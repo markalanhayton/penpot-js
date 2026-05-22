@@ -1,0 +1,1 @@
+export { DrawingTool as FrameTool } from './base.js';

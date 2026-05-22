@@ -1,0 +1,182 @@
+:root {
+  /* Colors — Accent (matches original Penpot dark theme) */
+  --penpot-accent: #7efff5;
+  --penpot-accent-hover: #a977d1;
+  --penpot-accent-muted: #426158;
+  --penpot-accent-select: rgba(0, 209, 184, 0.1);
+  --penpot-accent-bg-select: rgba(0, 209, 184, 0.7);
+  --penpot-accent-secondary: #bb97d8;
+  --penpot-accent-tertiary: #00d1b8;
+  --penpot-accent-action: #bb97d8;
+  --penpot-accent-action-hover: #a977d1;
+  --penpot-accent-off: #f3f4f6;
+
+  /* Primary (alias for accent — used by components) */
+  --penpot-primary: #31efb8;
+  --penpot-primary-hover: #28d4a3;
+  --penpot-primary-pressed: #1fbf92;
+  --penpot-primary-bg: rgba(0, 209, 184, 0.08);
+  --penpot-primary-bg-hover: rgba(0, 209, 184, 0.15);
+
+  /* Semantic */
+  --penpot-success: #2d9f8f;
+  --penpot-success-bg: #0a2927;
+  --penpot-warning: #fe9c07;
+  --penpot-warning-bg: #3d2501;
+  --penpot-danger: #c80857;
+  --penpot-danger-hover: #ff3277;
+  --penpot-danger-bg: #500124;
+  --penpot-danger-fg: #ff3277;
+  --penpot-info: #2196f3;
+  --penpot-info-bg: rgba(33, 150, 243, 0.08);
+
+  /* Backgrounds */
+  --penpot-bg: #18181a;
+  --penpot-bg-secondary: #000;
+  --penpot-surface: #212426;
+  --penpot-surface-high: #2e3434;
+  --penpot-surface-highest: #3a3d3d;
+
+  /* Foreground */
+  --penpot-text: #fff;
+  --penpot-text-dim: #8f9da3;
+  --penpot-text-disabled: #666;
+  --penpot-text-inverse: #000;
+  --penpot-icon-default: #8f9da3;
+
+  /* Borders */
+  --penpot-border: #444;
+  --penpot-border-focused: #555;
+  --penpot-border-hover: #666;
+
+  /* Inputs */
+  --penpot-input-bg: #2e3434;
+  --penpot-input-border: #555;
+  --penpot-input-border-focused: var(--penpot-accent);
+  --penpot-input-height: 32px;
+
+  /* Spacing (matches original $sp-* tokens) */
+  --penpot-spacing-xxs: 2px;
+  --penpot-spacing-xs: 4px;
+  --penpot-spacing-s: 8px;
+  --penpot-spacing-m: 12px;
+  --penpot-spacing-l: 16px;
+  --penpot-spacing-xl: 20px;
+  --penpot-spacing-xxl: 24px;
+  --penpot-spacing-xxxl: 32px;
+
+  /* Typography (matches original Penpot type scale) */
+  --penpot-font-family: "worksans", "vazirmatn", -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --penpot-font-mono: 'Roboto Mono', 'SF Mono', 'Fira Code', Menlo, Consolas, monospace;
+  --penpot-font-size-xxs: 9px;
+  --penpot-font-size-xs: 10px;
+  --penpot-font-size-s: 12px;
+  --penpot-font-size-m: 14px;
+  --penpot-font-size-l: 16px;
+  --penpot-font-size-xl: 18px;
+  --penpot-font-size-xxl: 20px;
+  --penpot-font-size-display: 36px;
+
+  /* Border Radius (matches original $br-* tokens) */
+  --penpot-radius-xs: 2px;
+  --penpot-radius-s: 4px;
+  --penpot-radius-m: 8px;
+  --penpot-radius-l: 12px;
+  --penpot-radius-full: 50%;
+
+  /* Shadows (matches original $el-* elevations) */
+  --penpot-shadow-dark: 0 0 10px 0 rgba(0, 0, 0, 0.6);
+  --penpot-shadow-s: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --penpot-shadow-m: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --penpot-shadow-l: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --penpot-shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.6);
+
+  /* Transitions */
+  --penpot-transition-fast: 0.1s ease;
+  --penpot-transition-normal: 0.2s ease;
+  --penpot-transition-slow: 0.3s ease;
+
+  /* Z-index (matches original $z-index-* tokens) */
+  --penpot-z-auto: auto;
+  --penpot-z-canvas: 0;
+  --penpot-z-canvas-overlay: 1;
+  --penpot-z-panels: 100;
+  --penpot-z-guides: 200;
+  --penpot-z-set: 300;
+  --penpot-z-dropdown: 400;
+  --penpot-z-modal: 300;
+  --penpot-z-tooltip: 500;
+  --penpot-z-notification: 500;
+  --penpot-z-context-menu: 400;
+  --penpot-z-loaders: 600;
+
+  /* Layout — Workspace */
+  --penpot-topbar-height: 44px;
+  --penpot-toolsbar-height: 32px;
+  --penpot-sidebar-width: 260px;
+  --penpot-rulers-size: 20px;
+
+  /* Component Sizes (matches original $sz-* tokens) */
+  --penpot-size-s: 12px;
+  --penpot-size-m: 16px;
+  --penpot-size-l: 32px;
+  --penpot-size-xl: 48px;
+
+  /* Interactive */
+  --penpot-clickable-min: 24px;
+  --penpot-focus-outline: 2px solid var(--penpot-accent);
+  --penpot-focus-outline-offset: -3px;
+
+  /* Button defaults */
+  --penpot-button-height: 32px;
+  --penpot-button-radius: var(--penpot-radius-m);
+  --penpot-button-font: 500 12px var(--penpot-font-family);
+  --penpot-button-text-transform: uppercase;
+  --penpot-button-letter-spacing: 0.5px;
+}
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #app {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--penpot-font-family);
+  background: var(--penpot-bg);
+  color: var(--penpot-text);
+  font-size: var(--penpot-font-size-m);
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a { color: var(--penpot-accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+button { cursor: pointer; font-family: inherit; }
+button:disabled { cursor: not-allowed; }
+
+input, textarea, select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: var(--penpot-focus-outline);
+  outline-offset: var(--penpot-focus-outline-offset);
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--penpot-bg); }
+::-webkit-scrollbar-thumb { background: var(--penpot-border); border-radius: var(--penpot-radius-full); }
+::-webkit-scrollbar-thumb:hover { background: var(--penpot-border-hover); }

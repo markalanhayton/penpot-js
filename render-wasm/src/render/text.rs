@@ -1,0 +1,651 @@
+use super::{filters, RenderState, Shape, SurfaceId};
+use crate::{
+    error::Result,
+    math::Rect,
+    shapes::{
+        calculate_position_data, calculate_text_layout_data, set_paint_fill, ParagraphBuilderGroup,
+        Stroke, StrokeKind, TextContent,
+    },
+    utils::{get_fallback_fonts, get_font_collection},
+};
+use skia_safe::{
+    self as skia,
+    canvas::SaveLayerRec,
+    textlayout::{ParagraphBuilder, StyleMetrics, TextDecoration, TextStyle},
+    Canvas, ImageFilter, Paint, Path,
+};
+
+pub fn stroke_paragraph_builder_group_from_text(
+    text_content: &TextContent,
+    stroke: &Stroke,
+    bounds: &Rect,
+    use_shadow: Option<bool>,
+) -> (Vec<ParagraphBuilderGroup>, Option<f32>) {
+    let fallback_fonts = get_fallback_fonts();
+    let fonts = get_font_collection();
+    let mut paragraph_group = Vec::new();
+    let remove_stroke_alpha = use_shadow.unwrap_or(false) && !stroke.is_transparent();
+    let mut group_layer_opacity: Option<f32> = None;
+
+    for paragraph in text_content.paragraphs() {
+        let mut stroke_paragraphs_map: std::collections::HashMap<usize, ParagraphBuilder> =
+            std::collections::HashMap::new();
+
+        for span in paragraph.children().iter() {
+            let (stroke_paints, stroke_layer_opacity) =
+                get_text_stroke_paints(stroke, bounds, remove_stroke_alpha);
+
+            if group_layer_opacity.is_none() {
+                group_layer_opacity = stroke_layer_opacity;
+            }
+
+            let text: String = span.apply_text_transform();
+
+            for (paint_idx, stroke_paint) in stroke_paints.iter().enumerate() {
+                let builder = stroke_paragraphs_map.entry(paint_idx).or_insert_with(|| {
+                    let paragraph_style = paragraph.paragraph_to_style();
+                    ParagraphBuilder::new(&paragraph_style, fonts)
+                });
+                let stroke_paint = stroke_paint.clone();
+                let remove_alpha = use_shadow.unwrap_or(false) && !span.is_transparent();
+                let stroke_style = span.to_stroke_style(
+                    &stroke_paint,
+                    fallback_fonts,
+                    remove_alpha,
+                    paragraph.line_height(),
+                );
+                builder.push_style(&stroke_style);
+                builder.add_text(&text);
+            }
+        }
+
+        let stroke_paragraphs: Vec<ParagraphBuilder> = (0..stroke_paragraphs_map.len())
+            .filter_map(|i| stroke_paragraphs_map.remove(&i))
+            .collect();
+
+        paragraph_group.push(stroke_paragraphs);
+    }
+
+    (paragraph_group, group_layer_opacity)
+}
+
+fn get_text_stroke_paints(
+    stroke: &Stroke,
+    bounds: &Rect,
+    remove_stroke_alpha: bool,
+) -> (Vec<Paint>, Option<f32>) {
+    let mut paints = Vec::new();
+    let mut layer_opacity: Option<f32> = None;
+
+    let stroke_opacity = stroke.fill.opacity();
+    let needs_opacity_layer = stroke_opacity < 1.0 && !remove_stroke_alpha;
+
+    let fill_for_paint = |paint: &mut Paint| {
+        if needs_opacity_layer {
+            let opaque_fill = stroke.fill.with_full_opacity();
+            set_paint_fill(paint, &opaque_fill, bounds, remove_stroke_alpha);
+        } else {
+            set_paint_fill(paint, &stroke.fill, bounds, remove_stroke_alpha);
+        }
+    };
+
+    if needs_opacity_layer {
+        layer_opacity = Some(stroke_opacity);
+    }
+
+    match stroke.kind {
+        StrokeKind::Inner => {
+            // Just the stroke paint — mask+SrcIn+DstOver layering is handled
+            // by render_inner_stroke_on_canvas.
+            let mut paint = skia::Paint::default();
+            paint.set_style(skia::PaintStyle::Stroke);
+            paint.set_anti_alias(true);
+            paint.set_stroke_width(stroke.width * 2.0);
+            if remove_stroke_alpha {
+                paint.set_color(skia::Color::BLACK);
+                paint.set_alpha(255);
+            } else {
+                fill_for_paint(&mut paint);
+            }
+            paints.push(paint);
+        }
+        StrokeKind::Center => {
+            let mut paint = skia::Paint::default();
+            paint.set_style(skia::PaintStyle::Stroke);
+            paint.set_anti_alias(true);
+            paint.set_stroke_width(stroke.width);
+            fill_for_paint(&mut paint);
+            paints.push(paint);
+        }
+        StrokeKind::Outer => {
+            let mut paint = skia::Paint::default();
+            paint.set_style(skia::PaintStyle::Stroke);
+            paint.set_blend_mode(skia::BlendMode::DstOver);
+            paint.set_anti_alias(true);
+            paint.set_stroke_width(stroke.width * 2.0);
+            fill_for_paint(&mut paint);
+            paints.push(paint);
+
+            let mut paint = skia::Paint::default();
+            paint.set_style(skia::PaintStyle::Fill);
+            paint.set_blend_mode(skia::BlendMode::Clear);
+            paint.set_color(skia::Color::TRANSPARENT);
+            paint.set_anti_alias(true);
+            paints.push(paint);
+        }
+    }
+
+    (paints, layer_opacity)
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn render_with_bounds_outset(
+    render_state: Option<&mut RenderState>,
+    canvas: Option<&Canvas>,
+    shape: &Shape,
+    paragraph_builders: &mut [Vec<ParagraphBuilder>],
+    surface_id: Option<SurfaceId>,
+    shadow: Option<&Paint>,
+    blur: Option<&ImageFilter>,
+    stroke_bounds_outset: f32,
+    fill_inset: Option<f32>,
+    layer_opacity: Option<f32>,
+) -> Result<()> {
+    if let Some(render_state) = render_state {
+        let target_surface = surface_id.unwrap_or(SurfaceId::Fills);
+
+        if let Some(blur_filter) = blur {
+            let mut text_bounds = shape
+                .get_text_content()
+                .calculate_bounds(shape, false)
+                .to_rect();
+            if stroke_bounds_outset > 0.0 {
+                text_bounds.inset((-stroke_bounds_outset, -stroke_bounds_outset));
+            }
+            let bounds = blur_filter.compute_fast_bounds(text_bounds);
+            if bounds.is_finite() && bounds.width() > 0.0 && bounds.height() > 0.0 {
+                let blur_filter_clone = blur_filter.clone();
+                if filters::render_with_filter_surface(
+                    render_state,
+                    bounds,
+                    target_surface,
+                    |state, temp_surface| {
+                        let temp_canvas = state.surfaces.canvas(temp_surface);
+                        render_text_on_canvas(
+                            temp_canvas,
+                            shape,
+                            paragraph_builders,
+                            shadow,
+                            Some(&blur_filter_clone),
+                            fill_inset,
+                            layer_opacity,
+                        );
+                        Ok(())
+                    },
+                )? {
+                    return Ok(());
+                }
+            }
+        }
+
+        let canvas = render_state.surfaces.canvas_and_mark_dirty(target_surface);
+        render_text_on_canvas(
+            canvas,
+            shape,
+            paragraph_builders,
+            shadow,
+            blur,
+            fill_inset,
+            layer_opacity,
+        );
+        return Ok(());
+    }
+
+    if let Some(canvas) = canvas {
+        render_text_on_canvas(
+            canvas,
+            shape,
+            paragraph_builders,
+            shadow,
+            blur,
+            fill_inset,
+            layer_opacity,
+        );
+    }
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn render(
+    render_state: Option<&mut RenderState>,
+    canvas: Option<&Canvas>,
+    shape: &Shape,
+    paragraph_builders: &mut [Vec<ParagraphBuilder>],
+    surface_id: Option<SurfaceId>,
+    shadow: Option<&Paint>,
+    blur: Option<&ImageFilter>,
+    fill_inset: Option<f32>,
+    layer_opacity: Option<f32>,
+) -> Result<()> {
+    render_with_bounds_outset(
+        render_state,
+        canvas,
+        shape,
+        paragraph_builders,
+        surface_id,
+        shadow,
+        blur,
+        0.0,
+        fill_inset,
+        layer_opacity,
+    )
+}
+
+fn render_text_on_canvas(
+    canvas: &Canvas,
+    shape: &Shape,
+    paragraph_builders: &mut [Vec<ParagraphBuilder>],
+    shadow: Option<&Paint>,
+    blur: Option<&ImageFilter>,
+    fill_inset: Option<f32>,
+    layer_opacity: Option<f32>,
+) {
+    if let Some(blur_filter) = blur {
+        let mut blur_paint = Paint::default();
+        blur_paint.set_image_filter(blur_filter.clone());
+        let blur_layer = SaveLayerRec::default().paint(&blur_paint);
+        canvas.save_layer(&blur_layer);
+    }
+
+    if let Some(shadow_paint) = shadow {
+        let layer_rec = SaveLayerRec::default().paint(shadow_paint);
+        canvas.save_layer(&layer_rec);
+        draw_text(canvas, shape, paragraph_builders, layer_opacity);
+        canvas.restore();
+    } else if let Some(eps) = fill_inset.filter(|&e| e > 0.0) {
+        if let Some(erode) = skia_safe::image_filters::erode((eps, eps), None, None) {
+            let mut layer_paint = Paint::default();
+            layer_paint.set_image_filter(erode);
+            let layer_rec = SaveLayerRec::default().paint(&layer_paint);
+            canvas.save_layer(&layer_rec);
+            draw_text(canvas, shape, paragraph_builders, layer_opacity);
+            canvas.restore();
+        } else {
+            draw_text(canvas, shape, paragraph_builders, layer_opacity);
+        }
+    } else {
+        draw_text(canvas, shape, paragraph_builders, layer_opacity);
+    }
+
+    if blur.is_some() {
+        canvas.restore();
+    }
+
+    canvas.restore();
+}
+
+/// Lays out and paints paragraph builders without any layer management.
+fn paint_text(
+    canvas: &Canvas,
+    shape: &Shape,
+    paragraph_builder_groups: &mut [Vec<ParagraphBuilder>],
+) {
+    let text_content = shape.get_text_content();
+    let layout_info =
+        calculate_text_layout_data(shape, text_content, paragraph_builder_groups, true);
+
+    for para in &layout_info.paragraphs {
+        para.paragraph.paint(canvas, (para.x, para.y));
+        for deco in &para.decorations {
+            draw_text_decorations(
+                canvas,
+                &deco.text_style,
+                Some(deco.y),
+                deco.thickness,
+                deco.left,
+                deco.width,
+            );
+        }
+    }
+}
+
+fn draw_text(
+    canvas: &Canvas,
+    shape: &Shape,
+    paragraph_builder_groups: &mut [Vec<ParagraphBuilder>],
+    layer_opacity: Option<f32>,
+) {
+    if let Some(opacity) = layer_opacity {
+        let mut opacity_paint = Paint::default();
+        opacity_paint.set_alpha_f(opacity);
+        let layer_rec = SaveLayerRec::default().paint(&opacity_paint);
+        canvas.save_layer(&layer_rec);
+    } else {
+        canvas.save_layer(&SaveLayerRec::default());
+    }
+
+    paint_text(canvas, shape, paragraph_builder_groups);
+}
+
+/// Renders an inner stroke using mask + SrcIn + DstOver layer structure.
+///
+/// Layer structure:
+///   saveLayer()           — outer layer
+///     saveLayer()         — mask group (isolation)
+///       paint mask        — opaque fill as clip mask
+///       saveLayer(SrcIn)  — clips stroke to mask shape
+///         paint stroke
+///       restore
+///     restore
+///     saveLayer(DstOver)  — fill behind the stroke
+///       paint fill
+///     restore
+///   restore
+#[allow(clippy::too_many_arguments)]
+fn render_inner_stroke_on_canvas(
+    canvas: &Canvas,
+    shape: &Shape,
+    mask_builders: &mut [Vec<ParagraphBuilder>],
+    stroke_builders: &mut [Vec<ParagraphBuilder>],
+    fill_builders: &mut [Vec<ParagraphBuilder>],
+    blur: Option<&ImageFilter>,
+    layer_opacity: Option<f32>,
+) {
+    if let Some(blur_filter) = blur {
+        let mut blur_paint = Paint::default();
+        blur_paint.set_image_filter(blur_filter.clone());
+        canvas.save_layer(&SaveLayerRec::default().paint(&blur_paint));
+    }
+
+    // Opacity layer wraps the entire composition
+    if let Some(opacity) = layer_opacity {
+        let mut opacity_paint = Paint::default();
+        opacity_paint.set_alpha_f(opacity);
+        canvas.save_layer(&SaveLayerRec::default().paint(&opacity_paint));
+    }
+
+    // Outer layer
+    canvas.save_layer(&SaveLayerRec::default());
+
+    // Mask group layer (isolates mask from parent surface content)
+    canvas.save_layer(&SaveLayerRec::default());
+
+    // Draw opaque mask (full alpha text shape)
+    paint_text(canvas, shape, mask_builders);
+
+    // SrcIn layer — only keeps stroke pixels where mask has alpha
+    let mut src_in_paint = Paint::default();
+    src_in_paint.set_blend_mode(skia::BlendMode::SrcIn);
+    canvas.save_layer(&SaveLayerRec::default().paint(&src_in_paint));
+
+    // Draw stroke
+    paint_text(canvas, shape, stroke_builders);
+
+    canvas.restore(); // SrcIn layer
+    canvas.restore(); // mask group layer
+
+    // Fill with DstOver (behind the stroke result)
+    let mut dst_over_paint = Paint::default();
+    dst_over_paint.set_blend_mode(skia::BlendMode::DstOver);
+    canvas.save_layer(&SaveLayerRec::default().paint(&dst_over_paint));
+
+    paint_text(canvas, shape, fill_builders);
+
+    canvas.restore(); // DstOver layer
+    canvas.restore(); // outer layer
+
+    if layer_opacity.is_some() {
+        canvas.restore(); // opacity layer
+    }
+
+    if blur.is_some() {
+        canvas.restore(); // blur layer
+    }
+}
+
+/// Public API for rendering inner strokes with mask+SrcIn+DstOver approach.
+#[allow(clippy::too_many_arguments)]
+pub fn render_inner_stroke(
+    render_state: Option<&mut RenderState>,
+    canvas: Option<&Canvas>,
+    shape: &Shape,
+    mask_builders: &mut [Vec<ParagraphBuilder>],
+    stroke_builders: &mut [Vec<ParagraphBuilder>],
+    fill_builders: &mut [Vec<ParagraphBuilder>],
+    surface_id: Option<SurfaceId>,
+    blur: Option<&ImageFilter>,
+    stroke_bounds_outset: f32,
+    layer_opacity: Option<f32>,
+) -> Result<()> {
+    if let Some(render_state) = render_state {
+        let target_surface = surface_id.unwrap_or(SurfaceId::Fills);
+
+        if let Some(blur_filter) = blur {
+            let mut text_bounds = shape
+                .get_text_content()
+                .calculate_bounds(shape, false)
+                .to_rect();
+            if stroke_bounds_outset > 0.0 {
+                text_bounds.inset((-stroke_bounds_outset, -stroke_bounds_outset));
+            }
+            let bounds = blur_filter.compute_fast_bounds(text_bounds);
+            if bounds.is_finite() && bounds.width() > 0.0 && bounds.height() > 0.0 {
+                let blur_filter_clone = blur_filter.clone();
+                if filters::render_with_filter_surface(
+                    render_state,
+                    bounds,
+                    target_surface,
+                    |state, temp_surface| {
+                        let temp_canvas = state.surfaces.canvas(temp_surface);
+                        render_inner_stroke_on_canvas(
+                            temp_canvas,
+                            shape,
+                            mask_builders,
+                            stroke_builders,
+                            fill_builders,
+                            Some(&blur_filter_clone),
+                            layer_opacity,
+                        );
+                        Ok(())
+                    },
+                )? {
+                    return Ok(());
+                }
+            }
+        }
+
+        let canvas = render_state.surfaces.canvas_and_mark_dirty(target_surface);
+        render_inner_stroke_on_canvas(
+            canvas,
+            shape,
+            mask_builders,
+            stroke_builders,
+            fill_builders,
+            blur,
+            layer_opacity,
+        );
+        return Ok(());
+    }
+
+    if let Some(canvas) = canvas {
+        render_inner_stroke_on_canvas(
+            canvas,
+            shape,
+            mask_builders,
+            stroke_builders,
+            fill_builders,
+            blur,
+            layer_opacity,
+        );
+    }
+    Ok(())
+}
+
+fn draw_text_decorations(
+    canvas: &Canvas,
+    text_style: &TextStyle,
+    y: Option<f32>,
+    thickness: f32,
+    text_left: f32,
+    text_width: f32,
+) {
+    if let Some(y) = y {
+        let r = skia_safe::Rect::new(
+            text_left,
+            y - thickness / 2.0,
+            text_left + text_width,
+            y + thickness / 2.0,
+        );
+        let mut decoration_paint = text_style.foreground();
+        decoration_paint.set_anti_alias(true);
+        canvas.draw_rect(r, &decoration_paint);
+    }
+}
+
+pub fn calculate_decoration_metrics(
+    style_metrics: &Vec<(usize, &StyleMetrics)>,
+    line_baseline: f32,
+) -> (f32, Option<f32>, f32, Option<f32>) {
+    let mut max_underline_thickness: f32 = 0.0;
+    let mut underline_y = None;
+    let mut max_strike_thickness: f32 = 0.0;
+    let mut strike_y = None;
+    for (_style_start, style_metric) in style_metrics.iter() {
+        let font_metrics = style_metric.font_metrics;
+        let font_size = font_metrics
+            .cap_height
+            .abs()
+            .max(font_metrics.x_height.abs());
+        let min_thickness = (font_size * 0.06).max(1.0);
+
+        // Magic numbers for line thickness partially based on Chromium
+        // (see https://source.chromium.org/chromium/chromium/src/+/main:ui/gfx/render_text.cc
+        let raw_font_size = style_metric.text_style.font_size();
+        let thickness_factor = raw_font_size.powf(0.4) * 6.0 / 18.0;
+
+        let thickness = (font_metrics.underline_thickness().unwrap_or(1.0) * thickness_factor)
+            .max(min_thickness);
+
+        if style_metric.text_style.decoration().ty == TextDecoration::UNDERLINE {
+            // Same gap from baseline to underline as in Chromium
+            // (see https://source.chromium.org/chromium/chromium/src/+/main:ui/gfx/render_text.cc
+            let gap_scaling = raw_font_size * 1.0 / 9.0;
+            let y = line_baseline + gap_scaling;
+
+            max_underline_thickness = max_underline_thickness.max(thickness);
+            underline_y = Some(y);
+        }
+        if style_metric.text_style.decoration().ty == TextDecoration::LINE_THROUGH {
+            let y = line_baseline
+                + font_metrics
+                    .strikeout_position()
+                    .unwrap_or(-font_metrics.cap_height / 2.0);
+            max_strike_thickness = max_strike_thickness.max(thickness);
+            strike_y = Some(y);
+        }
+    }
+    (
+        max_underline_thickness,
+        underline_y,
+        max_strike_thickness,
+        strike_y,
+    )
+}
+
+#[allow(dead_code)]
+fn calculate_total_paragraphs_height(paragraphs: &mut [ParagraphBuilder], width: f32) -> f32 {
+    paragraphs
+        .iter_mut()
+        .map(|p| {
+            let mut paragraph = p.build();
+            paragraph.layout(width);
+            paragraph.height()
+        })
+        .sum()
+}
+
+#[allow(dead_code)]
+fn calculate_all_paragraphs_height(
+    paragraph_groups: &mut [Vec<ParagraphBuilder>],
+    width: f32,
+) -> f32 {
+    paragraph_groups
+        .iter_mut()
+        .map(|group| {
+            // For stroke groups, only count the first paragraph to avoid double-counting
+            if group.len() > 1 {
+                let mut paragraph = group[0].build();
+                paragraph.layout(width);
+                paragraph.height()
+            } else {
+                calculate_total_paragraphs_height(group, width)
+            }
+        })
+        .sum()
+}
+
+// Render text paths (unused)
+#[allow(dead_code)]
+pub fn render_as_path(
+    render_state: &mut RenderState,
+    paths: &Vec<(Path, Paint)>,
+    surface_id: Option<SurfaceId>,
+) {
+    let canvas = render_state
+        .surfaces
+        .canvas_and_mark_dirty(surface_id.unwrap_or(SurfaceId::Fills));
+
+    for (path, paint) in paths {
+        // Note: path can be empty
+        canvas.draw_path(path, paint);
+    }
+}
+
+#[allow(dead_code)]
+pub fn render_position_data(
+    render_state: &mut RenderState,
+    surface_id: SurfaceId,
+    shape: &Shape,
+    text_content: &TextContent,
+) {
+    let position_data = calculate_position_data(shape, text_content, false);
+
+    let mut paint = skia::Paint::default();
+    paint.set_style(skia::PaintStyle::Stroke);
+    paint.set_color(skia::Color::from_argb(255, 255, 0, 0));
+    paint.set_stroke_width(2.);
+
+    for pd in position_data {
+        let rect = Rect::from_xywh(pd.x, pd.y, pd.width, pd.height);
+        render_state
+            .surfaces
+            .canvas_and_mark_dirty(surface_id)
+            .draw_rect(rect, &paint);
+    }
+}
+
+// How to use it?
+// Type::Text(text_content) => {
+//     self.surfaces
+//         .apply_mut(&[SurfaceId::Fills, SurfaceId::Strokes], |s| {
+//             s.canvas().concat(&matrix);
+//         });
+
+//     let text_content = text_content.new_bounds(shape.selrect());
+//     let paths = text_content.get_paths(antialias);
+
+//     shadows::render_text_shadows(self, &shape, &paths, antialias);
+//     text::render(self, &paths, None, None);
+
+//     for stroke in shape.visible_strokes().rev() {
+//         shadows::render_text_path_stroke_shadows(
+//             self, &shape, &paths, stroke, antialias,
+//         );
+//         strokes::render_text_paths(self, &shape, stroke, &paths, None, None, antialias);
+//         shadows::render_text_path_stroke_inner_shadows(
+//             self, &shape, &paths, stroke, antialias,
+//         );
+//     }
+
+//     shadows::render_text_inner_shadows(self, &shape, &paths, antialias);
+// }

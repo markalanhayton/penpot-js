@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Penpot Design System — Component Preview</title>
+  <link rel="icon" href="/favicon.svg">
+  <link rel="stylesheet" href="/styles/tokens.css">
+  <style>
+    .preview-page { padding: var(--penpot-spacing-xl) var(--penpot-spacing-xxxl); max-width: 960px; margin: 0 auto; }
+    .preview-page h1 { font-size: var(--penpot-font-size-xxl); color: var(--penpot-accent); margin-bottom: var(--penpot-spacing-xxxl); font-weight: 300; }
+    .preview-page h2 { font-size: var(--penpot-font-size-l); color: var(--penpot-text); margin-top: var(--penpot-spacing-xxxl); margin-bottom: var(--penpot-spacing-l); border-bottom: 1px solid var(--penpot-border); padding-bottom: var(--penpot-spacing-xs); }
+    .preview-page h3 { font-size: var(--penpot-font-size-m); color: var(--penpot-text-dim); margin-top: var(--penpot-spacing-l); margin-bottom: var(--penpot-spacing-s); }
+    .section { margin-bottom: var(--penpot-spacing-xxxl); }
+    .row { display: flex; align-items: center; gap: var(--penpot-spacing-l); flex-wrap: wrap; margin-bottom: var(--penpot-spacing-m); }
+    .label { font-size: var(--penpot-font-size-xs); color: var(--penpot-text-dim); min-width: 80px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--penpot-spacing-m); }
+    .colors { display: flex; flex-wrap: wrap; gap: var(--penpot-spacing-s); }
+    .color-swatch { width: 80px; }
+    .color-swatch .swatch { width: 80px; height: 40px; border-radius: var(--penpot-radius-s); border: 1px solid var(--penpot-border); }
+    .color-swatch .name { font-size: var(--penpot-font-size-xs); color: var(--penpot-text-dim); margin-top: 2px; }
+  </style>
+  <script type="module" src="/preview/preview.js"></script>
+</head>
+<body>
+  <div class="preview-page" id="app"></div>
+</body>
+</html>
