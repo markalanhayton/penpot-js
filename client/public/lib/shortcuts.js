@@ -3,6 +3,47 @@ const ACTIVE_SHORTCUTS = new Map();
 let initialized = false;
 let workspace = null;
 
+export const DEFAULT_SHORTCUTS = [
+  { key: 'v', modifiers: {}, description: 'Select tool' },
+  { key: 'h', modifiers: {}, description: 'Hand tool' },
+  { key: 'f', modifiers: {}, description: 'Frame tool' },
+  { key: 'r', modifiers: {}, description: 'Rectangle tool' },
+  { key: 'e', modifiers: {}, description: 'Ellipse tool' },
+  { key: 't', modifiers: {}, description: 'Text tool' },
+  { key: 'p', modifiers: {}, description: 'Pen/Path tool' },
+  { key: 'i', modifiers: {}, description: 'Image tool' },
+  { key: 'z', modifiers: { ctrl: true }, description: 'Undo' },
+  { key: 'z', modifiers: { ctrl: true, shift: true }, description: 'Redo' },
+  { key: 'y', modifiers: { ctrl: true }, description: 'Redo' },
+  { key: 'Delete', modifiers: {}, description: 'Delete selected' },
+  { key: 'Backspace', modifiers: {}, description: 'Delete selected' },
+  { key: 'a', modifiers: { ctrl: true }, description: 'Select all' },
+  { key: 'd', modifiers: { ctrl: true }, description: 'Duplicate' },
+  { key: 'g', modifiers: { ctrl: true }, description: 'Group' },
+  { key: 'g', modifiers: { ctrl: true, shift: true }, description: 'Ungroup' },
+  { key: ']', modifiers: {}, description: 'Bring forward' },
+  { key: '[', modifiers: {}, description: 'Send backward' },
+  { key: ']', modifiers: { shift: true }, description: 'Bring to front' },
+  { key: '[', modifiers: { shift: true }, description: 'Send to back' },
+  { key: 's', modifiers: { ctrl: true }, description: 'Save file' },
+  { key: 'e', modifiers: { ctrl: true }, description: 'Export' },
+  { key: '+', modifiers: { ctrl: true }, description: 'Zoom in' },
+  { key: '=', modifiers: { ctrl: true }, description: 'Zoom in' },
+  { key: '-', modifiers: { ctrl: true }, description: 'Zoom out' },
+  { key: '0', modifiers: { ctrl: true }, description: 'Zoom to fit' },
+  { key: '1', modifiers: { ctrl: true }, description: 'Zoom 100%' },
+  { key: '2', modifiers: { ctrl: true }, description: 'Zoom 200%' },
+  { key: 'Escape', modifiers: {}, description: 'Deselect / Cancel' },
+  { key: 'u', modifiers: { alt: true }, description: 'Boolean union' },
+  { key: 'd', modifiers: { alt: true }, description: 'Boolean difference' },
+  { key: 'i', modifiers: { alt: true }, description: 'Boolean intersection' },
+  { key: 'e', modifiers: { alt: true }, description: 'Boolean exclude' },
+  { key: 'k', modifiers: { ctrl: true, alt: true }, description: 'Create component' },
+  { key: 'd', modifiers: { ctrl: true, alt: true, shift: true }, description: 'Detach instance' },
+  { key: 'k', modifiers: { ctrl: true, alt: true, shift: true }, description: 'Sync instance to main' },
+  { key: 'i', modifiers: { ctrl: true, shift: true }, description: 'Import .penpot file' },
+];
+
 export function registerShortcut(key, modifiers, action, description = '') {
   const combo = normalizeCombo(key, modifiers);
   if (SHORTCUTS.has(combo)) {
@@ -116,42 +157,46 @@ export function wireShortcuts(toolManager, workspaceEl) {
     };
   }
 
-  const shortcuts = [
-    { key: 'v', modifiers: {}, action: switchTool('select'), description: 'Select tool' },
-    { key: 'h', modifiers: {}, action: switchTool('hand'), description: 'Hand tool' },
-    { key: 'f', modifiers: {}, action: switchTool('frame'), description: 'Frame tool' },
-    { key: 'r', modifiers: {}, action: switchTool('rect'), description: 'Rectangle tool' },
-    { key: 'e', modifiers: {}, action: switchTool('ellipse'), description: 'Ellipse tool' },
-    { key: 't', modifiers: {}, action: switchTool('text'), description: 'Text tool' },
-    { key: 'p', modifiers: {}, action: switchTool('path'), description: 'Pen/Path tool' },
-    { key: 'i', modifiers: {}, action: switchTool('image'), description: 'Image tool' },
-    { key: 'z', modifiers: { ctrl: true }, action: () => { if (toolManager) toolManager.undo(); }, description: 'Undo' },
-    { key: 'z', modifiers: { ctrl: true, shift: true }, action: () => { if (toolManager) toolManager.redo(); }, description: 'Redo' },
-    { key: 'y', modifiers: { ctrl: true }, action: () => { if (toolManager) toolManager.redo(); }, description: 'Redo' },
-    { key: 'Delete', modifiers: {}, action: () => { if (toolManager) toolManager.deleteSelected(); }, description: 'Delete selected' },
-    { key: 'Backspace', modifiers: {}, action: () => { if (toolManager) toolManager.deleteSelected(); }, description: 'Delete selected' },
-    { key: 'a', modifiers: { ctrl: true }, action: () => { if (toolManager) toolManager.selectAll(); }, description: 'Select all' },
-    { key: 'd', modifiers: { ctrl: true }, action: () => { if (toolManager) toolManager.duplicateSelected(); }, description: 'Duplicate' },
-    { key: 'g', modifiers: { ctrl: true }, action: () => { if (toolManager) toolManager.groupSelected(); }, description: 'Group' },
-    { key: 'g', modifiers: { ctrl: true, shift: true }, action: () => { if (toolManager) toolManager.ungroupSelected(); }, description: 'Ungroup' },
-    { key: ']', modifiers: {}, action: () => { if (toolManager && toolManager.selectedIds.size > 0) toolManager.bringForward([...toolManager.selectedIds][0]); }, description: 'Bring forward' },
-    { key: '[', modifiers: {}, action: () => { if (toolManager && toolManager.selectedIds.size > 0) toolManager.sendBackward([...toolManager.selectedIds][0]); }, description: 'Send backward' },
-    { key: ']', modifiers: { shift: true }, action: () => { if (toolManager && toolManager.selectedIds.size > 0) toolManager.bringToFront([...toolManager.selectedIds][0]); }, description: 'Bring to front' },
-    { key: '[', modifiers: { shift: true }, action: () => { if (toolManager && toolManager.selectedIds.size > 0) toolManager.sendToBack([...toolManager.selectedIds][0]); }, description: 'Send to back' },
-    { key: 's', modifiers: { ctrl: true }, action: () => { if (workspaceEl) workspaceEl.saveFile(); }, description: 'Save file' },
-    { key: 'e', modifiers: { ctrl: true }, action: () => { const dlg = workspaceEl?.querySelector('#export-dialog'); if (dlg) dlg.open(); }, description: 'Export' },
-    { key: '+', modifiers: { ctrl: true }, action: zoomCanvas('in'), description: 'Zoom in' },
-    { key: '=', modifiers: { ctrl: true }, action: zoomCanvas('in'), description: 'Zoom in' },
-    { key: '-', modifiers: { ctrl: true }, action: zoomCanvas('out'), description: 'Zoom out' },
-    { key: '0', modifiers: { ctrl: true }, action: zoomCanvas('fit'), description: 'Zoom to fit' },
-    { key: '1', modifiers: { ctrl: true }, action: zoomCanvas('reset'), description: 'Zoom 100%' },
-    { key: '2', modifiers: { ctrl: true }, action: zoomCanvas('200'), description: 'Zoom 200%' },
-    { key: 'Escape', modifiers: {}, action: () => { if (toolManager) toolManager.clearSelection(); }, description: 'Deselect / Cancel' },
-    { key: 'u', modifiers: { alt: true }, action: () => { if (toolManager) toolManager.createBoolOp('union'); }, description: 'Boolean union' },
-    { key: 'd', modifiers: { alt: true }, action: () => { if (toolManager) toolManager.createBoolOp('difference'); }, description: 'Boolean difference' },
-    { key: 'i', modifiers: { alt: true }, action: () => { if (toolManager) toolManager.createBoolOp('intersection'); }, description: 'Boolean intersection' },
-    { key: 'e', modifiers: { alt: true }, action: () => { if (toolManager) toolManager.createBoolOp('exclude'); }, description: 'Boolean exclude' },
-  ];
+  const shortcuts = DEFAULT_SHORTCUTS.map(s => ({
+    ...s,
+    action: s.key === 'v' ? switchTool('select') :
+            s.key === 'h' ? switchTool('hand') :
+            s.key === 'f' ? switchTool('frame') :
+            s.key === 'r' ? switchTool('rect') :
+            s.key === 'e' && !s.modifiers.ctrl && !s.modifiers.alt ? switchTool('ellipse') :
+            s.key === 't' ? switchTool('text') :
+            s.key === 'p' ? switchTool('path') :
+            s.key === 'i' && !s.modifiers.ctrl ? switchTool('image') :
+            s.key === 'z' && s.modifiers.ctrl && !s.modifiers.shift ? () => { if (toolManager) toolManager.undo(); } :
+            s.key === 'z' && s.modifiers.ctrl && s.modifiers.shift ? () => { if (toolManager) toolManager.redo(); } :
+            s.key === 'y' && s.modifiers.ctrl ? () => { if (toolManager) toolManager.redo(); } :
+            s.key === 'Delete' || s.key === 'Backspace' ? () => { if (toolManager) toolManager.deleteSelected(); } :
+            s.key === 'a' && s.modifiers.ctrl ? () => { if (toolManager) toolManager.selectAll(); } :
+            s.key === 'd' && s.modifiers.ctrl && !s.modifiers.alt ? () => { if (toolManager) toolManager.duplicateSelected(); } :
+            s.key === 'g' && s.modifiers.ctrl && !s.modifiers.shift ? () => { if (toolManager) toolManager.groupSelected(); } :
+            s.key === 'g' && s.modifiers.ctrl && s.modifiers.shift ? () => { if (toolManager) toolManager.ungroupSelected(); } :
+            s.key === ']' && !s.modifiers.shift ? () => { if (toolManager && toolManager.selectedIds.size > 0) toolManager.bringForward([...toolManager.selectedIds][0]); } :
+            s.key === '[' && !s.modifiers.shift ? () => { if (toolManager && toolManager.selectedIds.size > 0) toolManager.sendBackward([...toolManager.selectedIds][0]); } :
+            s.key === ']' && s.modifiers.shift ? () => { if (toolManager && toolManager.selectedIds.size > 0) toolManager.bringToFront([...toolManager.selectedIds][0]); } :
+            s.key === '[' && s.modifiers.shift ? () => { if (toolManager && toolManager.selectedIds.size > 0) toolManager.sendToBack([...toolManager.selectedIds][0]); } :
+            s.key === 's' && s.modifiers.ctrl ? () => { if (workspaceEl) workspaceEl.saveFile(); } :
+            s.key === 'e' && s.modifiers.ctrl && !s.modifiers.alt ? () => { const dlg = workspaceEl?.querySelector('#export-dialog'); if (dlg) dlg.open(); } :
+            (s.key === '+' || s.key === '=') && s.modifiers.ctrl ? zoomCanvas('in') :
+            s.key === '-' && s.modifiers.ctrl ? zoomCanvas('out') :
+            s.key === '0' && s.modifiers.ctrl ? zoomCanvas('fit') :
+            s.key === '1' && s.modifiers.ctrl ? zoomCanvas('reset') :
+            s.key === '2' && s.modifiers.ctrl ? zoomCanvas('200') :
+            s.key === 'Escape' ? () => { if (toolManager) toolManager.clearSelection(); } :
+            s.key === 'u' && s.modifiers.alt ? () => { if (toolManager) toolManager.createBoolOp('union'); } :
+            s.key === 'd' && s.modifiers.alt && !s.modifiers.shift ? () => { if (toolManager) toolManager.createBoolOp('difference'); } :
+            s.key === 'i' && s.modifiers.alt && !s.modifiers.ctrl ? () => { if (toolManager) toolManager.createBoolOp('intersection'); } :
+            s.key === 'e' && s.modifiers.alt && !s.modifiers.ctrl ? () => { if (toolManager) toolManager.createBoolOp('exclude'); } :
+            s.key === 'k' && s.modifiers.ctrl && s.modifiers.alt && !s.modifiers.shift ? () => { if (workspaceEl && typeof workspaceEl.createComponentFromSelection === 'function') workspaceEl.createComponentFromSelection(); } :
+            s.key === 'd' && s.modifiers.ctrl && s.modifiers.alt && s.modifiers.shift ? () => { if (workspaceEl && typeof workspaceEl.detachSelectedInstance === 'function') workspaceEl.detachSelectedInstance(); } :
+            s.key === 'k' && s.modifiers.ctrl && s.modifiers.alt && s.modifiers.shift ? () => { if (workspaceEl && typeof workspaceEl.syncSelectedInstance === 'function') workspaceEl.syncSelectedInstance(); } :
+            s.key === 'i' && s.modifiers.ctrl && s.modifiers.shift ? () => { if (workspaceEl && typeof workspaceEl.importPenpotFile === 'function') workspaceEl.importPenpotFile(); } :
+            () => {},
+  }));
 
   registerShortcuts(shortcuts);
   initShortcuts(workspaceEl);

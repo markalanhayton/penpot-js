@@ -146,7 +146,7 @@ test.describe('Auth Screen Edge Cases', () => {
     await page.waitForSelector('penpot-auth-screen');
 
     await page.locator('#submit').click();
-    await expect(page.locator('.auth-error')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.penpot-app__auth-error')).toBeVisible({ timeout: 5000 });
   });
 
   test('password visibility toggle works', async ({ page }) => {

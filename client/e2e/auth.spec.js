@@ -53,7 +53,7 @@ test.describe('Auth Screen', () => {
     await page.locator('#pw').fill('wrongpassword');
     await page.locator('#submit').click();
 
-    await expect(page.locator('.auth-error')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('.penpot-app__auth-error')).toBeVisible({ timeout: 10000 });
   });
 
   test('can login with valid credentials', async ({ page }) => {

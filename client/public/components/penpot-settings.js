@@ -5,7 +5,7 @@ import { appStore } from '../lib/store.js';
 const template = document.createElement('template');
 template.innerHTML = `<style>
 
-    penpot-settings { display: flex; height: 100%; background: var(--penpot-bg, #1c1c1c); color: var(--penpot-text, #e6e6e6); font-family: var(--penpot-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif); }
+    penpot-settings { display: flex; min-height: 100vh; height: 100%; background: var(--penpot-bg, #1c1c1c); color: var(--penpot-text, #e6e6e6); font-family: var(--penpot-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif); }
     .penpot-settings__settings-layout { display: flex; width: 100%; height: 100%; }
     .penpot-settings__settings-nav { width: 200px; background: var(--penpot-surface, #2a2a2a); border-right: 1px solid var(--penpot-border, #444); padding: var(--penpot-spacing-l, 16px); flex-shrink: 0; }
     .penpot-settings__settings-nav h3 { margin: 0 0 var(--penpot-spacing-m, 12px) 0; font-size: var(--penpot-font-size-l, 16px); color: var(--penpot-primary, #31efb8); }
@@ -43,6 +43,7 @@ template.innerHTML = `<style>
   </div>`;
 
 export class PenpotSettings extends PenpotElement {
+  #rendered = false;
   #section = 'profile';
   #profile = null;
   #message = null;
@@ -50,11 +51,12 @@ export class PenpotSettings extends PenpotElement {
 
   constructor() {
     super();
-this.appendChild(template.content.cloneNode(true));
   }
 
   connectedCallback() {
-    super.connectedCallback();
+    if (this.#rendered) return;
+    this.#rendered = true;
+    this.appendChild(template.content.cloneNode(true));
     this.querySelectorAll('.penpot-settings__nav-item').forEach(btn => {
       btn.addEventListener('click', () => {
         this.#section = btn.dataset.section;
@@ -180,7 +182,7 @@ this.appendChild(template.content.cloneNode(true));
       }
 
       try {
-        await cmd('update-password', { id: this.#profile?.id, old_password: oldPassword, new_password: newPassword });
+        await cmd('update-profile-password', { id: this.#profile?.id, old_password: oldPassword, new_password: newPassword });
         this.#message = 'Password changed successfully.';
         this.#messageType = 'success';
         content.querySelector('#old-password').value = '';
@@ -228,7 +230,7 @@ this.appendChild(template.content.cloneNode(true));
         return;
       }
       try {
-        await cmd('create-feedback', { type, content: content2 });
+        await cmd('push-audit-events', { events: [{ type, content: content2 }] });
         this.#message = 'Thank you for your feedback!';
         this.#messageType = 'success';
         content.querySelector('#feedback-content').value = '';
