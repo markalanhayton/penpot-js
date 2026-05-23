@@ -2,17 +2,23 @@ import { cmd } from '../lib/rpc.js';
 import { appStore } from '../lib/store.js';
 import { ToolManager } from '../lib/tool-manager.js';
 import { connectWS, disconnectWS, subscribeFile, unsubscribeFile, onWSMessage, sendPointerUpdate, getCursorPositions } from '../lib/ws.js';
-import { initPersistence, enqueueChange, makeCreateChange, makeModifyChange, makeDeleteChange, destroyPersistence, flushSave } from '../lib/persistence.js';
+import { initPersistence, enqueueChange, makeCreateChange, makeModifyChange, makeDeleteChange, makeAddPageChange, makeModPageChange, makeDeletePageChange, destroyPersistence, flushSave } from '../lib/persistence.js';
 import { wireShortcuts, destroyShortcuts } from '../lib/shortcuts.js';
 import { parseSVG } from '../lib/svg-import.js';
 import { createShape } from '../lib/types.js';
 import { PenpotElement } from './base.js';
+import { createComponentFromShape, detachInstanceFromShape, extractComponentsFromFile, syncInstanceToMain, createInstanceFromComponent, findMainInstanceForComponent, syncWithCrossPageLookup } from '../lib/components-lib.js';
+import { initCollaboration, resolveConflict, handleRemoteFileChange, broadcastChange, getPendingChanges, destroyCollaboration } from '../lib/collaboration.js';
+import { importFileToProject } from '../lib/file-import.js';
+import { createRichTextEditor, destroyActiveEditor, createFloatingToolbar } from '../lib/rich-text.js';
+import { initWasmRenderer, destroyWasmRenderer, isWasmAvailable, getRenderMode, requestRender } from '../lib/wasm-bridge.js';
 import './penpot-cursor-overlay.js';
 import './penpot-presence-bar.js';
 import './penpot-export-dialog.js';
 import './penpot-share-dialog.js';
 import './penpot-comment-panel.js';
 import './penpot-text-toolbar.js';
+import './penpot-import-dialog.js';
 
 const template = document.createElement('template');
 template.innerHTML = `
@@ -41,6 +47,7 @@ template.innerHTML = `
   </div>
   <penpot-export-dialog id="export-dialog"></penpot-export-dialog>
   <penpot-share-dialog id="share-dialog"></penpot-share-dialog>
+  <penpot-import-dialog id="import-dialog"></penpot-import-dialog>
 `;
 
 export class PenpotWorkspace extends PenpotElement {
@@ -139,6 +146,15 @@ export class PenpotWorkspace extends PenpotElement {
     this.querySelector('#left-sidebar').addEventListener('penpot-page-duplicate', (e) => {
       this.#duplicatePage(e.detail.pageIndex);
     });
+    this.querySelector('#left-sidebar').addEventListener('penpot-component-place-instance', (e) => {
+      this.placeComponentInstance(e.detail.componentId);
+    });
+    this.querySelector('#left-sidebar').addEventListener('penpot-component-detach', (e) => {
+      this.detachSelectedInstance();
+    });
+    this.querySelector('#left-sidebar').addEventListener('penpot-component-delete', (e) => {
+      this.deleteComponent(e.detail.componentId);
+    });
     this.querySelector('#right-sidebar').addEventListener('penpot-property-change', (e) => {
       this.#handlePropertyChange(e.detail);
     });
@@ -216,6 +232,7 @@ export class PenpotWorkspace extends PenpotElement {
   disconnectedCallback() {
     destroyPersistence();
     destroyShortcuts();
+    destroyCollaboration();
     if (this.#toolManager) {
       this.#toolManager.destroy();
       this.#toolManager = null;
@@ -240,13 +257,29 @@ export class PenpotWorkspace extends PenpotElement {
   }
 
   #handleShapeCreate(shape) {
-    if (!this.#toolManager) return;
+    const page = this.#pages[this.#currentPageIndex];
+    if (!page) return;
+    const objects = this.#toolManager.getCurrentPageShapes();
+    const parentId = this.#findParentFrame(shape, objects);
+    if (parentId) shape.parentId = parentId;
     this.#toolManager.addShape(shape);
     this.#updateSelectionFromTool(shape.id);
-    const page = this.#pages[this.#currentPageIndex];
-    if (page) {
-      enqueueChange(makeCreateChange(page.id, shape));
+    enqueueChange(makeCreateChange(page.id, shape, parentId));
+  }
+
+  #findParentFrame(shape, objects) {
+    if (!objects) return null;
+    const shapeX = shape.x || 0;
+    const shapeY = shape.y || 0;
+    for (const s of Object.values(objects)) {
+      if ((s.type === 'frame' || s.type === 'group') && !s.mainInstance) {
+        if (shapeX >= (s.x || 0) && shapeX < (s.x || 0) + (s.width || 0) &&
+            shapeY >= (s.y || 0) && shapeY < (s.y || 0) + (s.height || 0)) {
+          return s.id;
+        }
+      }
     }
+    return null;
   }
 
   #setupDragDrop() {
@@ -454,7 +487,9 @@ export class PenpotWorkspace extends PenpotElement {
   #initCollaboration() {
     if (!this.#fileData) return;
     const fileId = this.#fileData.id;
+    const profileId = appStore.get('profileId');
     subscribeFile(fileId);
+    initCollaboration(fileId, profileId);
     this.#startPointerBroadcast();
   }
 
@@ -479,10 +514,33 @@ export class PenpotWorkspace extends PenpotElement {
   }
 
   #handleRemoteFileChange(data) {
-    const fileId = data?.fileId;
+    const fileId = data?.fileId || data?.data?.fileId;
     if (!fileId || !this.#fileData) return;
     if (fileId !== this.#fileData.id) return;
-    this.loadFile();
+
+    const remoteRevn = data?.data?.revn || data?.revn;
+    if (remoteRevn) {
+      appStore.set('currentFileRev', remoteRevn);
+    }
+
+    const changes = data?.data?.changes || data?.changes || [];
+    if (changes.length > 0) {
+      handleRemoteFileChange({
+        fileId,
+        'file-id': fileId,
+        changes,
+        revn: remoteRevn,
+        profileId: data?.data?.profileId || data?.profileId,
+        sessionId: data?.data?.sessionId || data?.sessionId,
+      });
+      const updatedPages = appStore.get('pages');
+      if (updatedPages) {
+        this.#pages = updatedPages;
+      }
+      this.renderCurrentPage();
+    } else {
+      this.loadFile();
+    }
   }
 
   #toggleCommentPanel() {
@@ -514,15 +572,45 @@ export class PenpotWorkspace extends PenpotElement {
 
       this.querySelector('#toolbar').fileName = file.name || 'Untitled';
 
-      if (file.pages && file.pages.length > 0) {
+      if (file.data && file.data.pagesIndex) {
+        const pagesIndex = file.data.pagesIndex;
+        const pageOrder = Object.keys(pagesIndex).sort((a, b) => (pagesIndex[a].ordering ?? 0) - (pagesIndex[b].ordering ?? 0));
+        this.#pages = pageOrder.map(pageId => {
+          const pageData = pagesIndex[pageId];
+          return {
+            id: pageId,
+            name: pageData.name || 'Untitled',
+            objects: pageData.objects || {},
+            shapes: pageData.shapes || Object.keys(pageData.objects || {}),
+            ...(pageData.width ? { width: pageData.width } : {}),
+            ...(pageData.height ? { height: pageData.height } : {}),
+          };
+        });
+      } else if (file.data && file.data.pages) {
+        this.#pages = file.data.pages.map(page => ({
+          id: page.id,
+          name: page.name || 'Untitled',
+          objects: page.objects || {},
+          shapes: page.shapes || Object.keys(page.objects || {}),
+        }));
+      } else if (file.pages && file.pages.length > 0) {
         this.#pages = file.pages;
       } else {
         try {
           const pages = await cmd('get-page', { fileId });
           this.#pages = Array.isArray(pages) ? pages : pages ? [pages] : [];
+          for (const page of this.#pages) {
+            if (!page.objects) page.objects = {};
+            if (!page.shapes && page.objects) page.shapes = Object.keys(page.objects);
+          }
         } catch {
           this.#pages = [];
         }
+      }
+
+      const fileComponents = file.data?.components || file.components || {};
+      if (Object.keys(fileComponents).length > 0) {
+        appStore.set('currentFileComponents', fileComponents);
       }
 
       const leftSidebar = this.querySelector('#left-sidebar');
@@ -647,7 +735,7 @@ export class PenpotWorkspace extends PenpotElement {
 
   #addPage() {
     const pageNum = this.#pages.length + 1;
-    const page = { id: crypto.randomUUID(), name: `Page ${pageNum}`, objects: {} };
+    const page = { id: crypto.randomUUID(), name: `Page ${pageNum}`, objects: {}, shapes: [] };
     this.#pages.push(page);
     this.#currentPageIndex = this.#pages.length - 1;
     if (this.#toolManager) {
@@ -656,17 +744,20 @@ export class PenpotWorkspace extends PenpotElement {
     }
     this.renderCurrentPage();
     this.emit('penpot-page-change', {});
+    enqueueChange(makeAddPageChange(page.id, page.name));
   }
 
   #renamePage(pageIndex, newName) {
     if (pageIndex < 0 || pageIndex >= this.#pages.length) return;
     this.#pages[pageIndex].name = newName;
     this.renderCurrentPage();
+    enqueueChange(makeModPageChange(this.#pages[pageIndex].id, { name: newName }));
   }
 
   #deletePage(pageIndex) {
     if (this.#pages.length <= 1) return;
     if (pageIndex < 0 || pageIndex >= this.#pages.length) return;
+    const pageId = this.#pages[pageIndex].id;
     this.#pages.splice(pageIndex, 1);
     if (this.#currentPageIndex >= this.#pages.length) {
       this.#currentPageIndex = this.#pages.length - 1;
@@ -676,15 +767,23 @@ export class PenpotWorkspace extends PenpotElement {
       this.#toolManager.setPageIndex(this.#currentPageIndex);
     }
     this.renderCurrentPage();
+    enqueueChange(makeDeletePageChange(pageId));
   }
 
   #duplicatePage(pageIndex) {
     if (pageIndex < 0 || pageIndex >= this.#pages.length) return;
     const src = this.#pages[pageIndex];
     const objects = src.objects || src.children || {};
-    const srcShapes = Array.isArray(objects) ? objects : Object.values(objects);
-    const newShapes = srcShapes.map(s => ({ ...s, id: crypto.randomUUID() }));
-    const newPage = { id: crypto.randomUUID(), name: `${src.name} copy`, objects: newShapes };
+    const srcShapeIds = src.shapes || Object.keys(objects);
+    const idMap = new Map();
+    const newObjects = {};
+    for (const [oldId, shape] of Object.entries(objects)) {
+      const newId = crypto.randomUUID();
+      idMap.set(oldId, newId);
+      newObjects[newId] = { ...shape, id: newId, shapes: shape.shapes ? shape.shapes.map(cid => idMap.get(cid) || cid) : [] };
+    }
+    const newShapes = srcShapeIds.map(id => idMap.get(id) || id);
+    const newPage = { id: crypto.randomUUID(), name: `${src.name} copy`, objects: newObjects, shapes: newShapes };
     this.#pages.splice(pageIndex + 1, 0, newPage);
     this.#currentPageIndex = pageIndex + 1;
     if (this.#toolManager) {
@@ -692,6 +791,10 @@ export class PenpotWorkspace extends PenpotElement {
       this.#toolManager.setPageIndex(this.#currentPageIndex);
     }
     this.renderCurrentPage();
+    enqueueChange(makeAddPageChange(newPage.id, newPage.name));
+    for (const shape of Object.values(newObjects)) {
+      enqueueChange(makeCreateChange(newPage.id, shape, shape.parentId ? idMap.get(shape.parentId) || shape.parentId : newPage.id));
+    }
   }
 
   escHtml(str) { const el = document.createElement('span'); el.textContent = str || ''; return el.innerHTML; }
@@ -756,6 +859,233 @@ export class PenpotWorkspace extends PenpotElement {
     const sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(range);
+  }
+
+  createComponentFromSelection() {
+    if (!this.#toolManager || this.#toolManager.selectedIds.size === 0) return;
+    const shapes = this.#toolManager.getCurrentPageShapes();
+    if (!shapes) return;
+
+    const selectedShapes = [];
+    for (const id of this.#toolManager.selectedIds) {
+      if (shapes[id]) selectedShapes.push(shapes[id]);
+    }
+
+    if (selectedShapes.length === 0) return;
+
+    const firstShape = selectedShapes[0];
+    const { componentId, shape: updatedShape } = createComponentFromShape(firstShape);
+
+    const objects = { ...shapes };
+    objects[firstShape.id] = updatedShape;
+
+    if (selectedShapes.length > 1) {
+      const children = selectedShapes.slice(1).map(s => s.id);
+      objects[firstShape.id] = { ...updatedShape, children };
+    }
+
+    this.#toolManager.updatePageObjects(objects);
+    enqueueChange(makeModifyChange(firstShape.id, { componentId, componentRoot: true, mainInstance: true }));
+
+    const assetPanel = this.querySelector('#asset-panel');
+    if (assetPanel) {
+      const components = extractComponentsFromFile(this.#fileData || {});
+      assetPanel.components = [...components, { id: componentId, name: firstShape.name || 'Component', type: firstShape.type }];
+    }
+
+    this.emit('penpot-notification', { type: 'success', message: 'Component created' });
+  }
+
+  detachSelectedInstance() {
+    if (!this.#toolManager || this.#toolManager.selectedIds.size === 0) return;
+    const shapes = this.#toolManager.getCurrentPageShapes();
+    if (!shapes) return;
+
+    let objects = { ...shapes };
+    const changes = [];
+
+    for (const id of this.#toolManager.selectedIds) {
+      const shape = objects[id];
+      if (shape?.componentId && !shape?.mainInstance) {
+        const { shape: detached, objects: updatedObjects } = detachInstanceFromShape(shape, objects);
+        objects = { ...objects, ...updatedObjects };
+        changes.push(makeModifyChange(id, { componentId: null, componentRoot: null, shapeRef: null, touched: null }));
+      }
+    }
+
+    if (changes.length > 0) {
+      this.#toolManager.updatePageObjects(objects);
+      for (const change of changes) enqueueChange(change);
+      this.emit('penpot-notification', { type: 'success', message: `Detached ${changes.length} instance${changes.length > 1 ? 's' : ''}` });
+    }
+  }
+
+  syncSelectedInstance() {
+    if (!this.#toolManager || this.#toolManager.selectedIds.size === 0) return;
+    const shapes = this.#toolManager.getCurrentPageShapes();
+    if (!shapes) return;
+
+    const selectedId = [...this.#toolManager.selectedIds][0];
+    const instanceShape = shapes[selectedId];
+    if (!instanceShape?.componentId || !instanceShape?.shapeRef) return;
+
+    const mainShape = shapes[instanceShape.shapeRef];
+    if (!mainShape) {
+      this.emit('penpot-notification', { type: 'warning', message: 'Main component not found on current page' });
+      return;
+    }
+
+    const synced = syncInstanceToMain(instanceShape, mainShape);
+    const objects = { ...shapes, [selectedId]: synced };
+    this.#toolManager.updatePageObjects(objects);
+
+    const overrideKeys = Object.keys(synced).filter(k => !['id', 'parentId', 'componentId', 'componentRoot', 'shapeRef'].includes(k));
+    const changes = {};
+    for (const k of overrideKeys) {
+      if (synced[k] !== instanceShape[k]) changes[k] = synced[k];
+    }
+    if (Object.keys(changes).length > 0) {
+      enqueueChange(makeModifyChange(selectedId, changes));
+    }
+
+    this.emit('penpot-notification', { type: 'success', message: 'Instance synced to main' });
+  }
+
+  placeComponentInstance(componentId) {
+    if (!componentId || !this.#toolManager) return;
+    const shapes = this.#toolManager.getCurrentPageShapes();
+    if (!shapes) return;
+
+    const mainShape = findMainInstanceForComponent(shapes, componentId);
+    if (!mainShape) {
+      this.emit('penpot-notification', { type: 'warning', message: 'Component main instance not found' });
+      return;
+    }
+
+    const { shapes: newShapes, rootId } = createInstanceFromComponent(mainShape, shapes, 20, 20);
+
+    const objects = { ...shapes, ...newShapes };
+    this.#toolManager.updatePageObjects(objects);
+
+    const page = this.#pages[this.#currentPageIndex];
+    for (const [id, shape] of Object.entries(newShapes)) {
+      const parentId = this.#findParentFrame(shape, objects);
+      if (parentId) shape.parentId = parentId;
+      enqueueChange(makeCreateChange(page.id, shape, parentId));
+    }
+
+    this.#toolManager.selectedIds = new Set([rootId]);
+    this.#toolManager.activateTool('select');
+    this.emit('penpot-notification', { type: 'success', message: 'Instance placed' });
+  }
+
+  deleteComponent(componentId) {
+    if (!componentId) return;
+    const shapes = this.#toolManager.getCurrentPageShapes();
+    if (!shapes) return;
+
+    const updatedComponents = { ...(this.#fileData?.data?.components || {}) };
+    delete updatedComponents[componentId];
+
+    const mainShape = findMainInstanceForComponent(shapes, componentId);
+    if (mainShape) {
+      const { shape: detached, objects: updatedObjects } = detachInstanceFromShape(mainShape, shapes);
+      const objects = { ...shapes, ...updatedObjects };
+      this.#toolManager.updatePageObjects(objects);
+      enqueueChange(makeModifyChange(mainShape.id, { componentId: null, componentRoot: null, mainInstance: null }));
+    }
+
+    this.#fileData = { ...this.#fileData, data: { ...this.#fileData.data, components: updatedComponents } };
+    this.emit('penpot-notification', { type: 'success', message: 'Component deleted' });
+  }
+
+  async importPenpotFile() {
+    const importDialog = this.querySelector('#import-dialog');
+    if (importDialog) {
+      importDialog.open();
+    } else {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.penpot,.zip';
+      input.addEventListener('change', async () => {
+        const file = input.files?.[0];
+        if (!file) return;
+        try {
+          const projectId = appStore.get('currentProjectId');
+          if (!projectId) {
+            this.emit('penpot-notification', { type: 'danger', message: 'No project selected for import' });
+            return;
+          }
+          this.emit('penpot-notification', { type: 'info', message: 'Importing file...' });
+          const results = await importFileToProject(projectId, file);
+          if (results && results.length > 0) {
+            this.emit('penpot-notification', { type: 'success', message: `Imported ${results.length} file(s)` });
+            this.emit('penpot-file-imported', { results });
+          }
+        } catch (err) {
+          console.error('[workspace] import error:', err);
+          this.emit('penpot-notification', { type: 'danger', message: `Import failed: ${err.message || err}` });
+        }
+      });
+      input.click();
+    }
+  }
+
+  startRichTextEdit(shape, canvasEl) {
+    const canvasRect = canvasEl?.getBoundingClientRect();
+    const zoom = appStore.get('zoom') || 1;
+    const screenX = (shape.x || 0) * zoom;
+    const screenY = (shape.y || 0) * zoom;
+    const screenW = (shape.width || 100) * zoom;
+    const screenH = (shape.height || 40) * zoom;
+
+    destroyActiveEditor();
+    const container = this.querySelector('.canvas-area') || this;
+    const editor = createRichTextEditor(container, {
+      ...shape,
+      x: canvasRect ? canvasRect.left + screenX : screenX,
+      y: canvasRect ? canvasRect.top + screenY : screenY,
+      width: screenW,
+      height: screenH,
+    }, (result) => {
+      if (shape.id) {
+        enqueueChange(makeModifyChange(shape.id, {
+          content: result.content,
+          html: result.html,
+          fontFamily: result.fontFamily,
+          fontSize: result.fontSize,
+          fontWeight: result.fontWeight,
+          fontStyle: result.fontStyle,
+          textDecoration: result.textDecoration,
+          textAlign: result.textAlign,
+          lineHeight: result.lineHeight,
+          letterSpacing: result.letterSpacing,
+        }));
+      }
+    });
+
+    if (canvasRect) {
+      const toolbarX = Math.min(canvasRect.left + screenX, window.innerWidth - 500);
+      const toolbarY = canvasRect.top + screenY - 44;
+      createFloatingToolbar(container, editor, { x: Math.max(10, toolbarX), y: Math.max(10, toolbarY) });
+    }
+
+    return editor;
+  }
+
+  async initWasm(canvasEl) {
+    const initialized = await initWasmRenderer(canvasEl, {
+      devicePixelRatio: window.devicePixelRatio,
+      viewport: { x: 0, y: 0, zoom: 1 },
+    });
+    if (initialized) {
+      this.emit('penpot-notification', { type: 'info', message: 'WASM renderer active' });
+    }
+    return initialized;
+  }
+
+  getRenderMode() {
+    return getRenderMode();
   }
 }
 

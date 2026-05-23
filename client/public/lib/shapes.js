@@ -452,3 +452,11 @@ export function renderEmptyCanvas(message = 'No shapes on this page') {
   svg.appendChild(text);
   return svg;
 }
+
+export function renderShapeToSVGString(shape) {
+  const el = renderShape(shape);
+  if (!el) return '';
+  const tmp = document.createElement('div');
+  tmp.appendChild(el.cloneNode(true));
+  return tmp.innerHTML;
+}

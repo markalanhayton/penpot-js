@@ -85,6 +85,21 @@ export class ToolManager {
     return Array.isArray(objects) ? objects : Object.values(objects);
   }
 
+  getCurrentPageShapes() {
+    const page = this.getCurrentPage();
+    if (!page) return {};
+    const objects = page.objects || page.children || {};
+    return Array.isArray(objects) ? Object.fromEntries(objects.map(s => [s.id, s])) : objects;
+  }
+
+  updatePageObjects(objects) {
+    const page = this.getCurrentPage();
+    if (!page) return;
+    if (!page.objects) page.children = objects;
+    else page.objects = objects;
+    this.#workspace.emit('penpot-page-change', { page, pageIndex: this.#currentPageIndex });
+  }
+
   addShape(shape) {
     const page = this.getCurrentPage();
     if (!page) return;
