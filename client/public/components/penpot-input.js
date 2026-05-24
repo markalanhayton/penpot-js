@@ -54,11 +54,11 @@ template.innerHTML = `<style>
   <div class="penpot-input__error" id="error"></div>`;
 
 export class PenpotInput extends PenpotElement {
+  _template = template;
   static get observedAttributes() { return ['label', 'type', 'placeholder', 'value', 'disabled', 'error']; }
 
   constructor() {
     super();
-this.appendChild(template.content.cloneNode(true));
   }
 
   connectedCallback() {

@@ -38,13 +38,13 @@ template.innerHTML = `<style>
   </div>`;
 
 export class PenpotTeamSidebar extends PenpotElement {
+  _template = template;
   #teams = [];
   #currentTeamId = null;
   #loading = true;
 
   constructor() {
     super();
-this.appendChild(template.content.cloneNode(true));
   }
 
   connectedCallback() {
@@ -113,19 +113,49 @@ this.appendChild(template.content.cloneNode(true));
   }
 
   async createTeam() {
-    const name = prompt('Team name:');
-    if (!name) return;
-    try {
-      const team = await cmd('create-team', { name });
-      this.#teams.push(team);
-      this.#currentTeamId = team.id;
-      appStore.set('currentTeamId', team.id);
-      appStore.set('teams', this.#teams);
-      this.renderTeams();
-      this.emit('penpot-team-selected', { teamId: team.id });
-    } catch (err) {
-      this.emit('penpot-error', { source: 'create-team', error: err });
-    }
+    const scroll = this.querySelector('#team-scroll');
+    const existing = this.querySelector('#new-team-input');
+    if (existing) { existing.focus(); return; }
+
+    const footer = this.querySelector('.penpot-team__sidebar-footer');
+    const inputHtml = `<div style="padding:var(--penpot-spacing-s,8px)">
+      <input id="new-team-input" type="text" placeholder="Team name" style="width:100%;box-sizing:border-box;padding:var(--penpot-spacing-s,8px) var(--penpot-spacing-m,12px);background:var(--penpot-input-bg,#333);border:1px solid var(--penpot-input-border,#555);border-radius:var(--penpot-radius-s,4px);color:var(--penpot-text,#e6e6e6);font-size:var(--penpot-font-size-m,14px);outline:none;">
+      <div style="display:flex;gap:var(--penpot-spacing-s,8px);margin-top:var(--penpot-spacing-s,8px)">
+        <button id="confirm-team-btn" style="flex:1;padding:var(--penpot-spacing-s,8px);background:var(--penpot-primary,#31efb8);color:var(--penpot-text-inverse,#111);border:none;border-radius:var(--penpot-radius-s,4px);cursor:pointer;font-size:var(--penpot-font-size-s,12px);font-weight:600;">Create</button>
+        <button id="cancel-team-btn" style="flex:1;padding:var(--penpot-spacing-s,8px);background:none;border:1px solid var(--penpot-border,#444);border-radius:var(--penpot-radius-s,4px);color:var(--penpot-text,#e6e6e6);cursor:pointer;font-size:var(--penpot-font-size-s,12px);">Cancel</button>
+      </div>
+    </div>`;
+
+    const origFooter = footer.innerHTML;
+    footer.innerHTML = inputHtml;
+
+    const input = this.querySelector('#new-team-input');
+    const confirmBtn = this.querySelector('#confirm-team-btn');
+    const cancelBtn = this.querySelector('#cancel-team-btn');
+    input.focus();
+
+    const cleanup = () => { footer.innerHTML = origFooter; this.querySelector('#new-team-btn')?.addEventListener('click', () => this.createTeam()); };
+
+    const submit = async () => {
+      const name = input.value.trim();
+      if (!name) { cleanup(); return; }
+      cleanup();
+      try {
+        const team = await cmd('create-team', { name });
+        this.#teams.push(team);
+        this.#currentTeamId = team.id;
+        appStore.set('currentTeamId', team.id);
+        appStore.set('teams', this.#teams);
+        this.renderTeams();
+        this.emit('penpot-team-selected', { teamId: team.id });
+      } catch (err) {
+        this.emit('penpot-error', { source: 'create-team', error: err });
+      }
+    };
+
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') cleanup(); });
+    confirmBtn.addEventListener('click', submit);
+    cancelBtn.addEventListener('click', cleanup);
   }
 
   selectTeam(teamId) {

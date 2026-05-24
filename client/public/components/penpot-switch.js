@@ -22,14 +22,15 @@ template.innerHTML = `<style>
   <span class="penpot-switch__switch-label" id="label"><slot></slot></span>`;
 
 export class PenpotSwitch extends PenpotElement {
+  _template = template;
   static get observedAttributes() { return ['checked', 'disabled', 'label']; }
 
   constructor() {
     super();
-this.appendChild(template.content.cloneNode(true));
   }
 
   connectedCallback() {
+    super.connectedCallback();
     this.#update();
     const input = this.querySelector('#input');
     input.addEventListener('change', () => {

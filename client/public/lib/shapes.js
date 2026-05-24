@@ -50,7 +50,21 @@ function shapeStrokes(shape) {
     style: stroke.style || 'solid',
     cap: stroke.cap || 'round',
     join: stroke.join || 'round',
+    alignment: stroke.alignment || 'center',
   };
+}
+
+function strokeDasharray(stroke) {
+  if (!stroke) return undefined;
+  if (stroke.style === 'dashed') {
+    const w = stroke.width || 1;
+    return `${w * 4} ${w * 2}`;
+  }
+  if (stroke.style === 'dotted') {
+    const w = stroke.width || 1;
+    return `${w} ${w}`;
+  }
+  return undefined;
 }
 
 function shapeOpacity(shape) {
@@ -67,7 +81,29 @@ function shapeTransform(shape) {
   if (shape.rotation) {
     transforms.push(shapeRotation(shape));
   }
+  if (shape.transform) {
+    const t = shape.transform;
+    if (t.scaleX && t.scaleX !== 1) {
+      transforms.push(`scale(${t.scaleX}, 1)`);
+    }
+    if (t.scaleY && t.scaleY !== 1) {
+      transforms.push(`scale(1, ${t.scaleY})`);
+    }
+  }
   return transforms.length ? transforms.join(' ') : undefined;
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function resolveMediaSrc(src) {
+  if (!src) return '';
+  if (src.startsWith('data:') || src.startsWith('http://') || src.startsWith('https://') || src.startsWith('/')) {
+    return src;
+  }
+  if (UUID_RE.test(src)) {
+    return `/assets/by-file-media-id/${src}`;
+  }
+  return src;
 }
 
 export function renderShape(shape, depth = 0) {
@@ -98,7 +134,21 @@ export function renderShape(shape, depth = 0) {
   }
 }
 
+function applyStrokeAttrs(attrs, shape) {
+  const stroke = shapeStrokes(shape);
+  if (stroke) {
+    attrs.stroke = stroke.color;
+    attrs['stroke-width'] = stroke.width;
+    attrs['stroke-linecap'] = stroke.cap;
+    attrs['stroke-linejoin'] = stroke.join;
+    const dash = strokeDasharray(stroke);
+    if (dash) attrs['stroke-dasharray'] = dash;
+  }
+  return attrs;
+}
+
 function renderFrame(shape, depth) {
+  const hasBlur = shape.blur && shape.blur > 0;
   const attrs = {
     id: `shape-${shape.id}`,
     x: shape.x,
@@ -106,35 +156,125 @@ function renderFrame(shape, depth) {
     width: shape.width || 1,
     height: shape.height || 1,
     fill: shapeFills(shape) || '#ffffff',
-    stroke: shapeStrokes(shape)?.color || '#e0e0e0',
-    'stroke-width': shapeStrokes(shape)?.width || 1,
-    rx: shape.rx || shape.borderRadius || 0,
     opacity: shapeOpacity(shape),
   };
+  applyStrokeAttrs(attrs, shape);
+  if (!attrs.stroke) {
+    attrs.stroke = '#e0e0e0';
+    attrs['stroke-width'] = 1;
+  }
+  const rx = shape.rx ?? shape.borderRadius;
+  const r1 = shape.r1 ?? rx ?? 0;
+  const r2 = shape.r2 ?? rx ?? 0;
+  const r3 = shape.r3 ?? rx ?? 0;
+  const r4 = shape.r4 ?? rx ?? 0;
+  const hasIndividualCorners = r1 !== r2 || r2 !== r3 || r3 !== r4;
+  if (!hasIndividualCorners && r1 > 0) attrs.rx = r1;
   const transform = shapeTransform(shape);
   if (transform) attrs.transform = transform;
+  if (hasBlur) attrs.filter = `url(#blur-${shape.id})`;
 
-  const children = [];
   const objects = shape.objects || shape.children || [];
-  if (Array.isArray(objects)) {
-    for (const child of objects) {
-      const childEl = renderShape(child, depth + 1);
-      if (childEl) children.push(childEl);
-    }
-  } else if (typeof objects === 'object') {
-    for (const child of Object.values(objects)) {
-      const childEl = renderShape(child, depth + 1);
-      if (childEl) children.push(childEl);
-    }
+  const childShapes = Array.isArray(objects) ? objects : Object.values(objects || {});
+  const children = [];
+  for (const child of childShapes) {
+    const childEl = renderShape(child, depth + 1);
+    if (childEl) children.push(childEl);
   }
 
+  if (hasIndividualCorners) {
+    const w = shape.width || 1;
+    const h = shape.height || 1;
+    const path = `M ${r1},0 L ${w - r2},0 Q ${w},0 ${w},${r2} L ${w},${h - r3} Q ${w},${h} ${w - r3},${h} L ${r4},${h} Q 0,${h} 0,${h - r4} L 0,${r1} Q 0,0 ${r1},0 Z`;
+    const pathAttrs = {
+      id: `shape-${shape.id}`,
+      d: path,
+      fill: shapeFills(shape) || '#ffffff',
+      opacity: shapeOpacity(shape),
+    };
+    applyStrokeAttrs(pathAttrs, shape);
+    if (!pathAttrs.stroke) {
+      pathAttrs.stroke = '#e0e0e0';
+      pathAttrs['stroke-width'] = 1;
+    }
+    if (transform) pathAttrs.transform = transform;
+    if (hasBlur) pathAttrs.filter = `url(#blur-${shape.id})`;
+
+    if (hasBlur) {
+      return el('g', {}, [
+        el('defs', {}, [el('filter', { id: `blur-${shape.id}` }, [el('feGaussianBlur', { in: 'SourceGraphic', stdDeviation: String(shape.blur) })])]),
+        el('path', pathAttrs, children),
+      ]);
+    }
+    return el('path', pathAttrs, children);
+  }
+
+  if (hasBlur) {
+    return el('g', {}, [
+      el('defs', {}, [el('filter', { id: `blur-${shape.id}` }, [el('feGaussianBlur', { in: 'SourceGraphic', stdDeviation: String(shape.blur) })])]),
+      el('rect', attrs, children),
+    ]);
+  }
   return el('rect', attrs, children);
 }
 
 function renderGroup(shape, depth) {
-  const children = [];
-  const objects = shape.objects || shape.children || [];
+  const objects = shape.objects || shape.children || shape.shapes || [];
   const list = Array.isArray(objects) ? objects : Object.values(objects);
+  const isMasked = !!(shape['masked-group'] || shape.maskedGroup);
+
+  if (isMasked && list.length >= 2) {
+    const maskShape = list[0];
+    const maskId = `mask-${shape.id}`;
+    const clipId = `clip-${shape.id}`;
+
+    const defs = [];
+
+    const maskEl = el('mask', { id: maskId }, [
+      el('rect', {
+        x: shape.x || 0,
+        y: shape.y || 0,
+        width: shape.width || 1,
+        height: shape.height || 1,
+        fill: 'white',
+      }),
+      el('g', { opacity: '1' }, [renderShape(maskShape, depth + 1)].filter(Boolean).map(s => {
+        const clone = s.cloneNode(true);
+        clone.setAttribute('fill', 'white');
+        clone.setAttribute('stroke', 'white');
+        return clone;
+      })),
+    ]);
+    defs.push(maskEl);
+
+    const maskRect = el('rect', {
+      x: maskShape.x || 0,
+      y: maskShape.y || 0,
+      width: maskShape.width || 1,
+      height: maskShape.height || 1,
+    });
+    const clipEl = el('clipPath', { id: clipId }, [maskRect]);
+    defs.push(clipEl);
+
+    const clippedChildren = [];
+    for (let i = 1; i < list.length; i++) {
+      const childEl = renderShape(list[i], depth + 1);
+      if (childEl) clippedChildren.push(childEl);
+    }
+
+    return el('g', {
+      id: `shape-${shape.id}`,
+      opacity: shapeOpacity(shape),
+      transform: shapeTransform(shape),
+    }, [
+      el('defs', {}, defs),
+      el('g', { 'clip-path': `url(#${clipId})` }, [
+        el('g', { mask: `url(#${maskId})` }, clippedChildren),
+      ]),
+    ]);
+  }
+
+  const children = [];
   for (const child of list) {
     const childEl = renderShape(child, depth + 1);
     if (childEl) children.push(childEl);
@@ -148,6 +288,39 @@ function renderGroup(shape, depth) {
 }
 
 function renderRect(shape) {
+  const rx = shape.rx ?? shape.borderRadius;
+  const r1 = shape.r1 ?? rx ?? 0;
+  const r2 = shape.r2 ?? rx ?? 0;
+  const r3 = shape.r3 ?? rx ?? 0;
+  const r4 = shape.r4 ?? rx ?? 0;
+  const hasIndividualCorners = r1 !== r2 || r2 !== r3 || r3 !== r4;
+  const hasBlur = shape.blur && shape.blur > 0;
+
+  const transform = shapeTransform(shape);
+
+  if (hasIndividualCorners) {
+    const w = shape.width || 1;
+    const h = shape.height || 1;
+    const path = `M ${r1},0 L ${w - r2},0 Q ${w},0 ${w},${r2} L ${w},${h - r3} Q ${w},${h} ${w - r3},${h} L ${r4},${h} Q 0,${h} 0,${h - r4} L 0,${r1} Q 0,0 ${r1},0 Z`;
+    const pathAttrs = {
+      id: `shape-${shape.id}`,
+      d: path,
+      fill: shapeFills(shape) || '#4a90d9',
+      opacity: shapeOpacity(shape),
+    };
+    applyStrokeAttrs(pathAttrs, shape);
+    if (!pathAttrs.stroke) {
+      pathAttrs.stroke = 'transparent';
+      pathAttrs['stroke-width'] = 0;
+    }
+    if (transform) pathAttrs.transform = transform;
+    if (hasBlur) pathAttrs.filter = `url(#blur-${shape.id})`;
+
+    const children = [];
+    if (hasBlur) children.push(el('defs', {}, [el('filter', { id: `blur-${shape.id}` }, [el('feGaussianBlur', { in: 'SourceGraphic', stdDeviation: String(shape.blur) })])]));
+    return el('g', {}, [el('path', pathAttrs), ...children]);
+  }
+
   const attrs = {
     id: `shape-${shape.id}`,
     x: shape.x || 0,
@@ -155,13 +328,23 @@ function renderRect(shape) {
     width: shape.width || 1,
     height: shape.height || 1,
     fill: shapeFills(shape) || '#4a90d9',
-    stroke: shapeStrokes(shape)?.color || 'transparent',
-    'stroke-width': shapeStrokes(shape)?.width || 0,
-    rx: shape.rx || shape.borderRadius || 0,
+    rx: r1 > 0 ? r1 : 0,
     opacity: shapeOpacity(shape),
   };
-  const transform = shapeTransform(shape);
+  applyStrokeAttrs(attrs, shape);
+  if (!attrs.stroke) {
+    attrs.stroke = 'transparent';
+    attrs['stroke-width'] = 0;
+  };
   if (transform) attrs.transform = transform;
+  if (hasBlur) attrs.filter = `url(#blur-${shape.id})`;
+
+  if (hasBlur) {
+    const children = [
+      el('defs', {}, [el('filter', { id: `blur-${shape.id}` }, [el('feGaussianBlur', { in: 'SourceGraphic', stdDeviation: String(shape.blur) })])]),
+    ];
+    return el('g', {}, [el('rect', attrs), ...children]);
+  }
   return el('rect', attrs);
 }
 
@@ -174,10 +357,13 @@ function renderEllipse(shape) {
     id: `shape-${shape.id}`,
     cx, cy, rx: Math.max(0.5, rx), ry: Math.max(0.5, ry),
     fill: shapeFills(shape) || '#4a90d9',
-    stroke: shapeStrokes(shape)?.color || 'transparent',
-    'stroke-width': shapeStrokes(shape)?.width || 0,
     opacity: shapeOpacity(shape),
   };
+  applyStrokeAttrs(attrs, shape);
+  if (!attrs.stroke) {
+    attrs.stroke = 'transparent';
+    attrs['stroke-width'] = 0;
+  }
   const transform = shapeTransform(shape);
   if (transform) attrs.transform = transform;
   return el('ellipse', attrs);
@@ -191,6 +377,30 @@ function renderText(shape) {
   const fontStyle = shape.fontStyle || 'normal';
   const textAlign = shape.textAlign || 'left';
   const lineHeight = shape.lineHeight || 1.4;
+
+  if (shape.pathRef) {
+    const pathId = `textpath-${shape.id}`;
+    const defs = el('defs', {}, [
+      el('path', { id: pathId, d: shape.pathData || shape.pathRef })
+    ]);
+    const textAttrs = {
+      id: `shape-${shape.id}`,
+      fill: shapeFills(shape) || '#333',
+      'font-size': fontSize,
+      'font-family': fontFamily,
+      'font-weight': fontWeight,
+      'font-style': fontStyle,
+      opacity: shapeOpacity(shape),
+    };
+    const transform = shapeTransform(shape);
+    if (transform) textAttrs.transform = transform;
+    const textPathEl = el('textPath', { href: `#${pathId}`, startOffset: shape.pathOffset || '0%' }, typeof content === 'string' ? content : 'Text');
+    const textEl = el('text', textAttrs, [textPathEl]);
+    return el('g', {}, [defs, textEl]);
+  }
+
+  const growType = shape.growType || shape['grow-type'] || 'fixed';
+  const svgWidth = (growType === 'auto-width' || growType === 'auto-height') ? undefined : (shape.width || 100);
 
   const attrs = {
     id: `shape-${shape.id}`,
@@ -218,9 +428,12 @@ function renderPath(shape) {
     id: `shape-${shape.id}`,
     d,
     fill: shapeFills(shape) || 'transparent',
-    stroke: shapeStrokes(shape)?.color || '#333',
-    'stroke-width': shapeStrokes(shape)?.width || 1,
     opacity: shapeOpacity(shape),
+  };
+  applyStrokeAttrs(attrs, shape);
+  if (!attrs.stroke) {
+    attrs.stroke = '#333';
+    attrs['stroke-width'] = 1;
   };
   const transform = shapeTransform(shape);
   if (transform) attrs.transform = transform;
@@ -228,7 +441,8 @@ function renderPath(shape) {
 }
 
 function renderImage(shape) {
-  const src = shape.src || shape.url || '';
+  const rawSrc = shape.href || shape.src || shape.url || '';
+  const src = resolveMediaSrc(rawSrc);
   const attrs = {
     id: `shape-${shape.id}`,
     x: shape.x || 0,

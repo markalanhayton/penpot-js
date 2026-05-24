@@ -6,16 +6,28 @@
 
 export class PenpotElement extends HTMLElement {
   #rendered = false;
+  #templateAppended = false;
   #renderPending = false;
   #unsubscribers = [];
 
   connectedCallback() {
-    this.#rendered = true;
-    this.render();
+    if (!this.#rendered) {
+      this.#rendered = true;
+      if (this._template && !this.#templateAppended) {
+        this.#templateAppended = true;
+        this.appendChild(this._template.content.cloneNode(true));
+      }
+      this.render();
+    }
+    if (!this._listenersBound) {
+      this._listenersBound = true;
+      this.bindListeners?.();
+    }
   }
 
   disconnectedCallback() {
     this.#rendered = false;
+    this._listenersBound = false;
     for (const unsub of this.#unsubscribers) unsub();
     this.#unsubscribers = [];
   }

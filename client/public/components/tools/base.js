@@ -2,6 +2,15 @@ import { createShape } from '../../lib/types.js';
 import { SnapGuides } from '../../lib/snap.js';
 import { parseSVG } from '../../lib/svg-import.js';
 
+function imageToDataURL(img, width, height) {
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(width);
+  canvas.height = Math.round(height);
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL('image/png');
+}
+
 export class PenpotTool {
   #active = false;
   #canvas = null;
@@ -957,7 +966,8 @@ export class ImageTool extends PenpotTool {
           w *= scale;
           h *= scale;
         }
-        const shape = createShape('image', { x: Math.round(pos.x - w / 2), y: Math.round(pos.y - h / 2), width: Math.round(w), height: Math.round(h), href: url });
+        const dataUrl = imageToDataURL(img, w, h);
+        const shape = createShape('image', { x: Math.round(pos.x - w / 2), y: Math.round(pos.y - h / 2), width: Math.round(w), height: Math.round(h), href: dataUrl });
         this.workspace.emit('penpot-shape-create', { shape });
         URL.revokeObjectURL(url);
       };

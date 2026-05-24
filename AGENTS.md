@@ -79,12 +79,15 @@ Penpot is an open-source design tool composed of several modules:
 
 | Directory | Language | Purpose | Has `AGENTS.md` |
 |-----------|----------|---------|:----------------:|
-| `frontend/` | ClojureScript + SCSS | Single-page React app (design editor) | Yes |
-| `backend/` | Clojure (JVM) | HTTP/RPC server, PostgreSQL, Redis | Yes |
-| `backend-js/` | JavaScript (Node.js ESM) | Node.js port of backend (Fastify + SQLite) | Yes |
-| `common/` | Cljc (shared Clojure/ClojureScript) | Data types, geometry, schemas, utilities | Yes |
-| `render-wasm/` | Rust -> WebAssembly | High-performance canvas renderer (Skia) | Yes |
-| `exporter/` | ClojureScript (Node.js) | Headless Playwright-based export (SVG/PDF) | No |
+| `frontend/` | ClojureScript + SCSS | Single-page React app (design editor) — upstream | Yes |
+| `backend/` | Clojure (JVM) | HTTP/RPC server, PostgreSQL, Redis — upstream | Yes |
+| `client/` | JavaScript (ES2022+) + CSS | SPA design editor (Web Components) — JS port | Yes |
+| `server/` | JavaScript (Node.js ESM) | HTTP/RPC server, Fastify + SQLite — JS port | Yes |
+| `common/` | Cljc (shared Clojure/ClojureScript) | Data types, geometry, schemas, utilities — upstream | Yes |
+| `shared/` | JavaScript (ES2022+, dual-env) | Data types, geometry, schemas, utilities — JS port | Yes |
+| `render-wasm/` | Rust -> WebAssembly | High-performance canvas renderer (Skia) — upstream only, not ported | Yes |
+| `exporter/` (upstream only) | ClojureScript (Node.js) | Headless Playwright-based export (SVG/PDF) — upstream | No |
+| `server/exporter/` | JavaScript (Node.js ESM) | Headless Playwright export (PNG/JPEG/WebP/SVG/PDF) — JS port | Yes |
 | `mcp/` | TypeScript | Model Context Protocol integration | No |
 | `plugins/` | TypeScript | Plugin runtime and example plugins | No |
 
@@ -94,13 +97,27 @@ Some submodules use `pnpm` workspaces. The root `package.json` and
 ### Module Dependency Graph
 
 ```
+client ──> shared
+server  (standalone, mirrors backend)
+server/exporter ──> server (HTTP proxy)
 frontend ──> common
 backend  ──> common
-backend-js  (standalone, mirrors backend)
-exporter ──> common
-frontend ──> render-wasm  (loads compiled WASM)
+exporter ──> common (upstream)
+frontend ──> render-wasm  (upstream only, not ported)
 ```
 
-`common` is referenced as a local dependency (`{:local/root "../common"}`) by
-both `frontend` and `backend`. Changes to `common` can therefore affect multiple
-modules — test across consumers when modifying shared code.
+`shared` is a local dependency consumed by both `client` and `server`.
+Changes to `shared` can affect multiple modules — test across consumers
+when modifying shared code.
+
+## Migration Documentation
+
+The JS port migration is tracked in [`docs/migration/`](docs/migration/):
+
+- [`tracking.md`](docs/migration/tracking.md) — Master progress tracker
+- [`migration-plan.md`](docs/migration/migration-plan.md) — Full migration plan
+- [`client.md`](docs/migration/client.md) — Front-end migration details
+- [`server-reference.md`](docs/migration/server-reference.md) — Server architecture
+- [`server-next-steps.md`](docs/migration/server-next-steps.md) — Server next steps
+- [`exporter.md`](docs/migration/exporter.md) — Exporter architecture
+- [`shared-status.md`](docs/migration/shared-status.md) — Shared modules status

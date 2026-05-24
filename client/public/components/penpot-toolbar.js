@@ -31,17 +31,25 @@ template.innerHTML = `<style>
     <button class="penpot-toolbar__toolbar-btn" id="comment-btn" title="Comments (C)">&#128172;</button>
     <button class="penpot-toolbar__toolbar-btn" id="undo-btn" title="Undo (Ctrl+Z)">&#8630;</button>
     <button class="penpot-toolbar__toolbar-btn" id="redo-btn" title="Redo (Ctrl+Y)">&#8631;</button>
+    <button class="penpot-toolbar__toolbar-btn" id="component-btn" title="Create Component (Ctrl+Alt+K)">&#9733;</button>
+    <button class="penpot-toolbar__toolbar-btn" id="align-left-btn" title="Align Left">&#8676;</button>
+    <button class="penpot-toolbar__toolbar-btn" id="align-center-h-btn" title="Align Center Horizontal">&#8596;</button>
+    <button class="penpot-toolbar__toolbar-btn" id="align-right-btn" title="Align Right">&#8677;</button>
+    <button class="penpot-toolbar__toolbar-btn" id="align-top-btn" title="Align Top">&#8673;</button>
+    <button class="penpot-toolbar__toolbar-btn" id="align-center-v-btn" title="Align Center Vertical">&#8597;</button>
+    <button class="penpot-toolbar__toolbar-btn" id="align-bottom-btn" title="Align Bottom">&#8675;</button>
     <button class="penpot-toolbar__toolbar-btn" id="export-btn" title="Export (Ctrl+E)">Export</button>
+    <button class="penpot-toolbar__toolbar-btn" id="version-btn" title="Version History">&#128337;</button>
     <button class="penpot-toolbar__toolbar-btn" id="share-btn" title="Share">Share</button>
     <button class="penpot-toolbar__toolbar-btn penpot-toolbar__primary" id="save-btn">Save</button>
   </div>`;
 
 export class PenpotToolbar extends PenpotElement {
+  _template = template;
   #fileName = 'Untitled file';
 
   constructor() {
     super();
-this.appendChild(template.content.cloneNode(true));
   }
 
   connectedCallback() {
@@ -58,6 +66,9 @@ this.appendChild(template.content.cloneNode(true));
     this.querySelector('#export-btn').addEventListener('click', () => {
       this.emit('penpot-export', {});
     });
+    this.querySelector('#version-btn').addEventListener('click', () => {
+      this.emit('penpot-version-toggle', {});
+    });
     this.querySelector('#comment-btn').addEventListener('click', () => {
       this.emit('penpot-comment-toggle', {});
     });
@@ -66,6 +77,27 @@ this.appendChild(template.content.cloneNode(true));
     });
     this.querySelector('#redo-btn').addEventListener('click', () => {
       this.emit('penpot-redo', {});
+    });
+    this.querySelector('#component-btn').addEventListener('click', () => {
+      this.emit('penpot-create-component', {});
+    });
+    this.querySelector('#align-left-btn').addEventListener('click', () => {
+      this.emit('penpot-align', { alignment: 'left' });
+    });
+    this.querySelector('#align-center-h-btn').addEventListener('click', () => {
+      this.emit('penpot-align', { alignment: 'center-h' });
+    });
+    this.querySelector('#align-right-btn').addEventListener('click', () => {
+      this.emit('penpot-align', { alignment: 'right' });
+    });
+    this.querySelector('#align-top-btn').addEventListener('click', () => {
+      this.emit('penpot-align', { alignment: 'top' });
+    });
+    this.querySelector('#align-center-v-btn').addEventListener('click', () => {
+      this.emit('penpot-align', { alignment: 'center-v' });
+    });
+    this.querySelector('#align-bottom-btn').addEventListener('click', () => {
+      this.emit('penpot-align', { alignment: 'bottom' });
     });
 
     const nameEl = this.querySelector('#file-name');

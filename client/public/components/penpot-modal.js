@@ -31,14 +31,15 @@ template.innerHTML = `<style>
   </div>`;
 
 export class PenpotModal extends PenpotElement {
+  _template = template;
   static get observedAttributes() { return ['title', 'size']; }
 
   constructor() {
     super();
-this.appendChild(template.content.cloneNode(true));
   }
 
   connectedCallback() {
+    super.connectedCallback();
     this.querySelector('#backdrop').addEventListener('click', () => this.close());
     this.querySelector('#close').addEventListener('click', () => this.close());
     this.addEventListener('keydown', (e) => {

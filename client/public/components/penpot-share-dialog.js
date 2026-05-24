@@ -76,19 +76,15 @@ template.innerHTML = `<style>
   </div>`;
 
 export class PenpotShareDialog extends PenpotElement {
+  _template = template;
   #fileId = null;
   #shareUrl = '';
 
   static get observedAttributes() { return ['open']; }
 
-  constructor() {
-    super();
-this.appendChild(template.content.cloneNode(true));
-    this.style.display = 'none';
-  }
-
   connectedCallback() {
     super.connectedCallback();
+    this.style.display = 'none';
     this.querySelector('#close').addEventListener('click', () => this.close());
     this.querySelector('#cancel-btn').addEventListener('click', () => this.close());
     this.querySelector('#overlay').addEventListener('click', (e) => {
@@ -142,6 +138,15 @@ this.appendChild(template.content.cloneNode(true));
     if (editPerm !== 'none') params.set('edit', editPerm);
     this.#shareUrl = `${base}${sharePath}${params.toString() ? '?' + params.toString() : ''}`;
     this.querySelector('#share-url').value = this.#shareUrl;
+
+    cmd('update-file-share', {
+      id: this.#fileId,
+      permissions: {
+        view: viewPerm !== 'none' ? viewPerm : null,
+        comment: commentPerm !== 'none' ? commentPerm : null,
+        edit: editPerm !== 'none' ? editPerm : null,
+      },
+    }).catch(() => {});
   }
 
   #copyLink() {

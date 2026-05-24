@@ -28,16 +28,17 @@ template.innerHTML = `<style>
   <div class="penpot-dd__dropdown-menu" id="menu"><slot></slot></div>`;
 
 export class PenpotDropdown extends PenpotElement {
+  _template = template;
   static get observedAttributes() { return ['value', 'label', 'placeholder', 'disabled']; }
 
   #open = false;
 
   constructor() {
     super();
-this.appendChild(template.content.cloneNode(true));
   }
 
   connectedCallback() {
+    super.connectedCallback();
     const trigger = this.querySelector('#trigger');
     const overlay = this.querySelector('#overlay');
 

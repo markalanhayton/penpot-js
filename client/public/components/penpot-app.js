@@ -25,9 +25,11 @@ const COMPONENT_MAP = {
   'settings-profile': 'penpot-dashboard',
   'settings-password': 'penpot-dashboard',
   'settings-feedback': 'penpot-dashboard',
+  'settings-nudge': 'penpot-dashboard',
 };
 
 export class PenpotApp extends PenpotElement {
+  _template = template;
   #currentEl = null;
   #currentRoute = null;
 
@@ -35,7 +37,6 @@ export class PenpotApp extends PenpotElement {
 
   constructor() {
     super();
-this.appendChild(template.content.cloneNode(true));
   }
 
   connectedCallback() {

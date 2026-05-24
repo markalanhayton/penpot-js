@@ -21,6 +21,7 @@ template.innerHTML = `<style>
   <div class="penpot-ruler__ruler-v"><canvas id="v-canvas"></canvas></div>`;
 
 export class PenpotRulers extends PenpotElement {
+  _template = template;
   #zoom = 1;
   #panX = 0;
   #panY = 0;
@@ -30,15 +31,10 @@ export class PenpotRulers extends PenpotElement {
   #vCtx = null;
   #renderPending = false;
 
-  constructor() {
-    super();
-this.appendChild(template.content.cloneNode(true));
-    this.#hCanvas = this.querySelector('#h-canvas');
-    this.#vCanvas = this.querySelector('#v-canvas');
-  }
-
   connectedCallback() {
     super.connectedCallback();
+    this.#hCanvas = this.querySelector('#h-canvas');
+    this.#vCanvas = this.querySelector('#v-canvas');
     this.#hCtx = this.#hCanvas.getContext('2d');
     this.#vCtx = this.#vCanvas.getContext('2d');
   }

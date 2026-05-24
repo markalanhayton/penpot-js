@@ -1,0 +1,62 @@
+export const DEFAULTS = {
+  HTTP_PORT: 6061,
+  HOST: '0.0.0.0',
+  BROWSER_POOL_MAX: 5,
+  BROWSER_POOL_MIN: 0,
+  BROWSER_ACQUIRE_TIMEOUT_MS: 10000,
+  BROWSER_IDLE_TIMEOUT_MS: 10000,
+  BROWSER_EVICTION_INTERVAL_MS: 5000,
+  RENDER_TIMEOUT_MS: 30000,
+  RENDER_NAVIGATE_TIMEOUT_MS: 30000,
+  RENDER_SCREENSHOT_TIMEOUT_MS: 30000,
+  RENDER_FONT_LOAD_WAIT_MS: 2000,
+  RENDER_BATCH_SIZE: 50,
+  UPLOAD_TIMEOUT_MS: 30000,
+  EXPORT_LIMIT: 100,
+  CHROMIUM_ARGS: [
+    '--allow-insecure-localhost',
+    '--font-render-hinting=none',
+  ],
+  CONTEXT_OPTIONS: {
+    screen: { width: 1920, height: 1080 },
+    viewport: { width: 1920, height: 1080 },
+    locale: 'en-US',
+  },
+  VALID_TYPES: ['png', 'jpeg', 'webp', 'svg', 'pdf'],
+  MIME_TYPES: {
+    png: 'image/png',
+    jpeg: 'image/jpeg',
+    webp: 'image/webp',
+    svg: 'image/svg+xml',
+    pdf: 'application/pdf',
+    zip: 'application/zip',
+  },
+  EXTENSIONS: {
+    png: '.png',
+    jpeg: '.jpg',
+    webp: '.webp',
+    svg: '.svg',
+    pdf: '.pdf',
+  },
+};
+
+export function loadConfig(env = process.env) {
+  return {
+    publicUri: env.PENPOT_PUBLIC_URI || 'http://localhost:3449',
+    exporterHost: env.PENPOT_EXPORTER_HOST || DEFAULTS.HOST,
+    exporterPort: parseInt(env.PENPOT_EXPORTER_PORT, 10) || DEFAULTS.HTTP_PORT,
+    redisUri: env.PENPOT_EXPORTER_REDIS_URI || env.PENPOT_REDIS_URI || null,
+    secretKey: env.PENPOT_EXPORTER_SECRET_KEY || env.PENPOT_SECRET_KEY || null,
+    managementKey: env.PENPOT_EXPORTER_MANAGEMENT_KEY || env.PENPOT_MANAGEMENT_KEY || null,
+    browserPoolMax: parseInt(env.PENPOT_BROWSER_POOL_MAX, 10) || DEFAULTS.BROWSER_POOL_MAX,
+    browserPoolMin: parseInt(env.PENPOT_BROWSER_POOL_MIN, 10) || DEFAULTS.BROWSER_POOL_MIN,
+    browserAcquireTimeout: parseInt(env.PENPOT_BROWSER_ACQUIRE_TIMEOUT, 10) || DEFAULTS.BROWSER_ACQUIRE_TIMEOUT_MS,
+    browserIdleTimeout: parseInt(env.PENPOT_BROWSER_IDLE_TIMEOUT, 10) || DEFAULTS.BROWSER_IDLE_TIMEOUT_MS,
+    renderTimeout: parseInt(env.PENPOT_RENDER_TIMEOUT, 10) || DEFAULTS.RENDER_TIMEOUT_MS,
+    renderBatchSize: parseInt(env.PENPOT_RENDER_BATCH_SIZE, 10) || DEFAULTS.RENDER_BATCH_SIZE,
+    uploadTimeout: parseInt(env.PENPOT_UPLOAD_TIMEOUT, 10) || DEFAULTS.UPLOAD_TIMEOUT_MS,
+    exportLimit: parseInt(env.PENPOT_EXPORT_LIMIT, 10) || DEFAULTS.EXPORT_LIMIT,
+    enableSvgo: env.PENPOT_FLAGS?.includes('enable-exporter-svgo') ?? true,
+    debug: env.PENPOT_EXPORTER_DEBUG === 'true',
+  };
+}

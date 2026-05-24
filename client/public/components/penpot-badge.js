@@ -16,21 +16,21 @@ template.innerHTML = `<style>
   <span class="penpot-badge__badge penpot-badge__badge--default" id="badge"><slot></slot></span>`;
 
 export class PenpotBadge extends PenpotElement {
+  _template = template;
   static get observedAttributes() { return ['variant']; }
 
   constructor() {
     super();
-this.appendChild(template.content.cloneNode(true));
   }
 
-  connectedCallback() { this.#update(); }
+  connectedCallback() { super.connectedCallback(); this.#update(); }
   attributeChangedCallback() { this.#update(); }
 
   #update() {
     const badge = this.querySelector('#badge');
     if (!badge) return;
     const variant = this.getAttribute('variant') || 'default';
-    badge.className = `penpot-badge__badge badge--${variant}`;
+    badge.className = `penpot-badge__badge penpot-badge__badge--${variant}`;
   }
 
   render() {}

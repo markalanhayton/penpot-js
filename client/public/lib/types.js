@@ -15,6 +15,7 @@ export const STROKE_JOIN_TYPES = ['round', 'bevel', 'miter'];
 export const BLEND_MODES = ['normal', 'darken', 'multiply', 'color-burn', 'lighten', 'screen', 'color-dodge', 'overlay', 'soft-light', 'hard-light', 'difference', 'exclusion', 'hue', 'saturation', 'color', 'luminosity'];
 
 export function createShape(type, overrides = {}) {
+  const isContainer = type === 'frame' || type === 'group' || type === 'bool';
   return {
     id: crypto.randomUUID(),
     type,
@@ -30,6 +31,7 @@ export function createShape(type, overrides = {}) {
     shadows: [],
     constraintsH: 'scale',
     constraintsV: 'scale',
+    ...(isContainer ? { shapes: [] } : {}),
     ...overrides,
   };
 }
@@ -48,6 +50,7 @@ export function createPage(id, name = 'Page 1', overrides = {}) {
     id: id || crypto.randomUUID(),
     name,
     objects: {},
+    shapes: [],
     ...overrides,
   };
 }

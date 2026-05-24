@@ -20,14 +20,14 @@ template.innerHTML = `<style>
   </div>`;
 
 export class PenpotForm extends PenpotElement {
+  _template = template;
   static get observedAttributes() { return ['error', 'hint']; }
 
   constructor() {
     super();
-this.appendChild(template.content.cloneNode(true));
   }
 
-  connectedCallback() { this.#update(); }
+  connectedCallback() { super.connectedCallback(); this.#update(); }
   attributeChangedCallback() { this.#update(); }
 
   #update() {

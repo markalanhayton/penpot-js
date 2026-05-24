@@ -94,17 +94,14 @@ template.innerHTML = `<style>
   <button><span class="penpot-btn__spinner"></span><slot></slot></button>`;
 
 export class PenpotButton extends PenpotElement {
+  _template = template;
   static get observedAttributes() { return ['disabled', 'loading', 'variant', 'size']; }
 
-  constructor() {
-    super();
-this.appendChild(template.content.cloneNode(true));
-  }
-
-  connectedCallback() {
-    super.connectedCallback();
-    this.querySelector('button').addEventListener('click', () => {
-      if (!this.loading) this.emit('penpot-button-click', {});
+  bindListeners() {
+    this.addEventListener('click', () => {
+      if (!this.loading && !this.disabled) {
+        this.emit('penpot-button-click', {});
+      }
     });
   }
 

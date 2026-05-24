@@ -111,8 +111,34 @@ export function subscribeTeam(teamId) {
   sendWS('subscribe-team', { 'team-id': teamId });
 }
 
-export function sendPointerUpdate(fileId, x, y, pageId) {
-  sendWS('pointer-update', { 'file-id': fileId, x, y, page: pageId });
+export function sendPointerUpdate(fileId, x, y, pageId, selectedIds) {
+  const msg = { 'file-id': fileId, x, y, page: pageId };
+  if (selectedIds && selectedIds.length > 0) {
+    msg['selected-ids'] = selectedIds;
+  }
+  sendWS('pointer-update', msg);
+}
+
+let selectionUpdateTimer = null;
+let pendingSelectionUpdate = null;
+const SELECTION_UPDATE_THROTTLE = 500;
+
+export function sendSelectionUpdate(fileId, pageId, selectedIds) {
+  pendingSelectionUpdate = { fileId, pageId, selectedIds: [...selectedIds] };
+  if (!selectionUpdateTimer) {
+    selectionUpdateTimer = setTimeout(() => {
+      if (pendingSelectionUpdate) {
+        const { fileId: fId, pageId: pId, selectedIds: sIds } = pendingSelectionUpdate;
+        sendWS('selection-update', {
+          'file-id': fId,
+          page: pId,
+          'selected-ids': sIds,
+        });
+        pendingSelectionUpdate = null;
+      }
+      selectionUpdateTimer = null;
+    }, SELECTION_UPDATE_THROTTLE);
+  }
 }
 
 export function joinFile(fileId) {
@@ -180,6 +206,9 @@ function handleMessage(data) {
     case 'pointer-update':
       handlePointerUpdate(data);
       break;
+    case 'selection-update':
+      handleSelectionUpdate(data);
+      break;
     case 'file-change':
       handleFileChange(data);
       break;
@@ -233,6 +262,28 @@ function handlePointerUpdate(data) {
     x: data.x || 0,
     y: data.y || 0,
     page: data.page || data['page-id'] || data.pageId,
+    selectedIds: data['selected-ids'] || data.selectedIds || [],
+    color: existing?.color || getCursorColor(profileId),
+    timestamp: Date.now(),
+  });
+
+  appStore.set('cursorPositions', [...cursorPositions.values()]);
+}
+
+function handleSelectionUpdate(data) {
+  const profileId = data['profile-id'] || data.profileId;
+  if (!profileId) return;
+
+  const existing = onlineUsers.get(profileId);
+  const name = data['profile-name'] || data.profileName || existing?.name || 'Unknown';
+
+  const existingCursor = cursorPositions.get(profileId);
+  cursorPositions.set(profileId, {
+    ...(existingCursor || {}),
+    id: profileId,
+    name,
+    page: data.page || data['page-id'] || data.pageId,
+    selectedIds: data['selected-ids'] || data.selectedIds || [],
     color: existing?.color || getCursorColor(profileId),
     timestamp: Date.now(),
   });
@@ -243,6 +294,11 @@ function handlePointerUpdate(data) {
 function handleFileChange(data) {
   const fileId = data['file-id'] || data.fileId;
   const changeType = data['change-type'] || data.changeType || data.type;
+  const senderSessionId = data['session-id'] || data.sessionId;
+  const currentSessionId = appStore.get('currentSessionId');
+
+  if (senderSessionId && currentSessionId && senderSessionId === currentSessionId) return;
+
   dispatch('ws-file-change', { fileId, changeType, data });
 }
 

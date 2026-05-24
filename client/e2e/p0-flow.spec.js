@@ -27,7 +27,7 @@ test.describe('Full P0 Flow: Login → Dashboard → Create File → Workspace',
     const teamSidebar = page.locator('penpot-dashboard').locator('penpot-team-sidebar');
     await expect(teamSidebar).toBeVisible({ timeout: 10000 });
 
-    const teams = teamSidebar.locator('.team-item');
+    const teams = teamSidebar.locator('.penpot-team__team-item');
     await expect(teams.first()).toBeVisible({ timeout: 5000 });
   });
 

@@ -18,14 +18,15 @@ template.innerHTML = `<style>
   <div id="panels"><slot></slot></div>`;
 
 export class PenpotTabs extends PenpotElement {
+  _template = template;
   static get observedAttributes() { return ['selected']; }
 
   constructor() {
     super();
-this.appendChild(template.content.cloneNode(true));
   }
 
   connectedCallback() {
+    super.connectedCallback();
     this.#renderTabs();
     this.#showPanel(this.selected);
   }

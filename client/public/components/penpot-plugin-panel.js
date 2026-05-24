@@ -43,12 +43,12 @@ template.innerHTML = `<style>
   </div>`;
 
 export class PenpotPluginPanel extends PenpotElement {
+  _template = template;
   #pluginManager = null;
   #plugins = [];
 
   constructor() {
     super();
-this.appendChild(template.content.cloneNode(true));
   }
 
   connectedCallback() {

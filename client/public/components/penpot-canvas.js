@@ -1,5 +1,6 @@
 import { PenpotElement } from './base.js';
 import { renderPage, renderEmptyCanvas } from '../lib/shapes.js';
+import { Canvas2DRenderer } from '../lib/canvas2d-renderer.js';
 import './penpot-rulers.js';
 
 const template = document.createElement('template');
@@ -24,19 +25,21 @@ template.innerHTML = `<style>
   <div class="penpot-canvas__zoom-indicator" id="zoom-indicator">100%</div>`;
 
 export class PenpotCanvas extends PenpotElement {
+  _template = template;
   #zoom = 1;
   #panX = 0;
   #panY = 0;
   #isPanning = false;
   #lastPointer = null;
   #svgEl = null;
+  #canvas2d = null;
+  #renderMode = 'svg';
   #boundHandlers = {};
 
   static get observedAttributes() { return ['zoom']; }
 
   constructor() {
     super();
-this.appendChild(template.content.cloneNode(true));
   }
 
   connectedCallback() {
@@ -50,6 +53,8 @@ this.appendChild(template.content.cloneNode(true));
     container.addEventListener('pointerdown', this.#boundHandlers.pointerdown);
     container.addEventListener('pointermove', this.#boundHandlers.pointermove);
     container.addEventListener('pointerup', this.#boundHandlers.pointerup);
+    this.#boundHandlers.click = (e) => this.#handleClick(e);
+    container.addEventListener('click', this.#boundHandlers.click);
   }
 
   disconnectedCallback() {
@@ -59,6 +64,7 @@ this.appendChild(template.content.cloneNode(true));
       container.removeEventListener('pointerdown', this.#boundHandlers.pointerdown);
       container.removeEventListener('pointermove', this.#boundHandlers.pointermove);
       container.removeEventListener('pointerup', this.#boundHandlers.pointerup);
+      container.removeEventListener('click', this.#boundHandlers.click);
     }
     this.#boundHandlers = {};
     super.disconnectedCallback && super.disconnectedCallback();
@@ -128,7 +134,7 @@ this.appendChild(template.content.cloneNode(true));
     if (msg) msg.style.display = 'none';
   }
 
-  renderPage(page) {
+  renderPage(page, selectedIds = []) {
     this.clear();
     const container = this.querySelector('#container');
     if (!page) { this.showEmpty(); return; }
@@ -141,16 +147,46 @@ this.appendChild(template.content.cloneNode(true));
       return;
     }
 
-    this.#svgEl = renderPage(page);
-    this.#applyTransform();
-    container.appendChild(this.#svgEl);
-    const msg = this.querySelector('#message');
-    if (msg) msg.style.display = 'none';
+    if (this.#renderMode === 'canvas2d' && shapes.length > 100) {
+      let canvasEl = container.querySelector('canvas');
+      if (!canvasEl) {
+        canvasEl = document.createElement('canvas');
+        canvasEl.style.width = '100%';
+        canvasEl.style.height = '100%';
+        canvasEl.style.position = 'absolute';
+        canvasEl.style.top = '0';
+        canvasEl.style.left = '0';
+        container.appendChild(canvasEl);
+      }
+      if (!this.#canvas2d) {
+        this.#canvas2d = new Canvas2DRenderer(canvasEl);
+      }
+      this.#canvas2d.setZoom(this.#zoom);
+      this.#canvas2d.setPan(this.#panX, this.#panY);
+      this.#canvas2d.renderPage(page, selectedIds);
+      const msg = this.querySelector('#message');
+      if (msg) msg.style.display = 'none';
+    } else {
+      this.#svgEl = renderPage(page, undefined, selectedIds);
+      this.#applyTransform();
+      container.appendChild(this.#svgEl);
+      const msg = this.querySelector('#message');
+      if (msg) msg.style.display = 'none';
+    }
+  }
+
+  setRenderMode(mode) {
+    this.#renderMode = mode;
+    if (mode !== 'canvas2d' && this.#canvas2d) {
+      this.#canvas2d.destroy();
+      this.#canvas2d = null;
+    }
   }
 
   showSelection(selectedIds) {
     if (!this.#svgEl) return;
     this.#svgEl.querySelectorAll('.penpot-canvas__penpot-selection-handle').forEach(el => el.remove());
+    this.#svgEl.querySelectorAll('.penpot-canvas__gradient-handle').forEach(el => el.remove());
     if (!selectedIds || selectedIds.size === 0) return;
     const NS = 'http://www.w3.org/2000/svg';
     const ids = Array.isArray(selectedIds) ? selectedIds : [...selectedIds];
@@ -172,6 +208,135 @@ this.appendChild(template.content.cloneNode(true));
         this.#svgEl.appendChild(selRect);
       } catch {}
     }
+  }
+
+  showGradientHandles(shapes, selectedIds) {
+    if (!this.#svgEl) return;
+    this.#svgEl.querySelectorAll('.penpot-canvas__gradient-handle').forEach(el => el.remove());
+    if (!selectedIds || selectedIds.size !== 1) return;
+    const NS = 'http://www.w3.org/2000/svg';
+    const id = Array.isArray(selectedIds) ? selectedIds[0] : [...selectedIds][0];
+    const shape = shapes.find(s => s.id === id);
+    if (!shape || !shape.fills || shape.fills.length === 0) return;
+    const fill = shape.fills[0];
+    const gradType = fill.fillType || fill.type;
+    if (gradType !== 'linear-gradient' && gradType !== 'radial-gradient') return;
+
+    const sx = fill.startX ?? (shape.x || 0);
+    const sy = fill.startY ?? (shape.y || 0);
+    const ex = fill.endX ?? ((shape.x || 0) + (shape.width || 100));
+    const ey = fill.endY ?? (shape.y || 0);
+
+    const line = document.createElementNS(NS, 'line');
+    line.classList.add('penpot-canvas__gradient-handle');
+    line.setAttribute('x1', String(sx));
+    line.setAttribute('y1', String(sy));
+    line.setAttribute('x2', String(ex));
+    line.setAttribute('y2', String(ey));
+    line.setAttribute('stroke', '#ffffff');
+    line.setAttribute('stroke-width', '2');
+    line.setAttribute('stroke-dasharray', '4,4');
+    line.setAttribute('pointer-events', 'none');
+    this.#svgEl.appendChild(line);
+
+    const startCircle = document.createElementNS(NS, 'circle');
+    startCircle.classList.add('penpot-canvas__gradient-handle');
+    startCircle.setAttribute('cx', String(sx));
+    startCircle.setAttribute('cy', String(sy));
+    startCircle.setAttribute('r', '5');
+    startCircle.setAttribute('fill', '#ffffff');
+    startCircle.setAttribute('stroke', '#31efb8');
+    startCircle.setAttribute('stroke-width', '2');
+    startCircle.setAttribute('data-gradient-handle', 'start');
+    startCircle.setAttribute('data-shape-id', id);
+    startCircle.style.cursor = 'grab';
+    this.#svgEl.appendChild(startCircle);
+
+    const endCircle = document.createElementNS(NS, 'circle');
+    endCircle.classList.add('penpot-canvas__gradient-handle');
+    endCircle.setAttribute('cx', String(ex));
+    endCircle.setAttribute('cy', String(ey));
+    endCircle.setAttribute('r', '5');
+    endCircle.setAttribute('fill', '#ffffff');
+    endCircle.setAttribute('stroke', '#31efb8');
+    endCircle.setAttribute('stroke-width', '2');
+    endCircle.setAttribute('data-gradient-handle', 'end');
+    endCircle.setAttribute('data-shape-id', id);
+    endCircle.style.cursor = 'grab';
+    this.#svgEl.appendChild(endCircle);
+  }
+
+  showMeasurements(shapes, selectedIds) {
+    if (!this.#svgEl) return;
+    this.#svgEl.querySelectorAll('.penpot-canvas__measurement').forEach(el => el.remove());
+    if (!selectedIds || selectedIds.size === 0) return;
+    const NS = 'http://www.w3.org/2000/svg';
+    const ids = Array.isArray(selectedIds) ? selectedIds : [...selectedIds];
+    if (ids.length !== 1) return;
+    const shape = shapes.find(s => s.id === ids[0]);
+    if (!shape) return;
+
+    const x = shape.x || 0;
+    const y = shape.y || 0;
+    const w = shape.width || 0;
+    const h = shape.height || 0;
+    const labelColor = '#31efb8';
+    const dimOffset = 12;
+
+    const wLine = document.createElementNS(NS, 'line');
+    wLine.classList.add('penpot-canvas__measurement');
+    wLine.setAttribute('x1', String(x));
+    wLine.setAttribute('y1', String(y - dimOffset));
+    wLine.setAttribute('x2', String(x + w));
+    wLine.setAttribute('y2', String(y - dimOffset));
+    wLine.setAttribute('stroke', labelColor);
+    wLine.setAttribute('stroke-width', '1');
+    wLine.setAttribute('stroke-dasharray', '2,2');
+    wLine.setAttribute('pointer-events', 'none');
+    this.#svgEl.appendChild(wLine);
+
+    const wLabel = document.createElementNS(NS, 'text');
+    wLabel.classList.add('penpot-canvas__measurement');
+    wLabel.setAttribute('x', String(x + w / 2));
+    wLabel.setAttribute('y', String(y - dimOffset - 4));
+    wLabel.setAttribute('fill', labelColor);
+    wLabel.setAttribute('font-size', '10');
+    wLabel.setAttribute('text-anchor', 'middle');
+    wLabel.setAttribute('pointer-events', 'none');
+    wLabel.textContent = `W: ${Math.round(w)}`;
+    this.#svgEl.appendChild(wLabel);
+
+    const hLine = document.createElementNS(NS, 'line');
+    hLine.classList.add('penpot-canvas__measurement');
+    hLine.setAttribute('x1', String(x + w + dimOffset));
+    hLine.setAttribute('y1', String(y));
+    hLine.setAttribute('x2', String(x + w + dimOffset));
+    hLine.setAttribute('y2', String(y + h));
+    hLine.setAttribute('stroke', labelColor);
+    hLine.setAttribute('stroke-width', '1');
+    hLine.setAttribute('stroke-dasharray', '2,2');
+    hLine.setAttribute('pointer-events', 'none');
+    this.#svgEl.appendChild(hLine);
+
+    const hLabel = document.createElementNS(NS, 'text');
+    hLabel.classList.add('penpot-canvas__measurement');
+    hLabel.setAttribute('x', String(x + w + dimOffset + 4));
+    hLabel.setAttribute('y', String(y + h / 2 + 4));
+    hLabel.setAttribute('fill', labelColor);
+    hLabel.setAttribute('font-size', '10');
+    hLabel.setAttribute('pointer-events', 'none');
+    hLabel.textContent = `H: ${Math.round(h)}`;
+    this.#svgEl.appendChild(hLabel);
+
+    const posLabel = document.createElementNS(NS, 'text');
+    posLabel.classList.add('penpot-canvas__measurement');
+    posLabel.setAttribute('x', String(x));
+    posLabel.setAttribute('y', String(y - dimOffset - 16));
+    posLabel.setAttribute('fill', '#999');
+    posLabel.setAttribute('font-size', '9');
+    posLabel.setAttribute('pointer-events', 'none');
+    posLabel.textContent = `X:${Math.round(x)} Y:${Math.round(y)}`;
+    this.#svgEl.appendChild(posLabel);
   }
 
   panBy(dx, dy) {
@@ -236,6 +401,12 @@ this.appendChild(template.content.cloneNode(true));
   #handlePointerUp(e) {
     this.#isPanning = false;
     this.#lastPointer = null;
+  }
+
+  #handleClick(e) {
+    if (this.#isPanning) return;
+    const pos = this.screenToCanvas(e.clientX, e.clientY);
+    this.emit('penpot-canvas-click', { x: pos.x, y: pos.y });
   }
 
   render() {}

@@ -1,0 +1,1 @@
+export const BLUR_TYPES = new Set(['layer-blur', 'background-blur']);

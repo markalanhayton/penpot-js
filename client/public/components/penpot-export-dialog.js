@@ -3,6 +3,8 @@ import { exportAndDownload } from '../lib/export.js';
 
 const FORMATS = [
   { id: 'png', label: 'PNG', desc: 'Raster image with transparency' },
+  { id: 'jpeg', label: 'JPEG', desc: 'Compressed raster, smaller file' },
+  { id: 'webp', label: 'WebP', desc: 'Modern raster, great compression' },
   { id: 'svg', label: 'SVG', desc: 'Vector image, scalable' },
   { id: 'pdf', label: 'PDF', desc: 'Print-ready document' },
 ];
@@ -18,7 +20,7 @@ template.innerHTML = `<style>
     .penpot-export__dialog-close { background: none; border: none; color: #999; font-size: 20px; cursor: pointer; padding: 4px; line-height: 1; }
     .penpot-export__dialog-close:hover { color: #e6e6e6; }
     .penpot-export__dialog-body { padding: 20px; }
-    .penpot-export__format-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+    .penpot-export__format-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 16px; }
     .penpot-export__format-option { padding: 12px; border: 2px solid var(--export-border); border-radius: 6px; cursor: pointer; text-align: center; transition: border-color 0.15s, background 0.15s; }
     .penpot-export__format-option:hover { border-color: #666; background: #333; }
     .penpot-export__format-option.penpot-export__selected { border-color: var(--export-primary); background: rgba(49,239,184,0.08); }
@@ -35,6 +37,10 @@ template.innerHTML = `<style>
     .penpot-export__preview-area { width: 100%; aspect-ratio: 16/10; background: #1c1c1c; border: 1px solid var(--export-border); border-radius: 4px; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
     .penpot-export__preview-area img { max-width: 100%; max-height: 100%; object-fit: contain; }
     .penpot-export__preview-placeholder { color: #666; font-size: 12px; }
+    .penpot-export__page-select { background: #333; border: 1px solid #555; border-radius: 4px; color: #e6e6e6; padding: 4px 8px; font-size: 12px; outline: none; width: 100%; box-sizing: border-box; margin-bottom: 12px; }
+    .penpot-export__page-select:focus { border-color: var(--export-primary); }
+    .penpot-export__export-all { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; font-size: 11px; color: #999; }
+    .penpot-export__export-all input[type="checkbox"] { accent-color: var(--export-primary); }
     .penpot-export__dialog-footer { padding: 12px 20px; border-top: 1px solid var(--export-border); display: flex; gap: 8px; justify-content: flex-end; }
     .penpot-export__btn { padding: 8px 16px; border-radius: 4px; font-size: 12px; cursor: pointer; border: 1px solid var(--export-border); background: none; color: #e6e6e6; }
     .penpot-export__btn:hover { background: #333; }
@@ -52,6 +58,8 @@ template.innerHTML = `<style>
         <button class="penpot-export__dialog-close" id="close">&times;</button>
       </div>
       <div class="penpot-export__dialog-body">
+        <select class="penpot-export__page-select" id="page-select"></select>
+        <label class="penpot-export__export-all"><input type="checkbox" id="export-all" checked> Export all pages</label>
         <div class="penpot-export__format-grid" id="format-grid"></div>
         <div class="penpot-export__option-row">
           <span class="penpot-export__option-label">Scale</span>
@@ -70,6 +78,10 @@ template.innerHTML = `<style>
           <span class="penpot-export__option-label">Background</span>
           <input class="penpot-export__option-input" id="bg-input" type="color" value="#ffffff">
         </div>
+        <div class="penpot-export__option-row" id="quality-row" style="display:none;">
+          <span class="penpot-export__option-label">Quality <span id="quality-value">92</span>%</span>
+          <input class="penpot-export__option-input" id="quality-input" type="range" min="10" max="100" value="92" style="width:120px;">
+        </div>
         <div class="penpot-export__preview-area" id="preview">
           <span class="penpot-export__preview-placeholder">Preview will appear here</span>
         </div>
@@ -82,23 +94,23 @@ template.innerHTML = `<style>
   </div>`;
 
 export class PenpotExportDialog extends PenpotElement {
+  _template = template;
   #format = 'png';
   #scale = 2;
   #width = 1200;
   #background = '#ffffff';
+  #quality = 0.92;
   #page = null;
+  #pages = [];
+  #selectedShape = null;
+  #shapeExports = null;
   #exporting = false;
 
   static get observedAttributes() { return ['open']; }
 
-  constructor() {
-    super();
-this.appendChild(template.content.cloneNode(true));
-    this.style.display = 'none';
-  }
-
   connectedCallback() {
     super.connectedCallback();
+    this.style.display = 'none';
     const formatGrid = this.querySelector('#format-grid');
     FORMATS.forEach(f => {
       const div = document.createElement('div');
@@ -108,6 +120,10 @@ this.appendChild(template.content.cloneNode(true));
       div.addEventListener('click', () => {
         this.#format = f.id;
         formatGrid.querySelectorAll('.penpot-export__format-option').forEach(el => el.classList.toggle('penpot-export__selected', el.dataset.format === f.id));
+        const isRaster = ['png', 'jpeg', 'webp'].includes(f.id);
+        this.querySelector('#quality-row').style.display = isRaster ? '' : 'none';
+        const bgRow = this.querySelector('#bg-input').closest('.penpot-export__option-row');
+        if (bgRow) bgRow.style.display = f.id === 'svg' ? 'none' : '';
       });
       formatGrid.appendChild(div);
     });
@@ -125,6 +141,13 @@ this.appendChild(template.content.cloneNode(true));
       if (e.target === e.currentTarget) this.close();
     });
     this.querySelector('#export-btn').addEventListener('click', () => this.#doExport());
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.style.display !== 'none') {
+        this.close();
+      }
+    });
+
     this.querySelector('#width-input').addEventListener('change', (e) => {
       this.#width = parseInt(e.target.value, 10) || 1200;
     });
@@ -132,10 +155,11 @@ this.appendChild(template.content.cloneNode(true));
       this.#background = e.target.value;
     });
 
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && this.style.display !== 'none') {
-        this.close();
-      }
+    const qualityInput = this.querySelector('#quality-input');
+    const qualityValue = this.querySelector('#quality-value');
+    qualityInput.addEventListener('input', () => {
+      this.#quality = parseInt(qualityInput.value, 10) / 100;
+      qualityValue.textContent = qualityInput.value;
     });
   }
 
@@ -149,8 +173,50 @@ this.appendChild(template.content.cloneNode(true));
     this.#page = val;
   }
 
+  set pages(val) {
+    this.#pages = val || [];
+    this.#updatePageSelect();
+  }
+
+  set selectedShape(val) {
+    this.#selectedShape = val;
+  }
+
+  set shapeExports(val) {
+    this.#shapeExports = val;
+  }
+
+  get pages() { return this.#pages; }
+
+  #updatePageSelect() {
+    const select = this.querySelector('#page-select');
+    if (!select) return;
+    select.innerHTML = '';
+    if (this.#pages.length <= 1) {
+      select.style.display = 'none';
+      const exportAll = this.querySelector('#export-all');
+      if (exportAll) exportAll.parentElement.style.display = 'none';
+      return;
+    }
+    select.style.display = '';
+    const exportAll = this.querySelector('#export-all');
+    if (exportAll) exportAll.parentElement.style.display = '';
+    const allOpt = document.createElement('option');
+    allOpt.value = '__all__';
+    allOpt.textContent = `All Pages (${this.#pages.length})`;
+    select.appendChild(allOpt);
+    for (const page of this.#pages) {
+      const opt = document.createElement('option');
+      opt.value = page.id;
+      opt.textContent = page.name || 'Untitled Page';
+      select.appendChild(opt);
+    }
+    select.value = '__all__';
+  }
+
   open(page) {
     if (page) this.#page = page;
+    if (this.#pages.length > 0) this.#updatePageSelect();
     this.style.display = '';
     this.setAttribute('open', '');
   }
@@ -162,21 +228,45 @@ this.appendChild(template.content.cloneNode(true));
   }
 
   async #doExport() {
-    if (this.#exporting || !this.#page) return;
+    if (this.#exporting) return;
     this.#exporting = true;
     const btn = this.querySelector('#export-btn');
     btn.disabled = true;
     btn.innerHTML = '<span class="penpot-export__loading-spinner"></span>Exporting...';
 
     try {
-      const filename = `penpot-export.${this.#format}`;
-      await exportAndDownload(this.#page, this.#format, {
-        scale: this.#scale,
-        width: this.#width,
-        background: this.#background,
-        filename,
-      });
-      this.emit('penpot-export-success', { format: this.#format, filename });
+      const exportAll = this.querySelector('#export-all')?.checked ?? true;
+      const pageSelect = this.querySelector('#page-select');
+      const selectedPageId = pageSelect ? pageSelect.value : '__all__';
+
+      let pagesToExport = [];
+      if (this.#pages.length > 1 && selectedPageId === '__all__' && exportAll) {
+        pagesToExport = this.#pages;
+      } else if (this.#pages.length > 1 && selectedPageId !== '__all__') {
+        const found = this.#pages.find(p => p.id === selectedPageId);
+        pagesToExport = found ? [found] : (this.#page ? [this.#page] : []);
+      } else {
+        pagesToExport = this.#page ? [this.#page] : [];
+      }
+
+      if (pagesToExport.length === 0) {
+        this.emit('penpot-export-error', { error: 'No page to export' });
+        return;
+      }
+
+      for (const page of pagesToExport) {
+        const filename = pagesToExport.length > 1
+          ? `${(page.name || 'page').replace(/[^a-zA-Z0-9_-]/g, '_')}.${this.#format}`
+          : `penpot-export.${this.#format}`;
+        await exportAndDownload(page, this.#format, {
+          scale: this.#scale,
+          width: this.#width,
+          background: this.#background,
+          quality: this.#quality,
+          filename,
+        });
+      }
+      this.emit('penpot-export-success', { format: this.#format, pageCount: pagesToExport.length });
     } catch (err) {
       console.error('[export] Export failed:', err);
       this.emit('penpot-export-error', { error: err.message });

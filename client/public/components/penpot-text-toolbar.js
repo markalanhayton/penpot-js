@@ -1,6 +1,6 @@
 import { PenpotElement } from './base.js';
 
-const FONTS = [
+const SYSTEM_FONTS = [
   { label: 'Sans Serif', value: 'sans-serif' },
   { label: 'Serif', value: 'serif' },
   { label: 'Monospace', value: 'monospace' },
@@ -39,18 +39,50 @@ template.innerHTML = `<style>
   <button class="penpot-ttoolbar__tb-btn" id="align-right-btn" title="Align right">&#8678;</button>`;
 
 export class PenpotTextToolbar extends PenpotElement {
+  _template = template;
   #shape = null;
   #visible = false;
+  #teamFonts = [];
 
-  constructor() {
-    super();
-this.appendChild(template.content.cloneNode(true));
+  set teamFonts(val) {
+    this.#teamFonts = val || [];
+    this.#rebuildFontSelect();
+  }
 
+  get teamFonts() { return this.#teamFonts; }
+
+  #buildFontList() {
+    const teamFontEntries = this.#teamFonts.map(f => ({
+      value: f.fontFamily,
+      label: `★ ${f.fontFamily}`,
+    }));
+    return [...SYSTEM_FONTS, ...teamFontEntries];
+  }
+
+  #rebuildFontSelect() {
     const fontSelect = this.querySelector('#font-family');
-    for (const f of FONTS) {
+    if (!fontSelect) return;
+    const currentVal = fontSelect.value;
+    fontSelect.innerHTML = '';
+    for (const f of this.#buildFontList()) {
       const opt = document.createElement('option');
       opt.value = f.value;
       opt.textContent = f.label;
+      opt.style.fontFamily = f.value;
+      fontSelect.appendChild(opt);
+    }
+    if (currentVal) fontSelect.value = currentVal;
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+
+    const fontSelect = this.querySelector('#font-family');
+    for (const f of SYSTEM_FONTS) {
+      const opt = document.createElement('option');
+      opt.value = f.value;
+      opt.textContent = f.label;
+      opt.style.fontFamily = f.value;
       fontSelect.appendChild(opt);
     }
 

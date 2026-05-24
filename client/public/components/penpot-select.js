@@ -31,6 +31,7 @@ template.innerHTML = `<style>
   <div class="penpot-select__select-menu" id="menu"></div>`;
 
 export class PenpotSelect extends PenpotElement {
+  _template = template;
   static get observedAttributes() { return ['value', 'placeholder', 'disabled']; }
 
   #open = false;
@@ -38,10 +39,10 @@ export class PenpotSelect extends PenpotElement {
 
   constructor() {
     super();
-this.appendChild(template.content.cloneNode(true));
   }
 
   connectedCallback() {
+    super.connectedCallback();
     const trigger = this.querySelector('#trigger');
     const overlay = this.querySelector('#overlay');
 

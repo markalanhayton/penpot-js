@@ -28,11 +28,11 @@ template.innerHTML = `<style>
   </div>`;
 
 export class PenpotShadowEditor extends PenpotElement {
+  _template = template;
   #shadows = [];
 
-  constructor() {
-    super();
-this.appendChild(template.content.cloneNode(true));
+  connectedCallback() {
+    super.connectedCallback();
     this.querySelector('#add-shadow').addEventListener('click', () => {
       this.#shadows.push({ style: 'drop-shadow', color: '#000000', offsetX: 0, offsetY: 4, blur: 8, spread: 0, opacity: 0.3 });
       this.#render();

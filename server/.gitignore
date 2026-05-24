@@ -1,0 +1,7 @@
+node_modules/
+penpot.sqlite
+penpot.sqlite-shm
+penpot.sqlite-wal
+assets/
+.env
+*.mjs

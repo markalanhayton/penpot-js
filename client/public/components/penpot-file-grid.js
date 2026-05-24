@@ -26,6 +26,7 @@ template.innerHTML = `<style>
   <div id="container"></div>`;
 
 export class PenpotFileGrid extends PenpotElement {
+  _template = template;
   #files = [];
   #projectId = null;
   #loading = false;
@@ -34,7 +35,6 @@ export class PenpotFileGrid extends PenpotElement {
 
   constructor() {
     super();
-this.appendChild(template.content.cloneNode(true));
   }
 
   connectedCallback() {
@@ -91,7 +91,7 @@ this.appendChild(template.content.cloneNode(true));
 
     for (const file of this.#files) {
       const modified = file.modifiedAt ? new Date(file.modifiedAt).toLocaleDateString() : '';
-      const thumbSrc = file.thumbnailUrl || '';
+      const thumbSrc = file.thumbnailUrl || file.thumbnail || '';
       html += `<div class="penpot-fgrid__file-card" data-file-id="${this.escAttr(file.id)}">
         <div class="penpot-fgrid__file-thumb">
           ${thumbSrc ? `<img src="${this.escAttr(thumbSrc)}" alt="" loading="lazy">` : '<span class="penpot-fgrid__file-icon">\u270E</span>'}
@@ -110,7 +110,7 @@ this.appendChild(template.content.cloneNode(true));
       this.emit('penpot-create-file', { projectId: this.#projectId });
     });
 
-    this.querySelectorAll('.file-card[data-file-id]').forEach(el => {
+    this.querySelectorAll('.penpot-fgrid__file-card[data-file-id]').forEach(el => {
       el.addEventListener('click', () => {
         const fileId = el.dataset.fileId;
         this.emit('penpot-open-file', { fileId });

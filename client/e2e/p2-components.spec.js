@@ -104,20 +104,20 @@ test.describe('P2 Design System Components', () => {
     await page.goto('/preview/');
     const dropdown = page.locator('penpot-dropdown').first();
     await expect(dropdown).toBeVisible();
-    const trigger = dropdown.locator('.dropdown-trigger');
+    const trigger = dropdown.locator('.penpot-dd__dropdown-trigger');
     await trigger.click();
-    const menu = dropdown.locator('.dropdown-menu');
-    await expect(menu).toHaveClass(/open/);
+    const menu = dropdown.locator('.penpot-dd__dropdown-menu');
+    await expect(menu).toHaveClass(/penpot-dd__open/);
   });
 
   test('select opens and shows options', async ({ page }) => {
     await page.goto('/preview/');
     const select = page.locator('penpot-select').first();
     await expect(select).toBeVisible();
-    const trigger = select.locator('.select-trigger');
+    const trigger = select.locator('.penpot-select__select-trigger');
     await trigger.click();
-    const menu = select.locator('.select-menu');
-    await expect(menu).toHaveClass(/open/);
+    const menu = select.locator('.penpot-select__select-menu');
+    await expect(menu).toHaveClass(/penpot-select__open/);
   });
 
   test('notification triggers on button click', async ({ page }) => {

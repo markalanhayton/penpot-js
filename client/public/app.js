@@ -41,6 +41,8 @@ import './components/penpot-settings.js';
 import './components/penpot-text-toolbar.js';
 import './components/penpot-gradient-editor.js';
 import './components/penpot-shadow-editor.js';
+import './components/penpot-version-panel.js';
+import './components/penpot-shortcuts-reference.js';
 import './components/penpot-workspace.js';
 import './components/penpot-viewer.js';
 import { init, subscribe, current, navigate } from './lib/router.js';
@@ -83,6 +85,7 @@ function render(route) {
       break;
     case 'settings-profile':
     case 'settings-password':
+    case 'settings-tokens':
     case 'settings-feedback':
       currentEl = document.createElement('penpot-settings');
       currentEl.setAttribute('section', route.name.replace('settings-', ''));
@@ -98,6 +101,12 @@ function render(route) {
   }
 
   app.appendChild(currentEl);
+
+  currentEl.addEventListener('navigate', (e) => {
+    if (e.detail && e.detail.route) {
+      navigate(e.detail.route);
+    }
+  });
 }
 
 async function bootstrap() {

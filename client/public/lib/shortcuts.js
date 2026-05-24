@@ -42,6 +42,7 @@ export const DEFAULT_SHORTCUTS = [
   { key: 'd', modifiers: { ctrl: true, alt: true, shift: true }, description: 'Detach instance' },
   { key: 'k', modifiers: { ctrl: true, alt: true, shift: true }, description: 'Sync instance to main' },
   { key: 'i', modifiers: { ctrl: true, shift: true }, description: 'Import .penpot file' },
+  { key: '/', modifiers: { ctrl: true }, description: 'Show keyboard shortcuts' },
 ];
 
 export function registerShortcut(key, modifiers, action, description = '') {
@@ -195,6 +196,7 @@ export function wireShortcuts(toolManager, workspaceEl) {
             s.key === 'd' && s.modifiers.ctrl && s.modifiers.alt && s.modifiers.shift ? () => { if (workspaceEl && typeof workspaceEl.detachSelectedInstance === 'function') workspaceEl.detachSelectedInstance(); } :
             s.key === 'k' && s.modifiers.ctrl && s.modifiers.alt && s.modifiers.shift ? () => { if (workspaceEl && typeof workspaceEl.syncSelectedInstance === 'function') workspaceEl.syncSelectedInstance(); } :
             s.key === 'i' && s.modifiers.ctrl && s.modifiers.shift ? () => { if (workspaceEl && typeof workspaceEl.importPenpotFile === 'function') workspaceEl.importPenpotFile(); } :
+            s.key === '/' && s.modifiers.ctrl ? () => { const ref = workspaceEl?.querySelector('#shortcuts-ref'); if (ref) ref.open(); } :
             () => {},
   }));
 

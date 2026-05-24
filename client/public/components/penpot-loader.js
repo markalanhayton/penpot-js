@@ -12,14 +12,14 @@ template.innerHTML = `<style>
   <div class="penpot-loader__spinner" role="status"><span class="penpot-loader__sr-only">Loading...</span></div>`;
 
 export class PenpotLoader extends PenpotElement {
+  _template = template;
   static get observedAttributes() { return ['size', 'color']; }
 
   constructor() {
     super();
-this.appendChild(template.content.cloneNode(true));
   }
 
-  connectedCallback() { this.#update(); }
+  connectedCallback() { super.connectedCallback(); this.#update(); }
   attributeChangedCallback() { this.#update(); }
 
   #update() {

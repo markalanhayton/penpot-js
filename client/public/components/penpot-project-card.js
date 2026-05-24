@@ -29,13 +29,13 @@ template.innerHTML = `<style>
   </div>`;
 
 export class PenpotProjectCard extends PenpotElement {
+  _template = template;
   #project = null;
 
   static get observedAttributes() { return ['project-id', 'project-name', 'file-count']; }
 
   constructor() {
     super();
-this.appendChild(template.content.cloneNode(true));
   }
 
   connectedCallback() {

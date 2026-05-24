@@ -151,7 +151,17 @@ function detachShape(shape) {
   return result;
 }
 
-export { extractComponentsFromFile, findComponentInstances, isComponentMain, isComponentInstance };
+function swapInstanceComponent(instanceShape, newComponentId, newComponentFile) {
+  const swapped = { ...instanceShape };
+  swapped['component-id'] = newComponentId;
+  if (newComponentFile) swapped['component-file'] = newComponentFile;
+  const touched = new Set(instanceShape.touched || []);
+  touched.add(`swap-slot-${newComponentId}`);
+  swapped.touched = touched;
+  return swapped;
+}
+
+export { extractComponentsFromFile, findComponentInstances, isComponentMain, isComponentInstance, swapInstanceComponent };
 
 function extractComponentsFromFile(fileData) {
   const components = fileData?.data?.components || fileData?.components || {};

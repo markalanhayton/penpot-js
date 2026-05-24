@@ -9,9 +9,11 @@ export class History {
   #stack = [];
   #index = -1;
   #maxSize = 100;
+  #onChange = null;
 
-  constructor(maxSize = 100) {
+  constructor(maxSize = 100, onChange = null) {
     this.#maxSize = maxSize;
+    this.#onChange = onChange;
   }
 
   push(entry) {
@@ -21,21 +23,24 @@ export class History {
       this.#stack.shift();
     }
     this.#index = this.#stack.length - 1;
+    if (this.#onChange) this.#onChange();
   }
 
   undo() {
     if (!this.canUndo) return null;
     this.#index--;
+    if (this.#onChange) this.#onChange();
     return this.#stack[this.#index + 1];
   }
 
   redo() {
     if (!this.canRedo) return null;
     this.#index++;
+    if (this.#onChange) this.#onChange();
     return this.#stack[this.#index];
   }
 
-  get canUndo() { return this.#index > 0; }
+  get canUndo() { return this.#index >= 0; }
   get canRedo() { return this.#index < this.#stack.length - 1; }
   get length() { return this.#stack.length; }
   get currentIndex() { return this.#index; }

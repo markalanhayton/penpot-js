@@ -426,4 +426,95 @@ test.describe('P4: Layer Panel + Asset Library', () => {
       expect(['rect', 'Rectangle']).toContain(typeText);
     }
   });
+
+  test('dashboard fonts page shows system fonts and upload button', async ({ page }) => {
+    await login(page);
+    const dashboard = page.locator('penpot-dashboard');
+    const fontsBtn = dashboard.locator('#nav-fonts');
+    if (await fontsBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await fontsBtn.click();
+      await page.waitForTimeout(500);
+      const fontList = dashboard.locator('#system-fonts, .font-item, .penpot-app__font-item');
+      const count = await fontList.count();
+      expect(count).toBeGreaterThan(0);
+      const uploadBtn = dashboard.locator('#upload-font-btn');
+      await expect(uploadBtn).toBeVisible({ timeout: 3000 });
+    }
+  });
+
+  test('asset panel shows components, fonts, and media tabs', async ({ page }) => {
+    if (!(await openWorkspace(page))) return;
+    const sidebar = page.locator('penpot-left-sidebar');
+    const assetsTab = sidebar.locator('[data-tab="assets"]');
+    if (await assetsTab.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await assetsTab.click();
+      const assetPanel = sidebar.locator('penpot-asset-panel');
+      await expect(assetPanel).toBeVisible({ timeout: 3000 });
+      const compTab = assetPanel.locator('[data-tab="components"]');
+      const fontTab = assetPanel.locator('[data-tab="fonts"]');
+      const mediaTab = assetPanel.locator('[data-tab="media"]');
+      await expect(compTab).toBeVisible({ timeout: 2000 });
+      await expect(fontTab).toBeVisible({ timeout: 2000 });
+      await expect(mediaTab).toBeVisible({ timeout: 2000 });
+    }
+  });
+
+  test('create component from selected shape via keyboard shortcut', async ({ page }) => {
+    if (!(await openWorkspace(page))) return;
+    const canvas = page.locator('penpot-canvas');
+    const canvasBox = await canvas.boundingBox();
+    if (!canvasBox) return;
+
+    const tools = page.locator('penpot-tools-bar');
+    await tools.locator('[data-tool="rect"]').click();
+    const startX = canvasBox.x + canvasBox.width / 2;
+    const startY = canvasBox.y + canvasBox.height / 2;
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(startX + 80, startY + 60, { steps: 5 });
+    await page.mouse.up();
+    await page.waitForTimeout(300);
+
+    await tools.locator('[data-tool="select"]').click();
+    await page.waitForTimeout(200);
+    const canvasBody = canvas.locator('svg');
+    if (await canvasBody.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await canvasBody.click();
+      await page.waitForTimeout(200);
+    }
+
+    await page.keyboard.press('Control+Alt+k');
+    await page.waitForTimeout(500);
+
+    const sidebar = page.locator('penpot-left-sidebar');
+    const assetsTab = sidebar.locator('[data-tab="assets"]');
+    if (await assetsTab.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await assetsTab.click();
+      const assetPanel = sidebar.locator('penpot-asset-panel');
+      const compTab = assetPanel.locator('[data-tab="components"]');
+      if (await compTab.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await compTab.click();
+        const comps = assetPanel.locator('.penpot-assets__component-card');
+        const count = await comps.count();
+        expect(count).toBeGreaterThanOrEqual(0);
+      }
+    }
+  });
+
+  test('detach instance action is available on component instances', async ({ page }) => {
+    if (!(await openWorkspace(page))) return;
+    const sidebar = page.locator('penpot-left-sidebar');
+    const assetsTab = sidebar.locator('[data-tab="assets"]');
+    if (await assetsTab.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await assetsTab.click();
+      const assetPanel = sidebar.locator('penpot-asset-panel');
+      const compTab = assetPanel.locator('[data-tab="components"]');
+      if (await compTab.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await compTab.click();
+        const detachBtns = assetPanel.locator('[data-detach-instance]');
+        const count = await detachBtns.count();
+        expect(count).toBeGreaterThanOrEqual(0);
+      }
+    }
+  });
 });

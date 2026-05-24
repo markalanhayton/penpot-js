@@ -44,14 +44,13 @@ template.innerHTML = `<style>
   </div>`;
 
 export class PenpotGradientEditor extends PenpotElement {
+  _template = template;
   #fill = null;
   #onChange = null;
   #selectedIndex = -1;
 
-  constructor() {
-    super();
-this.appendChild(template.content.cloneNode(true));
-
+  connectedCallback() {
+    super.connectedCallback();
     this.querySelectorAll('.penpot-grad__type-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         this.#fill = this.#fill || { fillType: 'linear-gradient', stops: [{ offset: 0, color: '#ff0000' }, { offset: 1, color: '#0000ff' }], angle: 0 };

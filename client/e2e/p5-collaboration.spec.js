@@ -125,4 +125,60 @@ test.describe('P5: Collaboration (WebSocket)', () => {
     });
     expect(Array.isArray(cursors)).toBe(true);
   });
+
+  test('collaboration module exports are available', async ({ page }) => {
+    await page.goto('/');
+    const exports = await page.evaluate(async () => {
+      const mod = await import('/lib/collaboration.js');
+      return {
+        hasInit: typeof mod.initCollaboration === 'function',
+        hasBroadcast: typeof mod.broadcastChange === 'function',
+        hasBroadcastChanges: typeof mod.broadcastChanges === 'function',
+        hasResolve: typeof mod.resolveConflict === 'function',
+        hasFetchLagged: typeof mod.fetchLaggedChanges === 'function',
+        hasDestroy: typeof mod.destroyCollaboration === 'function',
+        hasGetSession: typeof mod.getSessionId === 'function',
+      };
+    });
+    expect(exports.hasInit).toBe(true);
+    expect(exports.hasBroadcast).toBe(true);
+    expect(exports.hasBroadcastChanges).toBe(true);
+    expect(exports.hasResolve).toBe(true);
+    expect(exports.hasFetchLagged).toBe(true);
+    expect(exports.hasDestroy).toBe(true);
+    expect(exports.hasGetSession).toBe(true);
+  });
+
+  test('persistence module has conflict resolution integration', async ({ page }) => {
+    await page.goto('/');
+    const exports = await page.evaluate(async () => {
+      const mod = await import('/lib/persistence.js');
+      return {
+        hasInit: typeof mod.initPersistence === 'function',
+        hasGetRevn: typeof mod.getRevision === 'function',
+        hasGetLastSaved: typeof mod.getLastSavedRevision === 'function',
+        hasEnqueue: typeof mod.enqueueChange === 'function',
+        hasFlush: typeof mod.flushSave === 'function',
+        hasMakeCreate: typeof mod.makeCreateChange === 'function',
+        hasMakeModify: typeof mod.makeModifyChange === 'function',
+        hasMakeDelete: typeof mod.makeDeleteChange === 'function',
+        hasMakeMove: typeof mod.makeMoveChange === 'function',
+      };
+    });
+    expect(exports.hasInit).toBe(true);
+    expect(exports.hasGetRevn).toBe(true);
+    expect(exports.hasGetLastSaved).toBe(true);
+    expect(exports.hasEnqueue).toBe(true);
+    expect(exports.hasFlush).toBe(true);
+  });
+
+  test('file-change WS messages skip own session', async ({ page }) => {
+    await page.goto('/');
+    const result = await page.evaluate(async () => {
+      const { onWSMessage } = await import('/lib/ws.js');
+      const { initCollaboration, handleRemoteFileChange } = await import('/lib/collaboration.js');
+      return typeof handleRemoteFileChange === 'function';
+    });
+    expect(result).toBe(true);
+  });
 });

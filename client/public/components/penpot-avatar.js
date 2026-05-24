@@ -15,14 +15,14 @@ template.innerHTML = `<style>
   <div class="penpot-avatar__avatar" id="avatar"><span id="initials"></span></div>`;
 
 export class PenpotAvatar extends PenpotElement {
+  _template = template;
   static get observedAttributes() { return ['name', 'src', 'size']; }
 
   constructor() {
     super();
-this.appendChild(template.content.cloneNode(true));
   }
 
-  connectedCallback() { this.#update(); }
+  connectedCallback() { super.connectedCallback(); this.#update(); }
   attributeChangedCallback() { this.#update(); }
 
   #update() {

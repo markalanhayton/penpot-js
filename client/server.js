@@ -74,7 +74,51 @@ function proxy(req, res, url) {
   req.pipe(proxyReq);
 }
 
+server.on('upgrade', (req, socket, head) => {
+  if (!req.url || !req.url.startsWith('/ws/')) {
+    socket.destroy();
+    return;
+  }
+
+  const proxyReq = http.request({
+    port: 6060,
+    host: 'localhost',
+    path: req.url,
+    method: 'GET',
+    headers: {
+      ...req.headers,
+      host: 'localhost:6060',
+      connection: 'upgrade',
+      upgrade: 'websocket',
+    },
+  });
+
+  proxyReq.on('upgrade', (proxyRes, proxySocket, proxyHead) => {
+    proxySocket.on('error', () => { try { socket.destroy(); } catch {} });
+    socket.on('error', () => { try { proxySocket.destroy(); } catch {} });
+
+    let responseHeaders = `HTTP/1.1 101 Switching Protocols\r\n`;
+    for (let i = 0; i < proxyRes.rawHeaders.length; i += 2) {
+      responseHeaders += `${proxyRes.rawHeaders[i]}: ${proxyRes.rawHeaders[i + 1]}\r\n`;
+    }
+    responseHeaders += '\r\n';
+    socket.write(responseHeaders);
+
+    if (proxyHead && proxyHead.length) socket.write(proxyHead);
+    proxySocket.pipe(socket);
+    socket.pipe(proxySocket);
+  });
+
+  proxyReq.on('error', (err) => {
+    console.error(`[ws-proxy] error: ${err.message}`);
+    try { socket.destroy(); } catch {}
+  });
+
+  if (head && head.length) proxyReq.write(head);
+  proxyReq.end();
+});
+
 server.listen(PORT, () => {
-  console.log(`[penpot-frontend] http://localhost:${PORT}`);
-  console.log(`[penpot-frontend] Proxying /api/* -> ${BACKEND}`);
+  console.log(`[penpot-client] http://localhost:${PORT}`);
+  console.log(`[penpot-client] Proxying /api/* -> ${BACKEND}`);
 });

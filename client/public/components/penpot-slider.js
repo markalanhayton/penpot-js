@@ -22,6 +22,7 @@ template.innerHTML = `<style>
   </div>`;
 
 export class PenpotSlider extends PenpotElement {
+  _template = template;
   #min = 0;
   #max = 100;
   #value = 50;
@@ -32,10 +33,10 @@ export class PenpotSlider extends PenpotElement {
 
   constructor() {
     super();
-this.appendChild(template.content.cloneNode(true));
   }
 
   connectedCallback() {
+    super.connectedCallback();
     this.#min = parseFloat(this.getAttribute('min')) || 0;
     this.#max = parseFloat(this.getAttribute('max')) || 100;
     this.#step = parseFloat(this.getAttribute('step')) || 1;

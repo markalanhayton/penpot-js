@@ -19,14 +19,15 @@ template.innerHTML = `<style>
   <div class="penpot-radio__radio-group" id="group"><slot></slot></div>`;
 
 export class PenpotRadio extends PenpotElement {
+  _template = template;
   static get observedAttributes() { return ['value', 'disabled']; }
 
   constructor() {
     super();
-this.appendChild(template.content.cloneNode(true));
   }
 
   connectedCallback() {
+    super.connectedCallback();
     this.addEventListener('penpot-radio-select', (e) => {
       if (this.disabled) return;
       this.value = e.detail.value;

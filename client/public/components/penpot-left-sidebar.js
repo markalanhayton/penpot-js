@@ -58,6 +58,7 @@ template.innerHTML = `<style>
   </div>`;
 
 export class PenpotLeftSidebar extends PenpotElement {
+  _template = template;
   #pages = [];
   #currentPageIndex = 0;
   #selectedIds = new Set();
@@ -66,7 +67,6 @@ export class PenpotLeftSidebar extends PenpotElement {
 
   constructor() {
     super();
-this.appendChild(template.content.cloneNode(true));
   }
 
   connectedCallback() {
@@ -121,8 +121,8 @@ this.appendChild(template.content.cloneNode(true));
       this.emit('penpot-asset-use', e.detail);
     });
 
-    assetPanel.addEventListener('penpot-font-upload', () => {
-      this.emit('penpot-font-upload', {});
+    assetPanel.addEventListener('penpot-font-upload', (e) => {
+      this.emit('penpot-font-upload', e.detail);
     });
 
     assetPanel.addEventListener('penpot-font-remove', (e) => {
@@ -131,6 +131,50 @@ this.appendChild(template.content.cloneNode(true));
 
     assetPanel.addEventListener('penpot-media-upload', (e) => {
       this.emit('penpot-media-upload', e.detail);
+    });
+
+    assetPanel.addEventListener('penpot-color-add', (e) => {
+      this.emit('penpot-color-add', e.detail);
+    });
+
+    assetPanel.addEventListener('penpot-color-delete', (e) => {
+      this.emit('penpot-color-delete', e.detail);
+    });
+
+    assetPanel.addEventListener('penpot-color-use', (e) => {
+      this.emit('penpot-color-use', e.detail);
+    });
+
+    assetPanel.addEventListener('penpot-color-rename', (e) => {
+      this.emit('penpot-color-rename', e.detail);
+    });
+
+    assetPanel.addEventListener('penpot-sync-library-colors', () => {
+      this.emit('penpot-sync-library-colors');
+    });
+
+    assetPanel.addEventListener('penpot-sync-library-typographies', () => {
+      this.emit('penpot-sync-library-typographies');
+    });
+
+    assetPanel.addEventListener('penpot-typography-add', (e) => {
+      this.emit('penpot-typography-add', e.detail);
+    });
+
+    assetPanel.addEventListener('penpot-typography-delete', (e) => {
+      this.emit('penpot-typography-delete', e.detail);
+    });
+
+    assetPanel.addEventListener('penpot-typography-use', (e) => {
+      this.emit('penpot-typography-use', e.detail);
+    });
+
+    assetPanel.addEventListener('penpot-typography-edit', (e) => {
+      this.emit('penpot-typography-edit', e.detail);
+    });
+
+    assetPanel.addEventListener('penpot-typography-rename', (e) => {
+      this.emit('penpot-typography-rename', e.detail);
     });
   }
 
@@ -184,7 +228,15 @@ this.appendChild(template.content.cloneNode(true));
     const page = this.#pages[this.#currentPageIndex];
     if (!page) return;
     const objects = page.objects || page.children || {};
-    const shapes = Array.isArray(objects) ? objects : Object.values(objects);
+
+    let shapes;
+    if (Array.isArray(objects)) {
+      shapes = objects;
+    } else {
+      const topIds = page.shapes || Object.keys(objects);
+      shapes = topIds.map(id => objects[id]).filter(Boolean);
+    }
+
     layerPanel.shapes = shapes;
     layerPanel.page = page;
   }

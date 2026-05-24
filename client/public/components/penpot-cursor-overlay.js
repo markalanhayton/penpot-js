@@ -6,6 +6,8 @@ template.innerHTML = `<style>
 
     penpot-cursor-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
     .penpot-cursor__cursor-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+    .penpot-cursor__selection { position: absolute; border: 2px dashed; border-radius: 2px; pointer-events: none; opacity: 0.7; }
+    .penpot-cursor__selection-label { position: absolute; font-size: 10px; padding: 1px 4px; border-radius: 2px; white-space: nowrap; font-family: -apple-system, BlinkMacSystemFont, sans-serif; pointer-events: none; z-index: 1001; opacity: 0.9; }
   
   </style>
   <div class="penpot-cursor__cursor-container" id="cursors"></div>`;
@@ -13,14 +15,16 @@ template.innerHTML = `<style>
 const STALE_CURSOR_MS = 30000;
 
 export class PenpotCursorOverlay extends PenpotElement {
+  _template = template;
   #cursors = [];
   #cursorEls = new Map();
   #cleanupInterval = null;
   #lastPositions = [];
+  #remoteSelections = [];
+  #selectionEls = [];
 
   constructor() {
     super();
-this.appendChild(template.content.cloneNode(true));
   }
 
   connectedCallback() {
@@ -43,6 +47,13 @@ this.appendChild(template.content.cloneNode(true));
 
   get cursors() { return this.#cursors; }
 
+  set remoteSelections(selections) {
+    this.#remoteSelections = selections || [];
+    this.#renderSelections();
+  }
+
+  get remoteSelections() { return this.#remoteSelections; }
+
   #renderCursors() {
     const container = this.querySelector('#cursors');
     if (!container) return;
@@ -64,6 +75,47 @@ this.appendChild(template.content.cloneNode(true));
         this.#cursorEls.set(cursor.id, el);
       }
       this.#updateCursorPosition(el, cursor);
+    }
+  }
+
+  #renderSelections() {
+    const container = this.querySelector('#cursors');
+    if (!container) return;
+
+    for (const el of this.#selectionEls) {
+      el.remove();
+    }
+    this.#selectionEls = [];
+
+    for (const sel of this.#remoteSelections) {
+      if (!sel.shapes || sel.shapes.length === 0) continue;
+      const color = sel.color || '#31efb8';
+      const name = sel.name || 'User';
+      let firstShape = true;
+      for (const shape of sel.shapes) {
+        const el = document.createElement('div');
+        el.className = 'penpot-cursor__selection';
+        el.style.borderColor = color;
+        el.style.left = `${shape.x || 0}px`;
+        el.style.top = `${shape.y || 0}px`;
+        el.style.width = `${shape.width || 0}px`;
+        el.style.height = `${shape.height || 0}px`;
+        container.appendChild(el);
+        this.#selectionEls.push(el);
+
+        if (firstShape) {
+          const label = document.createElement('div');
+          label.className = 'penpot-cursor__selection-label';
+          label.style.left = `${(shape.x || 0)}px`;
+          label.style.top = `${(shape.y || 0) - 16}px`;
+          label.style.background = color;
+          label.style.color = '#111';
+          label.textContent = name;
+          container.appendChild(label);
+          this.#selectionEls.push(label);
+          firstShape = false;
+        }
+      }
     }
   }
 
@@ -104,6 +156,7 @@ this.appendChild(template.content.cloneNode(true));
     const container = this.querySelector('#cursors');
     if (container) container.innerHTML = '';
     this.#cursorEls.clear();
+    this.#selectionEls = [];
   }
 
   render() {}

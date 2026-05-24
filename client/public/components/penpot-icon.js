@@ -1,6 +1,7 @@
 import { PenpotElement } from './base.js';
 
 const ICON_PATHS = {
+  cursor: 'M5 3l14 9-7 2-3 7z',
   plus: 'M12 5v14M5 12h14',
   minus: 'M5 12h14',
   check: 'M5 12l5 5L19 7',
@@ -37,9 +38,10 @@ const ICON_PATHS = {
   hand: 'M18 11V6a2 2 0 00-4 0M14 10V4a2 2 0 00-4 0v6M10 10.5V6a2 2 0 00-4 0v8M18 8a2 2 0 014 0v6a8 8 0 01-8 8h-2c-2.76 0-5-2.24-5-5v-3',
   frame: 'M6 3v18M18 3v18M3 6h18M3 18h18',
   square: 'M3 3h18v18H3z',
-  circle: 'M12 12m-9 0a9 9 0 1018 0 9 9 0 10-18 0',
+  circle: 'M12 2a10 10 0 1 0 0 20 10 10 0 1 0 0-20z',
   text: 'M4 7V4h16v3M9 20h6M12 4v16',
   pen: 'M12 19l7-7 3 3-7 7-3-3zM18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5zM2 2l7.586 7.586',
+  bezier: 'M3 17C3 12 7 7 12 7s9 5 9 10c0 3-2 5-4 5s-4-2-4-5c0-3 2-5 4-5M12 7l0-5',
 };
 
 const template = document.createElement('template');
@@ -52,14 +54,15 @@ template.innerHTML = `<style>
   <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path id="path"/></svg>`;
 
 export class PenpotIcon extends PenpotElement {
+  _template = template;
   static get observedAttributes() { return ['name', 'size', 'color']; }
 
   constructor() {
     super();
-this.appendChild(template.content.cloneNode(true));
   }
 
   connectedCallback() {
+    super.connectedCallback();
     this.#update();
   }
 

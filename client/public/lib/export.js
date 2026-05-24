@@ -26,6 +26,58 @@ export async function exportToPNG(page, options = {}) {
   }
 }
 
+export async function exportToJPEG(page, options = {}) {
+  const scale = options.scale || 1;
+  const quality = options.quality || 0.92;
+  const background = options.background || '#ffffff';
+
+  const svgEl = renderPageToSVG(page, options);
+  const svgData = new XMLSerializer().serializeToString(svgEl);
+  const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(svgBlob);
+
+  try {
+    const img = await loadImage(url);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round((options.width || img.naturalWidth || 800) * scale));
+    canvas.height = Math.max(1, Math.round((options.height || img.naturalHeight || 600) * scale));
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', quality);
+    return dataUrl;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+export async function exportToWebP(page, options = {}) {
+  const scale = options.scale || 1;
+  const quality = options.quality || 0.92;
+  const background = options.background || '#ffffff';
+
+  const svgEl = renderPageToSVG(page, options);
+  const svgData = new XMLSerializer().serializeToString(svgEl);
+  const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(svgBlob);
+
+  try {
+    const img = await loadImage(url);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round((options.width || img.naturalWidth || 800) * scale));
+    canvas.height = Math.max(1, Math.round((options.height || img.naturalHeight || 600) * scale));
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/webp', quality);
+    return dataUrl;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 export async function exportToSVG(page, options = {}) {
   const svgEl = renderPageToSVG(page, options);
   const svgData = new XMLSerializer().serializeToString(svgEl);
@@ -75,6 +127,17 @@ export async function exportAndDownload(page, format = 'png', options = {}) {
       downloadDataURL(dataUrl, filename);
       return dataUrl;
     }
+    case 'jpeg':
+    case 'jpg': {
+      const dataUrl = await exportToJPEG(page, options);
+      downloadDataURL(dataUrl, filename);
+      return dataUrl;
+    }
+    case 'webp': {
+      const dataUrl = await exportToWebP(page, options);
+      downloadDataURL(dataUrl, filename);
+      return dataUrl;
+    }
     case 'svg': {
       const blobUrl = await exportToSVG(page, options);
       downloadBlobURL(blobUrl, filename);
@@ -92,12 +155,13 @@ export async function exportAndDownload(page, format = 'png', options = {}) {
 
 export async function exportToServer(fileId, pageId, format = 'png', options = {}) {
   try {
-    const result = await cmd('export-file', {
-      id: fileId,
+    const exportType = format === 'pdf' ? 'export-frames' : 'export-shapes';
+    const result = await cmd(exportType, {
+      'file-id': fileId,
       'page-id': pageId,
-      format,
+      objects: options.objects || [{ id: 'all', name: 'export', type: format }],
       scale: options.scale || 1,
-      ...options,
+      ...(format === 'pdf' ? { type: 'pdf' } : { type: format }),
     });
     return result;
   } catch (err) {

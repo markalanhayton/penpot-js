@@ -24,11 +24,11 @@ template.innerHTML = `<style>
   </div>`;
 
 export class PenpotTooltip extends PenpotElement {
+  _template = template;
   static get observedAttributes() { return ['text', 'position']; }
 
   constructor() {
     super();
-this.appendChild(template.content.cloneNode(true));
     this.#id = `tooltip-${++tooltipCounter}`;
   }
 
@@ -36,6 +36,7 @@ this.appendChild(template.content.cloneNode(true));
   #visible = false;
 
   connectedCallback() {
+    super.connectedCallback();
     this.#update();
     const trigger = this.querySelector('#trigger');
     trigger.addEventListener('mouseenter', () => this.show());

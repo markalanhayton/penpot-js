@@ -4,7 +4,8 @@ Thank you for your interest in contributing to Penpot. This guide covers
 how to propose changes, submit fixes, and follow project conventions.
 
 For architecture details, module-specific guidelines, and AI-agent
-instructions, see [AGENTS.md](AGENTS.md). For final user technical
+instructions, see [AGENTS.md](AGENTS.md). For the JS port migration
+status and plan, see [`docs/migration/`](docs/migration/). For final user technical
 documentation, see the `docs/` directory or the rendered [Help
 Center](https://help.penpot.app/).
 

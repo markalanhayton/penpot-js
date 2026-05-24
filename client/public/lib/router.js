@@ -22,12 +22,14 @@ const ROUTE_MAP = [
   { pattern: /^\/view\/(.+)$/, name: 'viewer', paramNames: ['fileId'] },
   { pattern: /^\/settings\/profile$/, name: 'settings-profile' },
   { pattern: /^\/settings\/password$/, name: 'settings-password' },
+  { pattern: /^\/settings\/tokens$/, name: 'settings-tokens' },
   { pattern: /^\/settings\/feedback$/, name: 'settings-feedback' },
+  { pattern: /^\/settings\/nudge$/, name: 'settings-nudge' },
 ];
 
 const AUTH_REQUIRED = new Set([
   'dashboard', 'dashboard-search', 'dashboard-fonts', 'dashboard-libraries',
-  'workspace', 'settings-profile', 'settings-password', 'settings-feedback',
+  'workspace', 'settings-profile', 'settings-password', 'settings-tokens', 'settings-feedback', 'settings-nudge',
 ]);
 
 export function registerRoute(name, handler) {
@@ -82,7 +84,9 @@ function routeToPath(name, params = {}) {
     case 'viewer': return `/view/${params.fileId || ''}`;
     case 'settings-profile': return '/settings/profile';
     case 'settings-password': return '/settings/password';
+    case 'settings-tokens': return '/settings/tokens';
     case 'settings-feedback': return '/settings/feedback';
+    case 'settings-nudge': return '/settings/nudge';
     default: return '/dashboard';
   }
 }

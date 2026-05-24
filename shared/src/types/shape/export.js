@@ -1,0 +1,1 @@
+export const EXPORT_TYPES = new Set(['png', 'jpeg', 'webp', 'svg', 'pdf']);

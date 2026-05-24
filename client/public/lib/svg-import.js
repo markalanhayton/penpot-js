@@ -20,6 +20,69 @@ export function parseSVG(svgText) {
     }
   }
 
+  const gradients = {};
+  const masks = {};
+  const clipPaths = {};
+
+  function collectDefs(parent) {
+    for (const child of parent.children) {
+      const tag = child.localName;
+      const id = child.getAttribute('id');
+      if (tag === 'linearGradient' || tag === 'radialGradient') {
+        const stops = [];
+        for (const stop of child.children) {
+          if (stop.localName === 'stop') {
+            stops.push({
+              offset: parseFloat(stop.getAttribute('offset') || '0') || 0,
+              color: stop.getAttribute('stop-color') || '#000',
+              opacity: parseFloat(stop.getAttribute('stop-opacity') || '1'),
+            });
+          }
+        }
+        const grad = { type: tag, stops };
+        if (tag === 'linearGradient') {
+          grad.x1 = child.getAttribute('x1') || '0%';
+          grad.y1 = child.getAttribute('y1') || '0%';
+          grad.x2 = child.getAttribute('x2') || '100%';
+          grad.y2 = child.getAttribute('y2') || '0%';
+        } else {
+          grad.cx = child.getAttribute('cx') || '50%';
+          grad.cy = child.getAttribute('cy') || '50%';
+          grad.r = child.getAttribute('r') || '50%';
+        }
+        if (id) gradients[id] = grad;
+      } else if (tag === 'mask') {
+        if (id) masks[id] = child;
+      } else if (tag === 'clipPath') {
+        if (id) clipPaths[id] = child;
+      } else if (tag === 'defs' || tag === 'svg') {
+        collectDefs(child);
+      }
+    }
+  }
+
+  collectDefs(svgEl);
+
+  function resolveFill(fillAttr) {
+    if (!fillAttr || fillAttr === 'none') return null;
+    const urlMatch = fillAttr.match(/^url\(#(.+?)\)$/);
+    if (urlMatch) {
+      const refId = urlMatch[1];
+      const grad = gradients[refId];
+      if (grad) {
+        const type = grad.type === 'linearGradient' ? 'linear-gradient' : 'radial-gradient';
+        return { fillType: type, stops: grad.stops };
+      }
+      return null;
+    }
+    return { fillType: 'solid', color: fillAttr };
+  }
+
+  function parseColor(val) {
+    if (!val || val === 'none') return null;
+    return val;
+  }
+
   function parseColor(val) {
     if (!val || val === 'none') return null;
     return val;
@@ -39,8 +102,20 @@ export function parseSVG(svgText) {
     const opacity = parseFloat(node.getAttribute('opacity') || '1');
     const transform = node.getAttribute('transform') || '';
 
-    const fills = fill ? [{ fillType: 'solid', color: fill }] : [];
-    const strokes = stroke ? [{ color: stroke, width: strokeWidth }] : [];
+    const fillAttr = node.getAttribute('fill');
+    const strokeAttr = node.getAttribute('stroke');
+    const fillResolved = resolveFill(fillAttr);
+    const fills = fillResolved ? (fillResolved.fillType === 'solid' ? [fillResolved] : [fillResolved]) : [];
+    const strokes = strokeAttr && strokeAttr !== 'none' ? [{ color: parseColor(strokeAttr), width: strokeWidth }] : [];
+    const maskAttr = node.getAttribute('mask');
+    const clipAttr = node.getAttribute('clip-path');
+    const maskedGroup = maskAttr ? true : false;
+    const clipPathRef = clipAttr ? (clipAttr.match(/^url\(#(.+?)\)$/) || [])[1] : null;
+
+    const extraProps = {};
+    if (maskedGroup) extraProps['masked-group'] = true;
+    if (node.getAttribute('fill-opacity')) extraProps.fillOpacity = parseFloat(node.getAttribute('fill-opacity') || '1');
+    if (node.getAttribute('stroke-opacity')) extraProps.strokeOpacity = parseFloat(node.getAttribute('stroke-opacity') || '1');
 
     switch (tag) {
       case 'rect': {
@@ -55,6 +130,7 @@ export function parseSVG(svgText) {
           strokes,
           opacity,
           rx,
+          ...extraProps,
         });
         break;
       }
@@ -71,6 +147,7 @@ export function parseSVG(svgText) {
           fills,
           strokes,
           opacity,
+          ...extraProps,
         });
         break;
       }
@@ -88,6 +165,7 @@ export function parseSVG(svgText) {
           fills,
           strokes,
           opacity,
+          ...extraProps,
         });
         break;
       }
@@ -155,7 +233,8 @@ export function parseSVG(svgText) {
         const content = node.textContent || '';
         const fontSize = parseFloat(node.getAttribute('font-size') || '14') || 14;
         const fontFamily = node.getAttribute('font-family') || 'sans-serif';
-        const fillColor = fill || node.getAttribute('color') || '#000';
+        const textFillColor = fillResolved ? (fillResolved.color || fillResolved) : { fillType: 'solid', color: node.getAttribute('color') || '#000' };
+        const textFills = fillResolved ? fills : [{ fillType: 'solid', color: node.getAttribute('color') || '#000' }];
         shapes.push({
           type: 'text',
           x: parentX + x - offsetX,
@@ -165,17 +244,40 @@ export function parseSVG(svgText) {
           content,
           fontSize,
           fontFamily,
-          fills: [{ fillType: 'solid', color: fillColor }],
+          fills: textFills,
           strokes: [],
           opacity,
+          ...extraProps,
         });
         break;
       }
       case 'g': {
         const gx = x || 0;
         const gy = y || 0;
+        const groupShapes = [];
+        const savedShapesLen = shapes.length;
         for (const child of node.children) {
           processNode(child, parentX + gx, parentY + gy);
+        }
+        if (maskedGroup && shapes.length > savedShapesLen) {
+          const groupChildren = shapes.splice(savedShapesLen);
+          const minX = Math.min(...groupChildren.map(c => c.x || 0));
+          const minY = Math.min(...groupChildren.map(c => c.y || 0));
+          const maxX = Math.max(...groupChildren.map(c => (c.x || 0) + (c.width || 0)));
+          const maxY = Math.max(...groupChildren.map(c => (c.y || 0) + (c.height || 0)));
+          shapes.push({
+            type: 'group',
+            x: parentX + gx - offsetX,
+            y: parentY + gy - offsetY,
+            width: Math.max(1, maxX - minX),
+            height: Math.max(1, maxY - minY),
+            children: groupChildren,
+            'masked-group': true,
+            fills: [],
+            strokes: [],
+            opacity,
+          });
+          break;
         }
         break;
       }

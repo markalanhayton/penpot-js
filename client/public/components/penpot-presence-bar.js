@@ -24,12 +24,12 @@ template.innerHTML = `<style>
 const MAX_VISIBLE = 5;
 
 export class PenpotPresenceBar extends PenpotElement {
+  _template = template;
   #users = [];
   #wsConnected = false;
 
   constructor() {
     super();
-this.appendChild(template.content.cloneNode(true));
   }
 
   connectedCallback() {

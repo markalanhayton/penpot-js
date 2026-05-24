@@ -2,7 +2,7 @@
  * @module transit
  * @description Transit+JSON encoding and decoding for Penpot RPC protocol.
  * Handles keywords, UUIDs, dates, sets, tagged maps, and all Penpot-specific types.
- * Mirrors the backend codec in backend-js/src/transit/index.js.
+ * Mirrors the backend codec in server/src/transit/index.js.
  */
 
 export const API_BASE = '';

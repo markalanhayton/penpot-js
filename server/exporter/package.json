@@ -1,0 +1,19 @@
+{
+  "name": "@penpot/exporter",
+  "version": "0.1.0",
+  "description": "Penpot exporter service - renders designs to PNG, JPEG, WebP, SVG, and PDF using Playwright",
+  "type": "module",
+  "main": "src/core.js",
+  "scripts": {
+    "start": "node src/core.js",
+    "test": "node --test test/exporter.test.js"
+  },
+  "dependencies": {
+    "archiver": "^7.0.0",
+    "pdf-lib": "^1.17.1",
+    "playwright": "^1.52.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

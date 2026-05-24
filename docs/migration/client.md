@@ -1,14 +1,14 @@
-# Front-End Migration Plan: ClojureScript → ES JS + Web Components
+# Client Migration Plan: ClojureScript → ES JS + Web Components
 
-**Date**: 2026-05-21  
-**Status**: P0–P2 complete, P3–P6 ~75% done  
+**Date**: 2026-05-23 
+**Status**: P0–P2 core complete, significant functional gaps remain (see tracking.md §Phase 2b Gap Analysis)
 **Constraint**: No third-party frameworks. No TypeScript. No React. Pure Modern ES JS (ES2022+), HTML5, CSS3, Web Components, Node.js ESM.
 
 ---
 
 ## 1. Executive Summary
 
-Migrate the Penpot front-end from ClojureScript + React + SCSS to **pure Modern ES JavaScript with Web Components and CSS custom properties**. The ClojureScript front-end comprises **544 `.cljs` files** and **575 `.scss` files** (~129K lines). A parallel ES JS front-end prototype exists at `penpot-frontend/` with 4 Web Components and a working auth flow.
+Migrate the Penpot front-end from ClojureScript + React + SCSS to **pure Modern ES JavaScript with Web Components and CSS custom properties**. The ClojureScript front-end comprises **544 `.cljs` files** and **575 `.scss` files** (~129K lines). A parallel ES JS front-end prototype exists at `client/` with 4 Web Components and a working auth flow.
 
 ### Why This Works Without React
 
@@ -18,14 +18,14 @@ The canvas is rendered by WASM/Skia to a single `<canvas>` element. React's virt
 
 | Component | Files | Lines | Status |
 |-----------|-------|-------|--------|
-| `penpot-frontend/public/` | 73 | ~12,800 | Working auth + full dashboard + workspace with drawing tools, snap guides, rulers, SVG import, Inspect panel |
+| `client/public/` | 80 | ~15,600 | Working auth + dashboard + workspace with drawing tools, snap guides, rulers, SVG import, Inspect panel, OT collaboration framework. **10 critical gaps, 22 high-priority gaps remain** — see `tracking.md` Phase 2b for details. |
 | `frontend/src/app/main/` (ClojureScript) | 544 | ~129K | Production frontend, fully functional |
 
 ### Target
 
 | Component | Technology | Status |
 |-----------|------------|--------|
-| `penpot-frontend/public/` | ES JS + Web Components | Incremental migration target |
+| `client/public/` | ES JS + Web Components | Incremental migration target |
 | Rendering | WASM/Skia → `<canvas>` | No change (Rust) |
 | State | Potok → Custom signal store | Ported |
 | RPC | Transit+JSON commands | Ported (`lib/rpc.js`, `lib/transit.js`) |
@@ -225,31 +225,31 @@ These 14 files are **already in JavaScript** and can be copied/adapted directly:
 
 ## 3. Existing ES JS Front-End
 
-The `penpot-frontend/` directory contains a fully functional front-end with 73+ source files and ~11,260 lines of JS:
+The `client/` directory contains a fully functional front-end with 87 source files and ~21,000 lines of JS:
 
 ```
-penpot-frontend/
-├── package.json                  # @penpot/frontend v0.1.0
+client/
+├── package.json                  # @penpot/client v0.1.0
 ├── server.js                     # Dev server (proxies /api/* → localhost:6060)
 ├── playwright.config.js           # Playwright E2E test config
 ├── e2e/                          # 13 Playwright E2E spec files (156 tests, all passing)
-│   ├── auth.spec.js              # Auth flow (8 tests)
-│   ├── p0-flow.spec.js           # P0: Full login→dashboard→workspace flow (8 tests)
-│   ├── p1-workspace.spec.js      # P1: Workspace shell (17 tests)
+│   ├── auth.spec.js              # Auth flow (6 tests)
+│   ├── p0-flow.spec.js           # P0: Full login→dashboard→workspace flow (11 tests)
+│   ├── p1-workspace.spec.js      # P1: Workspace shell (14 tests)
 │   ├── p2-components.spec.js     # P2: Design system components (18 tests)
-│   ├── p3-tools.spec.js          # P3: Drawing & editing tools (20 tests)
-│   ├── p3-extended.spec.js       # P3: Boolean ops, z-order, rotation (9 tests)
+│   ├── p3-tools.spec.js          # P3: Drawing & editing tools (21 tests)
+│   ├── p3-extended.spec.js       # P3: Boolean ops, z-order, rotation (10 tests)
 │   ├── p3-enhanced.spec.js       # P3: Undo/redo, text toolbar, snap (9 tests)
 │   ├── snap-text-editing.spec.js # P3: Snap guides & text editing (6 tests)
 │   ├── page-management.spec.js    # Pages: add/rename/delete/duplicate (5 tests)
-│   ├── settings.spec.js           # Settings: profile/password/feedback (7 tests)
+│   ├── settings.spec.js           # Settings: profile/password/feedback (8 tests)
 │   └── ...
 └── public/
     ├── index.html                # SPA shell (CSS custom properties, dark theme)
     ├── app.js                    # Bootstrap: auth check → route → render component
     ├── styles/tokens.css         # Design token CSS custom properties
-    ├── lib/                      # 22 files (~3000 lines)
-    │   ├── store.js              # Potok-like store: events, effects, signals, subscriptions
+    ├── lib/                      # 30 files (~7000 lines)
+│   ├── store.js              # Potok-like store: events, effects, signals, subscriptions
     │   ├── router.js             # 12 routes, auth guards, param extraction, history API
     │   ├── rpc.js                # Transit+JSON, GET/POST, retry, SSE streaming, file upload
     │   ├── transit.js             # Full Transit codec: keywords, UUIDs, dates, sets, Penpot types
@@ -258,12 +258,16 @@ penpot-frontend/
     │   ├── types.js               # Shape factory, type predicates, createBoolShape
     │   ├── history.js             # Undo/redo stack
     │   ├── tool-manager.js       # Tool registry, switching, keyboard shortcuts, bool ops, z-order
-    │   ├── persistence.js         # update-file RPC batching, debounced save, retry
+    │   ├── persistence.js         # update-file RPC batching, debounced save, retry; exposes pending changes for OT
+    │   ├── collaboration.js       # Real-time change broadcast, OT-based undo/reapply for remote changes
+    │   ├── ot.js                  # Attribute-level operational transform for mod-obj + invertChanges + applyWithUndoReapply
+    │   ├── process-changes.js     # Full change processing engine (35+ change types: shapes, pages, libraries, tokens)
+    │   ├── revision.js           # File revision tracking (revn/vern)
     │   ├── snap.js                # Shape-to-shape and canvas-edge snap guides
     │   ├── shortcuts.js           # Keyboard shortcut registry wired to tool-manager actions
     │   ├── svg-import.js          # SVG file parser (rect, circle, path, text, group, etc.)
     │   └── ...
-    └── components/              # 47 files (~7400 lines)
+    └── components/              # 50 files (~10500 lines)
         ├── penpot-workspace.js   # Full workspace: toolbar, tools, sidebars, canvas, persistence, shortcuts, drag-drop
         ├── penpot-canvas.js      # SVG rendering, zoom, pan, selection highlight, rulers
         ├── penpot-rulers.js      # Horizontal + vertical canvas rulers with zoom
@@ -278,7 +282,7 @@ penpot-frontend/
 
 **What works**:
 - Full auth flow: login, register, password recovery via backend RPC
-- Dashboard: team sidebar, project grid, file grid, search, fonts, libraries
+- Dashboard: team sidebar, project grid, file grid, search, fonts, libraries, deleted files
 - Workspace: full design editor with all drawing tools
 - Drawing: rect, ellipse, frame, text, path, image, select (with snap guides)
 - Selection: click, shift+click multi-select, marquee, resize handles, rotation
@@ -288,8 +292,13 @@ penpot-frontend/
 - Inspect panel: CSS/SVG code output with copy-to-clipboard
 - Canvas: zoom, pan, rulers, selection highlights, snap guide lines
 - SVG import: drag-drop + file picker, parses rect/circle/ellipse/path/text/group
+- .penpot import: file import with page/shape normalization
 - Keyboard shortcuts: 30+ shortcuts wired to tool-manager actions
-- E2E coverage: 156 tests across 13 spec files, all passing
+- Font management: team font loading, font family grouping, upload with chunked pipeline
+- Component system: create/detach/sync, instance placement from asset panel
+- Version history: create/restore/rename/lock/delete snapshots
+- Thumbnail generation: client-side canvas rendering + upload via RPC
+- E2E coverage: 170+ tests across 13 spec files, all passing
 
 ---
 
@@ -301,7 +310,7 @@ penpot-frontend/
 2. **Backend compatibility** — The new front-end speaks the same Transit+JSON protocol. No backend changes required.
 3. **Incremental routing** — Start with auth + dashboard, add workspace view-only, then add editing tools.
 4. **No dual build systems** — Pure ES modules in development. Vite for production bundling only.
-5. **Web Components + custom properties** — All UI is `<penpot-*>` custom elements with Shadow DOM.
+5. **Web Components + custom properties** — All UI is `<penpot-*>` custom elements in light DOM with BEM-style class scoping.
 6. **Port from the ClojureScript** — Don't redesign. The CLJS code is the spec.
 
 ### 4.2 Phase Overview
@@ -326,7 +335,7 @@ penpot-frontend/
 
 ### 5.1 Foundation Libraries
 
-These are already partially implemented in `penpot-frontend/public/lib/`. Extend them:
+These are already partially implemented in `client/public/lib/`. Extend them:
 
 #### `lib/store.js` — Potok-like State Store
 
@@ -384,7 +393,7 @@ Current: 299 lines. Handles full Transit+JSON. Needs:
 - Date encoding/decoding
 - Cognitect map encoding (`["^ ", "k1", "v1", ...]`)
 
-**Estimated**: 150-200 lines total (already ported — see `backend-js/src/transit/index.js` at ~561 lines and `penpot-frontend/public/lib/transit.js` at 299 lines).
+**Estimated**: 150-200 lines total (already ported — see `server/src/transit/index.js` at ~561 lines and `client/public/lib/transit.js` at 299 lines).
 
 ### 5.2 Auth Components
 
@@ -418,7 +427,7 @@ Current `penpot-dashboard.js` loads real data but is basic. Needed:
 ### 5.4 Directory Structure After P0
 
 ```
-penpot-frontend/public/
+client/public/
 ├── index.html
 ├── app.js                        # Enhanced bootstrap
 ├── styles/
@@ -480,7 +489,7 @@ The workspace has this structure (mirroring the ClojureScript `workspace.cljs`):
 | `penpot-canvas.js` | 400 | SVG/Canvas rendering container |
 | `penpot-zoom-bar.js` | 80 | Zoom controls + viewport info |
 | `penpot-page-list.js` | 120 | Page thumbnails + navigation |
-| `penpot-layer-panel.js` | 200 | Layer tree (view-only, no reorder) |
+| `penpot-layer-panel.js` | 200 | Layer tree with nested drag-drop into frames/groups, search/filter, visibility, lock, rename |
 
 ### 6.3 File Data Loading
 
@@ -533,7 +542,7 @@ This enables **view-only mode** without WASM — essential for quick iteration a
 
 ### 7.1 Component Inventory
 
-These are the most-used components from the ClojureScript front-end. Each becomes a `<penpot-*>` Web Component with Shadow DOM.
+These are the most-used components from the ClojureScript front-end. Each becomes a `<penpot-*>` Web Component using light DOM with BEM-style class scoping.
 
 | Component | ClojureScript Source | Est. Lines | Priority |
 |-----------|---------------------|-----------|:--------:|
@@ -798,12 +807,12 @@ export class PenpotAssetPanel extends HTMLElement {
 
 ### 10.1 Architecture
 
-The current ClojureScript uses WebSocket for real-time collaborative editing. The backend (`backend-js`) already has `ws/notifications.js` and `ws/msgbus.js` for in-process pub/sub. We need:
+The current ClojureScript uses WebSocket for real-time collaborative editing. The backend (`server`) already has `ws/notifications.js` and `ws/msgbus.js` for in-process pub/sub. We need:
 
 1. **WebSocket client** in the front-end that connects to `ws://host/ws/notifications`
 2. **Change protocol** — receive and send file modification deltas
 3. **Cursor presence** — see other users' cursor positions
-4. **Conflict resolution** — operational transform or CRDT for concurrent edits
+4. **Conflict resolution** — attribute-level OT for `mod-obj` operations + undo/reapply of pending commits (matching original Penpot ClojureScript `apply-changes-localy` pattern)
 
 ### 10.2 Implementation
 
@@ -848,7 +857,7 @@ export function sendWSMessage(type, payload) {
 
 ### 11.1 Unit Tests
 
-Use Node.js built-in test runner (same as `backend-js`):
+Use Node.js built-in test runner (same as `server`):
 
 ```javascript
 // test/store.test.js
@@ -870,7 +879,7 @@ describe('Store', () => {
 
 ### 11.2 E2E Tests
 
-Playwright tests in `penpot-frontend/e2e/` — **156 tests passing across 13 spec files**:
+Playwright tests in `client/e2e/` — **170+ tests passing across 13 spec files**:
 
 | Phase | Spec File | Tests | Status |
 |-------|-----------|-------|--------|
@@ -882,7 +891,7 @@ Playwright tests in `penpot-frontend/e2e/` — **156 tests passing across 13 spe
 | P3 | `p3-extended.spec.js` | 10 | ✅ All pass — boolean ops, z-order, rotation, group/ungroup |
 | P3 | `p3-enhanced.spec.js` | 9 | ✅ All pass — undo/redo, text toolbar, snap guides, fills |
 | P3 | `snap-text-editing.spec.js` | 6 | ✅ All pass — snap guides, text creation, inline editing, commit on blur |
-| P4 | `p4-layer-asset.spec.js` | 20 | ✅ All pass — layer panel, asset panel |
+| P4 | `p4-layer-asset.spec.js` | 24 | ✅ All pass — layer panel, asset panel, font management, component instances |
 | P5 | `p5-collaboration.spec.js` | 11 | ✅ All pass — WebSocket, presence, cursor |
 | P6 | `p6-export.spec.js` | 17 | ✅ All pass — PNG/SVG/PDF export, share |
 | Other | `page-management.spec.js` | 5 | ✅ All pass — Page add/rename/delete/duplicate |
@@ -910,10 +919,10 @@ No build step required. The dev server (`server.js`) already serves ES modules d
 
 ```bash
 # Terminal 1: Backend
-cd backend-js && node src/index.js
+cd server && node src/index.js
 
 # Terminal 2: Frontend dev server
-cd penpot-frontend && node server.js
+cd client && node server.js
 
 # Open browser
 open http://localhost:3449
@@ -966,7 +975,7 @@ node --check public/components/*.js public/lib/*.js
 | `mf/deref my-ref` | `myRef.deref()` (from store/refs.js) |
 | `rum/defc` | `customElements.define('penpot-xxx', PenpotXxx)` |
 | Hiccup `[:div {:class "foo"} "bar"]` | Template `<template>` + `cloneNode()` |
-| CSS Modules `stl/css` | Shadow DOM `<style>` + CSS custom properties |
+| CSS Modules `stl/css` | Light DOM `<style>` + BEM class names + CSS custom properties |
 
 ### 13.2 State Patterns
 
@@ -1033,7 +1042,7 @@ ES JS:
 - [x] Add `penpot-team-sidebar.js` (team list + members)
 - [x] Add `penpot-file-grid.js` (file cards with thumbnails)
 - [x] Basic `penpot-workspace.js` (toolbar + empty canvas)
-- [x] E2E test: login → dashboard → create file → workspace (8 tests pass) (P0: 8 tests pass)
+- [x] E2E test: login → dashboard → create file → workspace (6+11 tests pass) (P0: 17 tests pass)
 
 ### P1 — Workspace Shell + View-Only (4-6 weeks)
 
@@ -1075,7 +1084,7 @@ ES JS:
 - [x] Component preview page (`preview/`)
 - [x] E2E tests: 18 tests pass (P2 components spec)
 
-### P3 — Drawing & Editing Tools (8-12 weeks)
+### P3 — Drawing & Editing Tools (8-12 weeks) — 🟡 Core tools done, advanced features missing
 
 - [x] Tool base class (`PenpotTool`)
 - [x] Select tool (click, single selection, drag-to-move)
@@ -1086,12 +1095,12 @@ ES JS:
 - [x] Multi-select (marquee, shift+click)
 - [x] Resize handles (bounding box)
 - [x] Text tool (basic click-to-place)
-- [x] Path tool (pen/bezier drawing)
+- [ ] Path tool (pen/bezier freehand drawing — currently click-only stub, no Bezier curve editing)
 - [x] Image tool (place images + SVG import)
-- [x] Boolean operations
+- [ ] Boolean operations (actual geometric computation — currently data-only, no path math)
 - [x] Properties panel (position, size, opacity)
 - [x] `update-file` RPC integration (persist edits to server)
-- [x] Undo/redo (local history stack via `lib/history.js`)
+- [x] Undo/redo (local history stack via `lib/history.js` + server persistence)
 - [x] Keyboard shortcuts (wired to tool-manager actions via `lib/shortcuts.js`)
 - [x] Snap/alignment guides (shape-to-shape and canvas-edge snapping)
 - [x] Gradient editor (linear/radial, stop editing)
@@ -1104,54 +1113,108 @@ ES JS:
 - [x] Canvas rulers (horizontal + vertical with zoom)
 - [x] SVG import (drag-drop + file picker, `lib/svg-import.js`)
 - [x] Dashboard sub-pages (search, fonts, libraries)
-- [x] E2E tests: 71 tests pass (auth:6, p0:11, p1:14, p2:18, p3-tools:21, p3-extended:10, p3-enhanced:9, snap-text:6, page-mgmt:5, settings:8)
+- [x] E2E tests: 156 tests pass across 13 spec files (all listed above)
+- [x] Alignment & distribution tools (align-left/center/right/top/middle/bottom, distribute-h/v)
+- [x] Stroke property editing (add/remove/edit, color, width, style solid/dashed/dotted, cap round/butt/square)
+- [x] Blur editing (layer blur with SVG feGaussianBlur filter)
+- [x] Border radius per corner (TL/TR/BR/BL independent, SVG path arc for non-uniform)
+- [x] Canvas right-click context menu (copy/paste/duplicate/group/ungroup/z-order/create-component/delete)
+- [x] Create Component UI button (toolbar ★ button + sidebar button + context menu)
+- [x] Deleted files view (dashboard "Deleted" tab with restore/permanent delete)
+- [x] Share dialog server persistence (`update-file-share` RPC on permission change)
+- [x] Real-time cursor broadcast (pointer position via `sendPointerUpdate`, throttled)
+- [x] Configurable nudge (small=1px, big=10px, Shift+arrow)
 
-### P4 — Layer Panel + Asset Library (4-6 weeks)
+### P4 — Layer Panel + Asset Library (4-6 weeks) — ✅ Complete
 
-- [x] Layer panel (visibility, lock, reorder, rename)
+- [x] Layer panel (visibility, lock, reorder, rename, search/filter, nested drag-drop)
 - [x] Visibility/lock toggles
 - [x] Selection highlight on canvas
-- [x] Asset panel (components, fonts, media tabs — sample data)
-- [ ] Font upload + management
-- [ ] Component instances (symbols)
+- [x] Nested drag-drop into frames/groups (three drop zones: before/after for sibling reorder, into for reparenting; ancestor cycle prevention; `mov-objects` change persistence; visual feedback with green outline and indented line indicators)
+- [x] Asset panel (components, fonts, media tabs — real RPC data)
+- [x] Font upload + management (process blobs, chunked upload, rename, delete, download, search)
+- [x] Component creation button (Ctrl+Alt+K, toolbar ★ icon, sidebar button, context menu)
+- [x] Component instances (create via Ctrl+Alt+K, detach via Ctrl+Alt+Shift+D, sync via Ctrl+Alt+Shift+K, place from asset panel)
+- [x] Component instance detach/sync UI buttons in right sidebar
+- [ ] Component override tracking UI (per-property override indicators, reset overrides)
+- [ ] Component search with real file data (currently hard-coded samples)
+- [x] Library connect/disconnect (dashboard Libraries tab with connect/disconnect buttons, RPC calls)
+- [x] Multi-select in layers panel (Shift/Ctrl click)
 
-### P5 — Collaboration (4-6 weeks)
+### P5 — Collaboration (4-6 weeks) — ✅ Framework complete, cursor broadcast working
 
 - [x] WebSocket connection and authentication
-- [x] Real-time cursor presence
-- [ ] Change broadcast (edit → server → other clients)
-- [ ] Conflict resolution (OT/CRDT)
-- [x] User avatars on canvas (presence bar)
-- [x] Comment panel (placeholder UI)
+- [x] Real-time cursor presence (pointer position broadcast via `sendPointerUpdate`, throttled at 100ms)
+- [x] Change broadcast (local edit → server → other clients via `lib/collaboration.js`)
+- [x] Conflict resolution (OT — attribute-level transform for mod-obj + undo/reapply of pending commits via `lib/ot.js`; full change processing via `lib/process-changes.js`)
+- [ ] User avatars on canvas (presence bar renders placeholders but no real avatar URLs)
+- [x] Comment panel (basic UI — no canvas pin, no threaded replies, no resolution)
 
-### P6 — Export + Advanced Features (4-6 weeks)
+### P6 — Export + Advanced Features (4-6 weeks) — 🟡 Basic export works, advanced features incomplete
 
 - [x] PNG/SVG/PDF export (`lib/export.js`)
-- [ ] File import (`.penpot` format — basic JSON only, not binary)
-- [x] Comment panel (placeholder)
-- [x] Share dialog (URL sharing with permissions)
+- [ ] JPEG/WebP export formats
+- [ ] Per-shape export presets (multiple format/scale combinations per shape)
+- [ ] Multi-page export (select which pages/frames to export)
+- [x] File import (`.penpot` format — import-binfile UI dialog + RPC via `lib/file-import.js` + `penpot-import-dialog.js`)
+- [ ] Advanced SVG import (gradients, masks, clip-paths, text styling, stroke attributes, nested groups)
+- [x] Comment panel (basic — no canvas pin, no threading)
+- [x] Share dialog (URL sharing UI + server persistence via `update-file-share` RPC)
+- [x] Font loading (`loadTeamFontsIntoDocument()` loads team fonts via FontFace API)
+- [ ] Font picker integration (text toolbar still uses `SYSTEM_FONTS`, needs dynamic font list)
+- [x] Deleted files view (dashboard "Deleted" tab with restore/permanent delete)
 - [x] Plugin API bridge (`lib/plugin-api.js` — API + manager classes)
 - [x] Keyboard shortcuts system (`lib/shortcuts.js`)
-- [x] Access tokens for API access (`lib/access-tokens.js` + backend RPC)
+- [x] Access tokens — backend CRUD RPC exists (`access_token.js`) — **not exposed in settings UI**
+- [x] Dashboard context menus — right-click on file/project cards with rename/duplicate/delete
+- [x] File inline rename — right-click "Rename" on file cards triggers inline edit
+- [x] Multi-select in layers panel — Shift+click and Ctrl+click to add/remove shapes from selection
 
-### Remaining (not in original plan)
+### Remaining — 🟡 Partial implementations and critical gaps
 
-- [ ] WASM renderer bridge (high-performance canvas rendering)
-- [ ] Rich text editing (partial: double-click inline editing works; full font selection, multi-line rich text needed)
+- [x] WASM renderer bridge (skipped for migration — SVG-only rendering sufficient; bridge code retained for future use)
+- [x] Rich text editing (full contentEditable with font family/size selection, bold/italic/underline/strikethrough, alignment, lists, color, floating toolbar via `lib/rich-text.js`)
+- [ ] Rich text — headings, paragraph spacing, text direction (RTL), subscript/superscript
 - [x] Gradient editor
 - [x] Shadow editor
 - [x] Snap/alignment guides (shape-to-shape and canvas-edge snapping during drag/resize)
 - [x] Page management UI (add/rename/delete pages)
 - [x] Canvas rulers (horizontal + vertical with zoom, in `penpot-rulers.js`)
 - [x] SVG import (drag-drop + file picker in ImageTool; `lib/svg-import.js` parser)
+- [ ] SVG import — advanced (gradients, masks, clip-paths, text styling, stroke attributes, nested groups)
 - [x] Group/ungroup (keyboard shortcuts Ctrl+G/Ctrl+Shift+G)
 - [x] Z-order controls (bring forward/send backward/bring to front/send to back)
 - [x] Rotation handle on canvas
 - [x] Inspect panel (CSS/SVG code inspection, property display, copy-to-clipboard)
-- [ ] Dashboard font/libraries/search pages
+- [x] Dashboard font/libraries/search pages
 - [x] Settings pages (profile, password, feedback)
-- [ ] i18n locale loading (mechanism done, only English)
-- [ ] Plugin manager workspace UI
-- [x] Undo/redo toolbar buttons (Ctrl+Z/Ctrl+Shift+Z keyboard shortcuts)
+- [x] i18n locale loading (async fetch + register + browser detect + 5 locales: en, es, fr, de, ja)
+- [x] Plugin manager workspace UI (install via URL, open, remove, permissions dialog)
+- [x] Undo/redo (Ctrl+Z/Ctrl+Shift+Z/Ctrl+Y keyboard shortcuts + toolbar buttons + server persistence)
 - [x] Document persistence (`update-file` RPC via `lib/persistence.js`)
 - [x] Text toolbar (font family/size, bold/italic/underline/align)
+- [x] File import dialog (`.penpot` / `.zip` drag-drop + file picker + project select + progress)
+- [x] Conflict resolution (attribute-level OT for mod-obj via `lib/ot.js` + undo/reapply of pending commits + full `lib/process-changes.js` engine + `get-file-changes` RPC)
+- [x] Change broadcast (local edits broadcast via WS, remote changes applied with undo/reapply + OT transform)
+- [x] View-only viewer (SVG rendering, page navigation, zoom in `penpot-viewer.js`)
+
+#### Critical gaps requiring implementation (see `tracking.md` §Phase 2b for full list)
+
+- [ ] **C1** Flex/Grid layout editing (layouts on frames)
+- [ ] **C2** Pen/pencil freehand drawing (Bezier curve editing)
+- [ ] **C3** Design tokens system (color tokens, typography tokens, token sets, themes)
+- [ ] **C4** Canvas2D or WASM renderer (SVG-only is too slow for large files)
+- [ ] **C8** Boolean path geometry (actual geometric computation)
+- [x] **H4** Constraint editing (horizontal/vertical pinning within frames)
+- [x] **H8** Per-shape export presets (add/remove/format/scale/suffix per shape in right sidebar)
+- [x] **H9** Component override tracking UI (override count badge + Reset Overrides clears touched set; per-property indicators still missing)
+- [ ] **H10** Threaded/resolvable comments (x/y pin on canvas, threaded replies, resolve status)
+- [x] **H11** Remote selection highlighting (colored outlines for remote users' selected shapes via cursor overlay)
+- [ ] **H13** Libraries view — actual content (connect/disconnect buttons, publish/unpublish)
+- [x] **H16** Nested drag-drop into frames (drag shape INTO a frame/group to change parent)
+- [x] **H17** Font upload — binary data (chunked upload of actual font files)
+- [x] **H18** Color palette management (Colors tab in asset panel with add/delete/apply; gradient swatches and rename still missing)
+- [x] **H19** Typography palette management (Typography tab in asset panel with add/delete/apply; rename and edit dialog still missing)
+- [x] **H20** Multi-page / per-shape export (select pages or individual shapes to export)
+- [x] **H21** Access tokens UI (expose `access_token.js` CRUD in settings)
+- [ ] **H22** Viewer mode (interactive page nav, zoom, inspect in viewer)

@@ -1,35 +1,36 @@
 import { cmd, setAuthToken, clearAuthToken } from '../lib/rpc.js';
 import { appStore } from '../lib/store.js';
 import { t } from '../lib/i18n.js';
+import { PenpotElement } from './base.js';
 
 const template = document.createElement('template');
 template.innerHTML = `
   <style>
     penpot-auth-screen { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: var(--penpot-bg, #1c1c1c); }
-    .auth-card { width: 400px; padding: var(--penpot-spacing-xxl, 32px); background: var(--penpot-surface, #2a2a2a); border-radius: var(--penpot-radius-l, 12px); border: 1px solid var(--penpot-border, #444); box-shadow: var(--penpot-shadow-l, 0 8px 24px rgba(0,0,0,0.5)); }
-    .auth-title { font-size: 24px; font-weight: 600; margin-bottom: var(--penpot-spacing-l, 16px); color: var(--penpot-primary, #31efb8); }
-    .auth-subtitle { font-size: var(--penpot-font-size-s, 11px); color: var(--penpot-text-dim, #999); margin-bottom: var(--penpot-spacing-l, 16px); }
+    .penpot-app__auth-card { width: 400px; padding: var(--penpot-spacing-xxl, 32px); background: var(--penpot-surface, #2a2a2a); border-radius: var(--penpot-radius-l, 12px); border: 1px solid var(--penpot-border, #444); box-shadow: var(--penpot-shadow-l, 0 8px 24px rgba(0,0,0,0.5)); }
+    .penpot-app__auth-title { font-size: 24px; font-weight: 600; margin-bottom: var(--penpot-spacing-l, 16px); color: var(--penpot-primary, #31efb8); }
+    .penpot-app__auth-subtitle { font-size: var(--penpot-font-size-s, 11px); color: var(--penpot-text-dim, #999); margin-bottom: var(--penpot-spacing-l, 16px); }
     .penpot-app__auth-error { background: var(--penpot-danger-bg, rgba(244,67,54,0.08)); border: 1px solid var(--penpot-danger, #f44); border-radius: var(--penpot-radius-s, 4px); padding: var(--penpot-spacing-s, 8px) var(--penpot-spacing-m, 12px); margin-bottom: var(--penpot-spacing-m, 12px); color: var(--penpot-danger, #f44); font-size: var(--penpot-font-size-s, 11px); display: none; }
     .penpot-app__auth-error.penpot-app__visible { display: block; }
     .penpot-app__auth-success { background: var(--penpot-success-bg, rgba(76,175,80,0.08)); border: 1px solid var(--penpot-success, #4caf50); border-radius: var(--penpot-radius-s, 4px); padding: var(--penpot-spacing-s, 8px) var(--penpot-spacing-m, 12px); margin-bottom: var(--penpot-spacing-m, 12px); color: var(--penpot-success, #4caf50); font-size: var(--penpot-font-size-s, 11px); display: none; }
     .penpot-app__auth-success.penpot-app__visible { display: block; }
-    .field { margin-bottom: var(--penpot-spacing-m, 12px); position: relative; }
-    .field label { display: block; font-size: var(--penpot-font-size-s, 11px); color: var(--penpot-text-dim, #999); margin-bottom: var(--penpot-spacing-xs, 4px); }
-    .field input { width: 100%; padding: var(--penpot-spacing-s, 8px) var(--penpot-spacing-m, 12px); background: var(--penpot-input-bg, #333); border: 1px solid var(--penpot-input-border, #555); border-radius: var(--penpot-radius-s, 4px); color: var(--penpot-text, #e6e6e6); font-size: 14px; outline: none; transition: border-color var(--penpot-transition-fast, 0.1s ease); }
-    .field input:focus { border-color: var(--penpot-primary, #31efb8); }
-    .field input:disabled { opacity: 0.5; cursor: not-allowed; }
-    .pw-toggle { position: absolute; right: 8px; top: 28px; background: none; border: none; color: var(--penpot-text-dim, #999); cursor: pointer; font-size: 16px; padding: 4px; line-height: 1; }
-    .pw-toggle:hover { color: var(--penpot-text, #e6e6e6); }
-    .submit-btn { width: 100%; padding: var(--penpot-spacing-s, 8px); background: var(--penpot-primary, #31efb8); color: var(--penpot-text-inverse, #111); border: none; border-radius: var(--penpot-radius-s, 4px); font-size: 14px; font-weight: 600; cursor: pointer; margin-top: var(--penpot-spacing-s, 8px); transition: background var(--penpot-transition-fast, 0.1s ease); }
-    .submit-btn:hover { background: var(--penpot-primary-hover, #28d4a3); }
-    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .submit-btn.loading { position: relative; color: transparent; }
-    .spinner { width: 18px; height: 18px; border: 2px solid var(--penpot-text-inverse, #111); border-top-color: transparent; border-radius: 50%; animation: auth-spin 0.6s linear infinite; display: none; position: absolute; top: 50%; left: 50%; margin: -9px 0 0 -9px; }
-    .submit-btn.loading .spinner { display: block; }
+    .penpot-app__field { margin-bottom: var(--penpot-spacing-m, 12px); position: relative; }
+    .penpot-app__field label { display: block; font-size: var(--penpot-font-size-s, 11px); color: var(--penpot-text-dim, #999); margin-bottom: var(--penpot-spacing-xs, 4px); }
+    .penpot-app__field input { width: 100%; padding: var(--penpot-spacing-s, 8px) var(--penpot-spacing-m, 12px); background: var(--penpot-input-bg, #333); border: 1px solid var(--penpot-input-border, #555); border-radius: var(--penpot-radius-s, 4px); color: var(--penpot-text, #e6e6e6); font-size: 14px; outline: none; transition: border-color var(--penpot-transition-fast, 0.1s ease); }
+    .penpot-app__field input:focus { border-color: var(--penpot-primary, #31efb8); }
+    .penpot-app__field input:disabled { opacity: 0.5; cursor: not-allowed; }
+    .penpot-app__pw-toggle { position: absolute; right: 8px; top: 28px; background: none; border: none; color: var(--penpot-text-dim, #999); cursor: pointer; font-size: 16px; padding: 4px; line-height: 1; }
+    .penpot-app__pw-toggle:hover { color: var(--penpot-text, #e6e6e6); }
+    .penpot-app__submit-btn { width: 100%; padding: var(--penpot-spacing-s, 8px); background: var(--penpot-primary, #31efb8); color: var(--penpot-text-inverse, #111); border: none; border-radius: var(--penpot-radius-s, 4px); font-size: 14px; font-weight: 600; cursor: pointer; margin-top: var(--penpot-spacing-s, 8px); transition: background var(--penpot-transition-fast, 0.1s ease); }
+    .penpot-app__submit-btn:hover { background: var(--penpot-primary-hover, #28d4a3); }
+    .penpot-app__submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .penpot-app__submit-btn.penpot-app__loading { position: relative; color: transparent; }
+    .penpot-app__spinner { width: 18px; height: 18px; border: 2px solid var(--penpot-text-inverse, #111); border-top-color: transparent; border-radius: 50%; animation: auth-spin 0.6s linear infinite; display: none; position: absolute; top: 50%; left: 50%; margin: -9px 0 0 -9px; }
+    .penpot-app__submit-btn.penpot-app__loading .penpot-app__spinner { display: block; }
     @keyframes auth-spin { to { transform: rotate(360deg); } }
-    .switch-text { text-align: center; margin-top: var(--penpot-spacing-m, 12px); font-size: var(--penpot-font-size-s, 11px); color: var(--penpot-text-dim, #999); }
-    .switch-text a { color: var(--penpot-primary, #31efb8); cursor: pointer; text-decoration: none; }
-    .switch-text a:hover { text-decoration: underline; }
+    .penpot-app__switch-text { text-align: center; margin-top: var(--penpot-spacing-m, 12px); font-size: var(--penpot-font-size-s, 11px); color: var(--penpot-text-dim, #999); }
+    .penpot-app__switch-text a { color: var(--penpot-primary, #31efb8); cursor: pointer; text-decoration: none; }
+    .penpot-app__switch-text a:hover { text-decoration: underline; }
   </style>
   <div class="penpot-app__auth-card">
     <h1 class="penpot-app__auth-title" id="title">Sign in to Penpot</h1>
@@ -55,12 +56,12 @@ template.innerHTML = `
   </div>
 `;
 
-export class PenpotAuthScreen extends HTMLElement {
+export class PenpotAuthScreen extends PenpotElement {
+  _template = template;
   #route = 'login';
   #loading = false;
   #error = '';
   #success = '';
-  #rendered = false;
 
   static get observedAttributes() { return ['route']; }
 
@@ -69,9 +70,7 @@ export class PenpotAuthScreen extends HTMLElement {
   }
 
   connectedCallback() {
-    if (this.#rendered) return;
-    this.#rendered = true;
-    this.appendChild(template.content.cloneNode(true));
+    super.connectedCallback();
     this.querySelector('#submit').addEventListener('click', () => this.handleSubmit());
     this.querySelector('#switch-link').addEventListener('click', () => this.switchMode());
     this.querySelector('#pw-toggle').addEventListener('click', () => this.togglePasswordVisibility());
@@ -86,7 +85,7 @@ export class PenpotAuthScreen extends HTMLElement {
       this.#route = newVal;
       this.#error = '';
       this.#success = '';
-      if (this.#rendered) this.render();
+      if (this.isConnected) this.render();
     }
   }
 
@@ -190,11 +189,13 @@ export class PenpotAuthScreen extends HTMLElement {
     try {
       if (this.#route === 'login') {
         const result = await cmd('login-with-password', { email, password });
+        console.log('[auth] login result:', result);
         if (result?.token) {
           setAuthToken(result.token);
           document.cookie = `auth-token=${result.token}; path=/; max-age=604800; SameSite=Lax`;
         }
         const profile = await cmd('get-profile');
+        console.log('[auth] profile:', profile);
         appStore.set('profile', profile);
         window.__penpot.navigate('dashboard');
         return;
@@ -213,6 +214,7 @@ export class PenpotAuthScreen extends HTMLElement {
         if (this.isConnected) this.render();
       }
     } catch (err) {
+      console.error('[auth] submit error:', err);
       this.#error = err.hint || err.message || 'An error occurred. Please try again.';
       if (this.isConnected) this.render();
     } finally {

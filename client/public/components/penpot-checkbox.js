@@ -23,19 +23,18 @@ template.innerHTML = `<style>
   </label>`;
 
 export class PenpotCheckbox extends PenpotElement {
+  _template = template;
   static get observedAttributes() { return ['checked', 'disabled', 'label']; }
 
-  constructor() {
-    super();
-this.appendChild(template.content.cloneNode(true));
+  connectedCallback() {
+    super.connectedCallback();
+    this.#update();
   }
 
-  connectedCallback() {
-    this.#update();
-    const input = this.querySelector('#input');
-    input.addEventListener('change', () => {
+  bindListeners() {
+    this.addEventListener('click', () => {
       if (!this.disabled) {
-        this.checked = input.checked;
+        this.checked = !this.checked;
         this.emit('penpot-change', { checked: this.checked });
       }
     });

@@ -1,7 +1,10 @@
 import { PenpotTool, DrawingTool, SelectTool, HandTool, TextTool, PathTool, ImageTool } from '../components/tools/base.js';
+import { PenBezierTool } from '../components/tools/pen-bezier.js';
 import { EllipseTool } from '../components/tools/ellipse-tool.js';
 import { History } from './history.js';
-import { createBoolShape } from './types.js';
+import { createShape, createBoolShape } from './types.js';
+import { computeBoolOperation } from './bool-ops.js';
+import { enqueueChange, makeCreateChange, makeModifyChange, makeDeleteChange, makeMoveChange } from './persistence.js';
 
 export class ToolManager {
   #tools = new Map();
@@ -9,22 +12,28 @@ export class ToolManager {
   #activeToolName = null;
   #canvas = null;
   #workspace = null;
-  #history = new History(100);
+  #history = null;
   #pages = [];
   #currentPageIndex = 0;
   #selectedIds = new Set();
   #clipboard = [];
+  #smallNudge = parseInt(localStorage.getItem('penpot-nudge-small'), 10) || 1;
+  #bigNudge = parseInt(localStorage.getItem('penpot-nudge-big'), 10) || 10;
   #canvasContainer = null;
   #boundPointerDown = null;
   #boundPointerMove = null;
   #boundPointerUp = null;
   #boundDblClick = null;
+  #boundContextMenu = null;
   #keydownHandler = null;
   #keyupHandler = null;
 
   constructor(canvas, workspace) {
     this.#canvas = canvas;
     this.#workspace = workspace;
+    this.#history = new History(100, () => {
+      this.#workspace.emit('penpot-undo-redo-state', { canUndo: this.#history.canUndo, canRedo: this.#history.canRedo });
+    });
     this.#registerBuiltinTools();
     this.#bindCanvasEvents();
     this.#bindKeyboard();
@@ -39,6 +48,7 @@ export class ToolManager {
     this.registerTool('ellipse', new EllipseTool());
     this.registerTool('text', new TextTool());
     this.registerTool('path', new PathTool());
+    this.registerTool('pen', new PenBezierTool());
     this.registerTool('image', new ImageTool());
   }
 
@@ -70,6 +80,10 @@ export class ToolManager {
   get activeTool() { return this.#activeTool; }
   get selectedIds() { return this.#selectedIds; }
   get history() { return this.#history; }
+  get smallNudge() { return this.#smallNudge; }
+  set smallNudge(v) { this.#smallNudge = v; }
+  get bigNudge() { return this.#bigNudge; }
+  set bigNudge(v) { this.#bigNudge = v; }
 
   setPages(pages) { this.#pages = pages; }
   setPageIndex(index) { this.#currentPageIndex = index; }
@@ -237,6 +251,23 @@ export class ToolManager {
     this.#workspace.emit('penpot-shape-select', { shapeId: newIds.length === 1 ? newIds[0] : null, selectedIds: [...this.#selectedIds] });
   }
 
+  pasteAt(x, y) {
+    if (this.#clipboard.length === 0) return;
+    const minX = Math.min(...this.#clipboard.map(s => s.x));
+    const minY = Math.min(...this.#clipboard.map(s => s.y));
+    const newIds = [];
+    for (const shape of this.#clipboard) {
+      const offsetX = shape.x - minX;
+      const offsetY = shape.y - minY;
+      const newShape = { ...shape, id: crypto.randomUUID(), x: x + offsetX, y: y + offsetY };
+      this.addShape(newShape);
+      newIds.push(newShape.id);
+    }
+    this.#selectedIds.clear();
+    for (const id of newIds) this.#selectedIds.add(id);
+    this.#workspace.emit('penpot-shape-select', { shapeId: newIds.length === 1 ? newIds[0] : null, selectedIds: [...this.#selectedIds] });
+  }
+
   moveShape(shapeId, dx, dy) {
     const page = this.getCurrentPage();
     if (!page) return;
@@ -251,8 +282,20 @@ export class ToolManager {
   }
 
   moveSelectedShapes(dx, dy) {
+    const page = this.getCurrentPage();
+    if (!page) return;
     for (const id of this.#selectedIds) {
       this.moveShape(id, dx, dy);
+    }
+    if (this.#selectedIds.size > 0) {
+      const changes = [];
+      for (const id of this.#selectedIds) {
+        const shape = this.#findShape(page, id);
+        if (shape) {
+          changes.push(makeModifyChange(page.id, id, { x: shape.x, y: shape.y }));
+        }
+      }
+      for (const change of changes) enqueueChange(change);
     }
   }
 
@@ -329,7 +372,10 @@ export class ToolManager {
         changed = true;
       }
     } else {
+      const oldValue = shape[shapeProp];
+      if (oldValue === value) return;
       shape[shapeProp] = value;
+      this.#history.push({ type: 'update', shapeId, prop: shapeProp, oldValue, newValue: value, pageId: page.id });
       changed = true;
     }
 
@@ -423,6 +469,31 @@ export class ToolManager {
     this.#workspace.emit('penpot-page-change', { page, pageIndex: this.#currentPageIndex });
   }
 
+  flattenPath(shapeId) {
+    const page = this.getCurrentPage();
+    if (!page) return;
+    const shape = this.#findShape(page, shapeId);
+    if (!shape) return;
+    const oldType = shape.type;
+    if (shape.type === 'path' || shape.type === 'bool') {
+      const strokes = shape.strokes || [];
+      if (strokes.length === 0) return;
+      const stroke = strokes[0];
+      const strokeColor = stroke.color || stroke.strokeColor || '#000000';
+      const strokeOpacity = stroke.opacity !== undefined ? stroke.opacity : 1;
+      const existingFills = shape.fills || [];
+      shape.fills = [...existingFills, { fillType: 'solid', color: strokeColor, opacity: strokeOpacity }];
+      shape.strokes = [];
+      this.#history.push({
+        type: 'update', shapeId, prop: 'flatten',
+        oldValue: { type: oldType, fills: existingFills, strokes },
+        newValue: { fills: shape.fills, strokes: [] },
+        pageId: page.id,
+      });
+      this.#workspace.emit('penpot-page-change', { page, pageIndex: this.#currentPageIndex });
+    }
+  }
+
   bringForward(shapeId) {
     const page = this.getCurrentPage();
     if (!page) return;
@@ -499,6 +570,8 @@ export class ToolManager {
     this.#canvasContainer.addEventListener('pointermove', this.#boundPointerMove);
     this.#canvasContainer.addEventListener('pointerup', this.#boundPointerUp);
     this.#canvasContainer.addEventListener('dblclick', this.#boundDblClick);
+    this.#boundContextMenu = (e) => this.#handleContextMenu(e);
+    this.#canvasContainer.addEventListener('contextmenu', this.#boundContextMenu);
   }
 
   #bindKeyboard() {
@@ -507,82 +580,7 @@ export class ToolManager {
 
       if (this.#activeTool) this.#activeTool.onKeyDown(e, this.#canvas);
 
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (this.#selectedIds.size > 0) {
-          e.preventDefault();
-          this.deleteSelected();
-        }
-      }
-
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        this.undo();
-      }
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'Z') || (e.shiftKey && e.key === 'z'))) {
-        e.preventDefault();
-        this.redo();
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
-        e.preventDefault();
-        this.duplicateSelected();
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
-        e.preventDefault();
-        this.copySelected();
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
-        e.preventDefault();
-        this.pasteClipboard();
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
-        e.preventDefault();
-        this.selectAll();
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'g' && !e.shiftKey) {
-        e.preventDefault();
-        this.groupSelected();
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'g' && e.shiftKey) {
-        e.preventDefault();
-        this.ungroupSelected();
-      }
-
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        this.#workspace.emit('penpot-save', {});
-      }
-
-      if (e.altKey && e.key === 'u') {
-        e.preventDefault();
-        this.createBoolOp('union');
-      }
-      if (e.altKey && e.key === 'd') {
-        e.preventDefault();
-        this.createBoolOp('difference');
-      }
-      if (e.altKey && e.key === 'i') {
-        e.preventDefault();
-        this.createBoolOp('intersection');
-      }
-      if (e.altKey && e.key === 'e') {
-        e.preventDefault();
-        this.createBoolOp('exclude');
-      }
-
-      if (e.key === ']' && !e.shiftKey && !e.ctrlKey && !e.metaKey && this.#selectedIds.size === 1) {
-        this.bringForward([...this.#selectedIds][0]);
-      }
-      if (e.key === '[' && !e.shiftKey && !e.ctrlKey && !e.metaKey && this.#selectedIds.size === 1) {
-        this.sendBackward([...this.#selectedIds][0]);
-      }
-      if (e.key === ']' && e.shiftKey && this.#selectedIds.size === 1) {
-        this.bringToFront([...this.#selectedIds][0]);
-      }
-      if (e.key === '[' && e.shiftKey && this.#selectedIds.size === 1) {
-        this.sendToBack([...this.#selectedIds][0]);
-      }
-
-      const nudge = e.shiftKey ? 10 : 1;
+      const nudge = e.shiftKey ? this.#bigNudge : this.#smallNudge;
       const arrowKeys = { ArrowUp: [0, -nudge], ArrowDown: [0, nudge], ArrowLeft: [-nudge, 0], ArrowRight: [nudge, 0] };
       if (arrowKeys[e.key] && this.#selectedIds.size > 0) {
         e.preventDefault();
@@ -620,6 +618,16 @@ export class ToolManager {
     }
   }
 
+  #handleContextMenu(e) {
+    e.preventDefault();
+    if (this.#selectedIds.size === 0) return;
+    this.#workspace.emit('penpot-shape-context-menu', {
+      x: e.clientX,
+      y: e.clientY,
+      selectedIds: [...this.#selectedIds],
+    });
+  }
+
   #updateCursor() {
     if (this.#activeTool && this.#canvas) {
       this.#canvas.style.cursor = this.#activeTool.getCursor();
@@ -630,6 +638,7 @@ export class ToolManager {
     const entry = this.#history.undo();
     if (!entry) return;
     this.#applyUndo(entry);
+    this.#persistUndo(entry);
     const page = this.getCurrentPage();
     if (page) this.#workspace.emit('penpot-page-change', { page, pageIndex: this.#currentPageIndex });
   }
@@ -638,6 +647,7 @@ export class ToolManager {
     const entry = this.#history.redo();
     if (!entry) return;
     this.#applyRedo(entry);
+    this.#persistRedo(entry);
     const page = this.getCurrentPage();
     if (page) this.#workspace.emit('penpot-page-change', { page, pageIndex: this.#currentPageIndex });
   }
@@ -732,6 +742,142 @@ export class ToolManager {
     }
   }
 
+  #persistUndo(entry) {
+    const pageId = entry.pageId;
+    switch (entry.type) {
+      case 'create':
+        enqueueChange(makeDeleteChange(pageId, entry.shapeId));
+        break;
+      case 'delete':
+        enqueueChange(makeCreateChange(pageId, entry.shape, entry.shape.parentId));
+        break;
+      case 'update':
+        enqueueChange(makeModifyChange(pageId, entry.shapeId, { [entry.prop]: entry.oldValue }));
+        break;
+      case 'move':
+        enqueueChange(makeModifyChange(pageId, entry.shapeId, { x: entry.oldX, y: entry.oldY }));
+        break;
+      case 'resize':
+        enqueueChange(makeModifyChange(pageId, entry.shapeId, { x: entry.oldProps.x, y: entry.oldProps.y, width: entry.oldProps.width, height: entry.oldProps.height }));
+        break;
+      case 'reorder':
+        enqueueChange(makeMoveChange(pageId, entry.shapeId, entry.toIndex, entry.fromIndex));
+        break;
+    }
+  }
+
+  #persistRedo(entry) {
+    const pageId = entry.pageId;
+    switch (entry.type) {
+      case 'create':
+        enqueueChange(makeCreateChange(pageId, entry.shape, entry.shape.parentId));
+        break;
+      case 'delete':
+        enqueueChange(makeDeleteChange(pageId, entry.shapeId));
+        break;
+      case 'update':
+        enqueueChange(makeModifyChange(pageId, entry.shapeId, { [entry.prop]: entry.newValue }));
+        break;
+      case 'move':
+        enqueueChange(makeModifyChange(pageId, entry.shapeId, { x: entry.newX, y: entry.newY }));
+        break;
+      case 'resize':
+        enqueueChange(makeModifyChange(pageId, entry.shapeId, { x: entry.newProps.x, y: entry.newProps.y, width: entry.newProps.width, height: entry.newProps.height }));
+        break;
+      case 'reorder':
+        enqueueChange(makeMoveChange(pageId, entry.shapeId, entry.fromIndex, entry.toIndex));
+        break;
+    }
+  }
+
+  alignSelectedShapes(alignment) {
+    if (this.#selectedIds.size < 2) return;
+    const page = this.getCurrentPage();
+    if (!page) return;
+    const shapes = [];
+    for (const id of this.#selectedIds) {
+      const shape = this.#findShape(page, id);
+      if (shape) shapes.push(shape);
+    }
+    if (shapes.length < 2) return;
+
+    const minX = Math.min(...shapes.map(s => s.x));
+    const maxX = Math.max(...shapes.map(s => s.x + s.width));
+    const minY = Math.min(...shapes.map(s => s.y));
+    const maxY = Math.max(...shapes.map(s => s.y + s.height));
+    const centerH = (minX + maxX) / 2;
+    const centerV = (minY + maxY) / 2;
+
+    for (const shape of shapes) {
+      const oldX = shape.x;
+      const oldY = shape.y;
+      switch (alignment) {
+        case 'left': shape.x = minX; break;
+        case 'center-h': shape.x = centerH - shape.width / 2; break;
+        case 'right': shape.x = maxX - shape.width; break;
+        case 'top': shape.y = minY; break;
+        case 'center-v': shape.y = centerV - shape.height / 2; break;
+        case 'bottom': shape.y = maxY - shape.height; break;
+      }
+      if (shape.x !== oldX || shape.y !== oldY) {
+        this.#history.push({ type: 'move', shapeId: shape.id, oldX, oldY, newX: shape.x, newY: shape.y, pageId: page.id });
+        enqueueChange(makeModifyChange(page.id, shape.id, { x: shape.x, y: shape.y }));
+      }
+    }
+    this.#workspace.emit('penpot-page-change', { page, pageIndex: this.#currentPageIndex });
+    this.#workspace.emit('penpot-shape-select', { shapeId: null, selectedIds: [...this.#selectedIds] });
+  }
+
+  distributeSelectedShapes(direction) {
+    if (this.#selectedIds.size < 3) return;
+    const page = this.getCurrentPage();
+    if (!page) return;
+    const shapes = [];
+    for (const id of this.#selectedIds) {
+      const shape = this.#findShape(page, id);
+      if (shape) shapes.push(shape);
+    }
+    if (shapes.length < 3) return;
+
+    if (direction === 'horizontal') {
+      shapes.sort((a, b) => a.x - b.x);
+      const first = shapes[0];
+      const last = shapes[shapes.length - 1];
+      const totalSpan = (last.x + last.width) - first.x;
+      const totalShapeWidth = shapes.reduce((sum, s) => sum + s.width, 0);
+      const gap = (totalSpan - totalShapeWidth) / (shapes.length - 1);
+      let currentX = first.x;
+      for (const shape of shapes) {
+        const oldX = shape.x;
+        shape.x = currentX;
+        if (shape.x !== oldX) {
+          this.#history.push({ type: 'move', shapeId: shape.id, oldX, oldY: shape.y, newX: shape.x, newY: shape.y, pageId: page.id });
+          enqueueChange(makeModifyChange(page.id, shape.id, { x: shape.x }));
+        }
+        currentX += shape.width + gap;
+      }
+    } else {
+      shapes.sort((a, b) => a.y - b.y);
+      const first = shapes[0];
+      const last = shapes[shapes.length - 1];
+      const totalSpan = (last.y + last.height) - first.y;
+      const totalShapeHeight = shapes.reduce((sum, s) => sum + s.height, 0);
+      const gap = (totalSpan - totalShapeHeight) / (shapes.length - 1);
+      let currentY = first.y;
+      for (const shape of shapes) {
+        const oldY = shape.y;
+        shape.y = currentY;
+        if (shape.y !== oldY) {
+          this.#history.push({ type: 'move', shapeId: shape.id, oldX: shape.x, oldY, newX: shape.x, newY: shape.y, pageId: page.id });
+          enqueueChange(makeModifyChange(page.id, shape.id, { y: shape.y }));
+        }
+        currentY += shape.height + gap;
+      }
+    }
+    this.#workspace.emit('penpot-page-change', { page, pageIndex: this.#currentPageIndex });
+    this.#workspace.emit('penpot-shape-select', { shapeId: null, selectedIds: [...this.#selectedIds] });
+  }
+
   destroy() {
     if (this.#keydownHandler) document.removeEventListener('keydown', this.#keydownHandler);
     if (this.#keyupHandler) document.removeEventListener('keyup', this.#keyupHandler);
@@ -740,6 +886,7 @@ export class ToolManager {
       if (this.#boundPointerMove) this.#canvasContainer.removeEventListener('pointermove', this.#boundPointerMove);
       if (this.#boundPointerUp) this.#canvasContainer.removeEventListener('pointerup', this.#boundPointerUp);
       if (this.#boundDblClick) this.#canvasContainer.removeEventListener('dblclick', this.#boundDblClick);
+      if (this.#boundContextMenu) this.#canvasContainer.removeEventListener('contextmenu', this.#boundContextMenu);
     }
     if (this.#activeTool) this.#activeTool.deactivate(this.#canvas);
   }

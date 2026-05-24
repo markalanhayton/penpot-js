@@ -45,11 +45,11 @@ const PALETTE = [
 ];
 
 export class PenpotColorPicker extends PenpotElement {
+  _template = template;
   static get observedAttributes() { return ['value', 'opacity']; }
 
   constructor() {
     super();
-this.appendChild(template.content.cloneNode(true));
   }
 
   connectedCallback() {
