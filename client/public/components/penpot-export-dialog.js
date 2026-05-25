@@ -41,6 +41,11 @@ template.innerHTML = `<style>
     .penpot-export__page-select:focus { border-color: var(--export-primary); }
     .penpot-export__export-all { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; font-size: 11px; color: #999; }
     .penpot-export__export-all input[type="checkbox"] { accent-color: var(--export-primary); }
+    .penpot-export__preset-item { display: flex; align-items: center; gap: 6px; padding: 4px 0; font-size: 12px; color: #e6e6e6; }
+    .penpot-export__preset-format { font-weight: 600; min-width: 40px; }
+    .penpot-export__preset-scale { color: #999; min-width: 30px; }
+    .penpot-export__preset-suffix { color: #31efb8; }
+    .penpot-export__preset-file { color: #999; }
     .penpot-export__dialog-footer { padding: 12px 20px; border-top: 1px solid var(--export-border); display: flex; gap: 8px; justify-content: flex-end; }
     .penpot-export__btn { padding: 8px 16px; border-radius: 4px; font-size: 12px; cursor: pointer; border: 1px solid var(--export-border); background: none; color: #e6e6e6; }
     .penpot-export__btn:hover { background: #333; }
@@ -84,6 +89,10 @@ template.innerHTML = `<style>
         </div>
         <div class="penpot-export__preview-area" id="preview">
           <span class="penpot-export__preview-placeholder">Preview will appear here</span>
+        </div>
+        <div id="shape-preset-list" style="display:none;">
+          <h4 style="font-size:12px;color:#999;margin:0 0 8px;">Per-preset export</h4>
+          <div id="shape-presets"></div>
         </div>
       </div>
       <div class="penpot-export__dialog-footer">
@@ -217,6 +226,23 @@ export class PenpotExportDialog extends PenpotElement {
   open(page) {
     if (page) this.#page = page;
     if (this.#pages.length > 0) this.#updatePageSelect();
+
+    const isShapeMode = this.#selectedShape && this.#shapeExports && this.#shapeExports.length > 0;
+    const exportAllLabel = this.querySelector('#export-all')?.closest('.penpot-export__export-all');
+    if (isShapeMode) {
+      if (this.querySelector('#page-select')) this.querySelector('#page-select').style.display = 'none';
+      if (exportAllLabel) exportAllLabel.style.display = 'none';
+      this.querySelector('.penpot-export__dialog-title').textContent = `Export: ${this.#selectedShape.name || 'Shape'}`;
+      const presetList = this.querySelector('#shape-preset-list');
+      if (presetList) presetList.style.display = '';
+    } else {
+      if (this.querySelector('#page-select')) this.querySelector('#page-select').style.display = '';
+      if (exportAllLabel) exportAllLabel.style.display = '';
+      this.querySelector('.penpot-export__dialog-title').textContent = 'Export';
+      const presetList = this.querySelector('#shape-preset-list');
+      if (presetList) presetList.style.display = 'none';
+    }
+
     this.style.display = '';
     this.setAttribute('open', '');
   }
@@ -235,38 +261,11 @@ export class PenpotExportDialog extends PenpotElement {
     btn.innerHTML = '<span class="penpot-export__loading-spinner"></span>Exporting...';
 
     try {
-      const exportAll = this.querySelector('#export-all')?.checked ?? true;
-      const pageSelect = this.querySelector('#page-select');
-      const selectedPageId = pageSelect ? pageSelect.value : '__all__';
-
-      let pagesToExport = [];
-      if (this.#pages.length > 1 && selectedPageId === '__all__' && exportAll) {
-        pagesToExport = this.#pages;
-      } else if (this.#pages.length > 1 && selectedPageId !== '__all__') {
-        const found = this.#pages.find(p => p.id === selectedPageId);
-        pagesToExport = found ? [found] : (this.#page ? [this.#page] : []);
+      if (this.#selectedShape && this.#shapeExports && this.#shapeExports.length > 0) {
+        await this.#doShapeExport();
       } else {
-        pagesToExport = this.#page ? [this.#page] : [];
+        await this.#doPageExport();
       }
-
-      if (pagesToExport.length === 0) {
-        this.emit('penpot-export-error', { error: 'No page to export' });
-        return;
-      }
-
-      for (const page of pagesToExport) {
-        const filename = pagesToExport.length > 1
-          ? `${(page.name || 'page').replace(/[^a-zA-Z0-9_-]/g, '_')}.${this.#format}`
-          : `penpot-export.${this.#format}`;
-        await exportAndDownload(page, this.#format, {
-          scale: this.#scale,
-          width: this.#width,
-          background: this.#background,
-          quality: this.#quality,
-          filename,
-        });
-      }
-      this.emit('penpot-export-success', { format: this.#format, pageCount: pagesToExport.length });
     } catch (err) {
       console.error('[export] Export failed:', err);
       this.emit('penpot-export-error', { error: err.message });
@@ -275,6 +274,98 @@ export class PenpotExportDialog extends PenpotElement {
       btn.disabled = false;
       btn.textContent = 'Export';
     }
+  }
+
+  async #doShapeExport() {
+    const shape = this.#selectedShape;
+    const presets = this.#shapeExports;
+    if (!shape || !presets || presets.length === 0) return;
+
+    const page = this.#page || this.#pages?.[0];
+    if (!page) return;
+
+    this.#renderShapePresets(shape, presets);
+
+    const shapeName = (shape.name || 'shape').replace(/[^a-zA-Z0-9_-]/g, '_');
+
+    for (const preset of presets) {
+      const format = preset.format || 'png';
+      const scale = preset.scale || 1;
+      const suffix = preset.suffix || `@${scale}x`;
+      const filename = `${shapeName}${suffix}.${format}`;
+
+      await exportAndDownload(page, format, {
+        scale,
+        width: Math.round((shape.width || 100) * scale),
+        height: Math.round((shape.height || 100) * scale),
+        background: this.#background,
+        quality: this.#quality,
+        filename,
+        shapeFilter: shape.id,
+      });
+    }
+    this.emit('penpot-export-success', { format: 'multi', pageCount: presets.length });
+  }
+
+  #renderShapePresets(shape, presets) {
+    const container = this.querySelector('#shape-presets');
+    if (!container) return;
+    const shapeName = (shape.name || 'shape').replace(/[^a-zA-Z0-9_-]/g, '_');
+    let html = '';
+    for (const preset of presets) {
+      const format = preset.format || 'png';
+      const scale = preset.scale || 1;
+      const suffix = preset.suffix || `@${scale}x`;
+      const filename = `${shapeName}${suffix}.${format}`;
+      html += `<div class="penpot-export__preset-item">
+        <span class="penpot-export__preset-format">${format.toUpperCase()}</span>
+        <span class="penpot-export__preset-scale">${scale}x</span>
+        <span class="penpot-export__preset-suffix">${this.escHtml(suffix)}</span>
+        <span class="penpot-export__preset-file">${this.escHtml(filename)}</span>
+      </div>`;
+    }
+    container.innerHTML = html;
+  }
+
+  escHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  async #doPageExport() {
+    const exportAll = this.querySelector('#export-all')?.checked ?? true;
+    const pageSelect = this.querySelector('#page-select');
+    const selectedPageId = pageSelect ? pageSelect.value : '__all__';
+
+    let pagesToExport = [];
+    if (this.#pages.length > 1 && selectedPageId === '__all__' && exportAll) {
+      pagesToExport = this.#pages;
+    } else if (this.#pages.length > 1 && selectedPageId !== '__all__') {
+      const found = this.#pages.find(p => p.id === selectedPageId);
+      pagesToExport = found ? [found] : (this.#page ? [this.#page] : []);
+    } else {
+      pagesToExport = this.#page ? [this.#page] : [];
+    }
+
+    if (pagesToExport.length === 0) {
+      this.emit('penpot-export-error', { error: 'No page to export' });
+      return;
+    }
+
+    for (const page of pagesToExport) {
+      const filename = pagesToExport.length > 1
+        ? `${(page.name || 'page').replace(/[^a-zA-Z0-9_-]/g, '_')}.${this.#format}`
+        : `penpot-export.${this.#format}`;
+      await exportAndDownload(page, this.#format, {
+        scale: this.#scale,
+        width: this.#width,
+        background: this.#background,
+        quality: this.#quality,
+        filename,
+      });
+    }
+    this.emit('penpot-export-success', { format: this.#format, pageCount: pagesToExport.length });
   }
 
   render() {}

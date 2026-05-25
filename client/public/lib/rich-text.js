@@ -173,11 +173,42 @@ export function createRichTextEditor(container, shape, onCommit) {
     applyLetterSpacing(ls) {
       editor.style.letterSpacing = `${ls}px`;
     },
+    applySubscript() {
+      document.execCommand('subscript', false, null);
+    },
+    applySuperscript() {
+      document.execCommand('superscript', false, null);
+    },
     applyBulletList() {
       document.execCommand('insertUnorderedList', false, null);
     },
     applyNumberedList() {
       document.execCommand('insertOrderedList', false, null);
+    },
+    applyParagraphSpacing(value) {
+      const sel = window.getSelection();
+      if (!sel.rangeCount) return;
+      let node = sel.anchorNode;
+      if (node && node.nodeType === Node.TEXT_NODE) node = node.parentNode;
+      const block = node && node.closest ? node.closest('p,h1,h2,h3,h4,div,li') : null;
+      if (block) {
+        block.style.marginTop = `${value}px`;
+        block.style.marginBottom = `${value}px`;
+      } else if (activeEditor) {
+        activeEditor.style.setProperty('--p-spacing', `${value}px`);
+      }
+    },
+    applyTextDirection(dir) {
+      const sel = window.getSelection();
+      if (!sel.rangeCount) return;
+      let node = sel.anchorNode;
+      if (node && node.nodeType === Node.TEXT_NODE) node = node.parentNode;
+      const block = node && node.closest ? node.closest('p,h1,h2,h3,h4,div,li') : null;
+      if (block) {
+        block.dir = dir;
+      } else if (activeEditor) {
+        activeEditor.dir = dir;
+      }
     },
     insertLink(url) {
       document.execCommand('createLink', false, url);
@@ -214,6 +245,11 @@ function updateToolbarState() {
   if (italicBtn) italicBtn.classList.toggle('active', document.queryCommandState('italic'));
   if (underlineBtn) underlineBtn.classList.toggle('active', document.queryCommandState('underline'));
   if (strikeBtn) strikeBtn.classList.toggle('active', document.queryCommandState('strikeThrough'));
+
+  const subBtn = toolbar.querySelector('[data-cmd="subscript"]');
+  const supBtn = toolbar.querySelector('[data-cmd="superscript"]');
+  if (subBtn) subBtn.classList.toggle('active', document.queryCommandState('subscript'));
+  if (supBtn) supBtn.classList.toggle('active', document.queryCommandState('superscript'));
 
   const alignLeft = toolbar.querySelector('[data-cmd="justifyLeft"]');
   const alignCenter = toolbar.querySelector('[data-cmd="justifyCenter"]');
@@ -382,6 +418,45 @@ export function createFloatingToolbar(container, editorInstance, position) {
     });
     toolbar.appendChild(btn);
   }
+
+  toolbar.appendChild(makeSep());
+
+  const subBtn = makeToolbarBtn('X\u2082', 'subscript', 'font-size:10px;');
+  subBtn.addEventListener('click', (e) => { e.preventDefault(); editorInstance.applySubscript(); updateToolbarState(); });
+  toolbar.appendChild(subBtn);
+  const supBtn = makeToolbarBtn('X\u00B2', 'superscript', 'font-size:10px;');
+  supBtn.addEventListener('click', (e) => { e.preventDefault(); editorInstance.applySuperscript(); updateToolbarState(); });
+  toolbar.appendChild(supBtn);
+
+  toolbar.appendChild(makeSep());
+
+  const paraSpacingSelect = document.createElement('select');
+  paraSpacingSelect.className = 'rt-para-spacing-select';
+  paraSpacingSelect.style.cssText = 'background:var(--penpot-surface-high,#333);border:1px solid var(--penpot-border,#444);color:var(--penpot-text,#e6e6e6);border-radius:3px;padding:2px 4px;font-size:10px;outline:none;width:42px;margin-left:2px;';
+  paraSpacingSelect.title = 'Paragraph spacing';
+  [{ value: '0', label: '0' }, { value: '4', label: '4' }, { value: '8', label: '8' }, { value: '12', label: '12' }, { value: '16', label: '16' }, { value: '24', label: '24' }].forEach(ps => {
+    const opt = document.createElement('option');
+    opt.value = ps.value;
+    opt.textContent = ps.label;
+    paraSpacingSelect.appendChild(opt);
+  });
+  paraSpacingSelect.value = '0';
+  paraSpacingSelect.addEventListener('change', () => {
+    editorInstance.applyParagraphSpacing(parseInt(paraSpacingSelect.value, 10));
+  });
+  paraSpacingSelect.addEventListener('mousedown', (e) => e.stopPropagation());
+  toolbar.appendChild(paraSpacingSelect);
+
+  const dirBtn = makeToolbarBtn('\u2194', 'textdirection', 'font-size:12px;');
+  dirBtn.title = 'Toggle text direction (LTR/RTL)';
+  let currentDir = 'ltr';
+  dirBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    currentDir = currentDir === 'ltr' ? 'rtl' : 'ltr';
+    editorInstance.applyTextDirection(currentDir);
+    dirBtn.textContent = currentDir === 'rtl' ? '\u2190' : '\u2194';
+  });
+  toolbar.appendChild(dirBtn);
 
   const colorInput = document.createElement('input');
   colorInput.type = 'color';

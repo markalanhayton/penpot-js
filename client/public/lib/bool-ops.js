@@ -1,4 +1,4 @@
-const { createShape } = require('../../lib/types.js');
+import { createShape } from './types.js';
 
 function ensureArray(shapes) {
   if (Array.isArray(shapes)) return shapes;

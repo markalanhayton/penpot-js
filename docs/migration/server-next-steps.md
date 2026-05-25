@@ -707,4 +707,32 @@ All 371 tests pass.
 - `storage_object__hash_backend_bucket__idx` on `(json_extract(metadata, '$.hash'), json_extract(metadata, '$.bucket'), backend) WHERE deleted_at IS NULL` for storage dedup queries
 - `profile__props__newsletter_news__idx` on `profile(email) WHERE json_extract(props, '$.newsletter-news') = 'true'`
 - `profile__props__newsletter_updates__idx` on `profile(email) WHERE json_extract(props, '$.newsletter-updates') = 'true'`
+
+---
+
+## 6. RPC Edge-Case Audit (WU-K1)
+
+Systematic comparison of all JS RPC handlers against upstream Clojure handlers completed.
+
+### 6.1 Missing Upstream Commands — Now Implemented
+
+| Command | Upstream File | Status | Notes |
+|---|---|---|---|
+| `get-file-summary` | `files.clj` line 601 | ✅ Implemented | Returns lightweight file metadata (id, name, projectId, isShared, revn, pageCount, libraryCount) without loading full data blob |
+| `get-file-libraries` | `files.clj` line 686 | ✅ Implemented | Returns libraries linked to a specific file (vs team-level `get-team-libraries`) |
+| `get-library-file-references` | `files.clj` line 713 | ✅ Implemented | Returns files that reference a given library file |
+
+### 6.2 JS-Specific Additions (Not in Upstream)
+
+| Command | JS File | Notes |
+|---|---|---|
+| `get-export-status` | `binfile.js` | Poll export completion status by storage object ID |
+| `get-current-mcp-token` | `access_token.js` | MCP token management |
+| `get-api-tokens` | `access_token.js` | API token listing |
+| `search-rebuild-index` | `search.js` | FTS5 index rebuild trigger |
+| `get-file-changes` | `files_update.js` | SSE/streaming file change feed |
+
+### 6.3 Summary
+
+The JS port now has **149 RPC commands** across **27 files**, covering all 143 upstream commands plus 6 JS-specific additions. All 564 server tests pass (5 new tests for the 3 new commands).
 - `scheduler.js` bug fix: changed `photo` → `photo_id` in profile/team photo references

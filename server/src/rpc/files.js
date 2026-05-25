@@ -28,6 +28,9 @@
  * | `permanently-delete-team-files` | Yes  | 2.13   |
  * | `restore-deleted-team-files`  | Yes    | 2.13   |
  * | `update-file-pin`             | Yes           | 2.23   |
+ * | `get-file-summary`          | Yes           | 2.8    |
+ * | `get-file-libraries`        | Yes           | 2.8    |
+ * | `get-library-file-references` | Yes          | 2.10   |
  */
 
 import { v4 as uuidv4 } from 'uuid';
@@ -635,6 +638,75 @@ export default function registerFileCommands(register, pool) {
       `).run(fileId, projectId, ctx.profileId, pinned, now, pinned, now);
 
       return { id: fileId, isPinned: isPinned || false };
+    },
+  });
+
+  register('get-file-summary', {
+    auth: true,
+    added: '2.8',
+    async handler(params, ctx) {
+      const { id } = params;
+      const file = pool.get('SELECT id, name, project_id, is_shared, revn, vern, modified_at, created_at FROM file WHERE id = ? AND deleted_at IS NULL', [id]);
+      if (!file) throw new RpcError('not-found', 'object-not-found', 'File not found');
+
+      checkReadPermissions(pool, ctx.profileId, id);
+
+      const pages = pool.query('SELECT id, name, ordering FROM page WHERE file_id = ? AND deleted_at IS NULL ORDER BY ordering', [id]);
+      const libraryCount = pool.get('SELECT COUNT(*) as cnt FROM file_library_rel WHERE file_id = ?', [id]);
+
+      return {
+        id: file.id,
+        name: file.name,
+        projectId: file.project_id,
+        isShared: file.is_shared === '1',
+        revn: file.revn,
+        vern: file.vern || 0,
+        modifiedAt: file.modified_at,
+        createdAt: file.created_at,
+        pageCount: pages.length,
+        libraryCount: libraryCount?.cnt || 0,
+      };
+    },
+  });
+
+  register('get-file-libraries', {
+    auth: true,
+    added: '2.8',
+    async handler(params, ctx) {
+      const { fileId } = params;
+
+      checkReadPermissions(pool, ctx.profileId, fileId);
+
+      const libraries = pool.query(
+        `SELECT f.id, f.name, f.is_shared, f.revn, f.modified_at, f.created_at
+         FROM file f
+         JOIN file_library_rel flr ON flr.library_file_id = f.id
+         WHERE flr.file_id = ? AND f.deleted_at IS NULL`,
+        [fileId]
+      );
+
+      return rowsToCamel(libraries);
+    },
+  });
+
+  register('get-library-file-references', {
+    auth: true,
+    added: '2.10',
+    async handler(params, ctx) {
+      const { libraryId } = params;
+
+      const library = pool.get('SELECT id, is_shared FROM file WHERE id = ? AND deleted_at IS NULL', [libraryId]);
+      if (!library) throw new RpcError('not-found', 'object-not-found', 'Library file not found');
+
+      const references = pool.query(
+        `SELECT f.id, f.name, f.project_id, f.revn, f.modified_at
+         FROM file f
+         JOIN file_library_rel flr ON flr.file_id = f.id
+         WHERE flr.library_file_id = ? AND f.deleted_at IS NULL`,
+        [libraryId]
+      );
+
+      return rowsToCamel(references);
     },
   });
 }

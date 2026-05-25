@@ -76,25 +76,12 @@ template.innerHTML = `<style>
   </div>
   <div class="penpot-assets__asset-content" id="content"></div>`;
 
-const SAMPLE_COMPONENTS = [
-  { id: 'comp-btn', name: 'Button', type: 'frame', icon: '\u25A1' },
-  { id: 'comp-input', name: 'Input', type: 'rect', icon: '\u25AD' },
-  { id: 'comp-card', name: 'Card', type: 'frame', icon: '\u25A1' },
-  { id: 'comp-avatar', name: 'Avatar', type: 'circle', icon: '\u25CB' },
-  { id: 'comp-badge', name: 'Badge', type: 'rect', icon: '\u25AD' },
-  { id: 'comp-divider', name: 'Divider', type: 'rect', icon: '\u2500' },
-];
-
 const SYSTEM_FONTS = [
   { id: 'font-sans', name: 'Inter', family: 'Inter, sans-serif' },
   { id: 'font-serif', name: 'Merriweather', family: 'Merriweather, serif' },
   { id: 'font-mono', name: 'JetBrains Mono', family: 'JetBrains Mono, monospace' },
   { id: 'font-display', name: 'Poppins', family: 'Poppins, sans-serif' },
   { id: 'font-system', name: 'System UI', family: '-apple-system, BlinkMacSystemFont, sans-serif' },
-];
-
-const SAMPLE_MEDIA = [
-  { id: 'media-placeholder', name: 'Placeholder', type: 'image', icon: '\u{1F5BC}' },
 ];
 
 const FONT_WEIGHT_NAMES = {
@@ -172,10 +159,11 @@ export class PenpotAssetPanel extends PenpotElement {
   }
 
   getAvailableComponents() {
-    const components = this.#components.length > 0 ? this.#components : SAMPLE_COMPONENTS;
-    if (!this.#searchQuery) return components;
-    const q = this.#searchQuery.toLowerCase();
-    return components.filter(c => c.name.toLowerCase().includes(q));
+    if (this.#searchQuery) {
+      const q = this.#searchQuery.toLowerCase();
+      return this.#components.filter(c => c.name.toLowerCase().includes(q));
+    }
+    return this.#components;
   }
 
   getAvailableFonts() {
@@ -226,7 +214,10 @@ export class PenpotAssetPanel extends PenpotElement {
   #renderComponents() {
     const components = this.getAvailableComponents();
     if (components.length === 0) {
-      return '<div class="penpot-assets__empty-state">No components found.</div>';
+      if (this.#components.length === 0) {
+        return '<div class="penpot-assets__empty-state">No components in this file yet. Select shapes and use "Create Component" to add one.</div>';
+      }
+      return '<div class="penpot-assets__empty-state">No components match your search.</div>';
     }
     let html = '<div class="penpot-assets__component-grid">';
     for (const comp of components) {
@@ -354,12 +345,11 @@ export class PenpotAssetPanel extends PenpotElement {
   }
 
   #renderMedia() {
-    const media = this.#media.length > 0 ? this.#media : SAMPLE_MEDIA;
-    if (media.length === 0) {
-      return '<div class="penpot-assets__empty-state">No media assets.</div>';
+    if (this.#media.length === 0) {
+      return '<div class="penpot-assets__empty-state">No media assets. Upload images to use them in your designs.</div>';
     }
     let html = '<div class="penpot-assets__media-grid">';
-    for (const item of media) {
+    for (const item of this.#media) {
       html += `<div class="penpot-assets__media-card" data-media-id="${this.escAttr(item.id)}" title="${this.escHtml(item.name)}">
         <div class="penpot-assets__media-thumb">${item.icon || '\u{1F5BC}'}</div>
         <div class="penpot-assets__media-label">${this.escHtml(item.name)}</div>
@@ -383,6 +373,12 @@ export class PenpotAssetPanel extends PenpotElement {
     content.querySelectorAll('.penpot-assets__component-card').forEach(card => {
       card.addEventListener('click', () => {
         this.emit('penpot-asset-use', { type: 'component', id: card.dataset.componentId });
+      });
+      card.setAttribute('draggable', 'true');
+      card.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('application/penpot-component', card.dataset.componentId);
+        e.dataTransfer.effectAllowed = 'copy';
+        try { e.dataTransfer.setDragImage(card, card.offsetWidth / 2, card.offsetHeight / 2); } catch (_) {}
       });
     });
 
@@ -491,11 +487,21 @@ export class PenpotAssetPanel extends PenpotElement {
         if (e.target.closest('[data-delete-color]')) return;
         this.emit('penpot-color-use', { id: item.dataset.colorId });
       });
+      item.setAttribute('draggable', 'true');
+      item.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('application/penpot-color', item.dataset.colorId);
+        e.dataTransfer.effectAllowed = 'copy';
+      });
     });
 
     content.querySelectorAll('.penpot-assets__recent-swatch').forEach(swatch => {
       swatch.addEventListener('click', () => {
         this.emit('penpot-color-use', { id: swatch.dataset.recentColorId });
+      });
+      swatch.setAttribute('draggable', 'true');
+      swatch.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('application/penpot-color', swatch.dataset.recentColorId);
+        e.dataTransfer.effectAllowed = 'copy';
       });
     });
 
@@ -600,6 +606,11 @@ export class PenpotAssetPanel extends PenpotElement {
         if (e.target.closest('[data-delete-typo]')) return;
         if (e.target.closest('[data-edit-typo]')) return;
         this.emit('penpot-typography-use', { id: item.dataset.typoId });
+      });
+      item.setAttribute('draggable', 'true');
+      item.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('application/penpot-typography', item.dataset.typoId);
+        e.dataTransfer.effectAllowed = 'copy';
       });
     });
 

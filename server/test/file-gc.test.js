@@ -2,7 +2,7 @@ import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { createTestPool, destroyTestPool, seedFullHierarchy } from './helpers.js';
 import { v4 as uuidv4 } from 'uuid';
-import { collectUsedMediaIds, collectMediaFromShape, collectMediaFromShapes, collectComponentReferences } from '../src/tasks/scheduler.js';
+import { collectUsedMediaIds, collectMediaFromShape, collectMediaFromShapes, collectComponentReferences, cleanFile } from '../src/tasks/file-gc.js';
 
 describe('collectMediaFromShape', () => {
   it('extracts fillImage', () => {
@@ -157,5 +157,85 @@ describe('collectComponentReferences', () => {
     };
     collectComponentReferences(objects, 'lib-file-id', usedIds);
     assert.equal(usedIds.size, 0);
+  });
+});
+
+describe('cleanFile', () => {
+  it('removes nil keys from top-level data', () => {
+    const data = { pagesIndex: {}, components: {}, nullValue: null, undefinedValue: undefined };
+    const result = cleanFile(data);
+    assert.equal(result.nullValue, undefined);
+    assert.equal(result.undefinedValue, undefined);
+    assert.deepEqual(Object.keys(result).sort(), ['components', 'pagesIndex']);
+  });
+
+  it('fixes bool-content → content migration', () => {
+    const data = {
+      pagesIndex: {
+        'page-1': {
+          id: 'page-1',
+          objects: {
+            'shape-1': { type: 'bool', boolContent: [{ type: 'rect' }], id: 'shape-1' },
+          },
+        },
+      },
+    };
+    const result = cleanFile(data);
+    const shape = result.pagesIndex['page-1'].objects['shape-1'];
+    assert.deepEqual(shape.content, [{ type: 'rect' }]);
+    assert.equal(shape.boolContent, undefined);
+  });
+
+  it('fixes legacy flex direction names', () => {
+    const data = {
+      pagesIndex: {
+        'page-1': {
+          id: 'page-1',
+          objects: {
+            'shape-1': { type: 'frame', layoutFlexDir: 'reverse-row', id: 'shape-1' },
+          },
+        },
+      },
+    };
+    const result = cleanFile(data);
+    assert.equal(result.pagesIndex['page-1'].objects['shape-1'].layoutFlexDir, 'row-reverse');
+  });
+
+  it('fixes root shape with zero UUID', () => {
+    const zeroId = '00000000-0000-0000-0000-000000000000';
+    const data = {
+      pagesIndex: {
+        'page-1': {
+          id: 'page-1',
+          objects: {
+            [zeroId]: { id: zeroId, type: 'frame' },
+          },
+        },
+      },
+    };
+    const result = cleanFile(data);
+    const root = result.pagesIndex['page-1'].objects[zeroId];
+    assert.equal(root.parentId, zeroId);
+    assert.equal(root.frameId, zeroId);
+  });
+
+  it('cleans components with nil objects', () => {
+    const data = {
+      components: {
+        'comp-1': {
+          id: 'comp-1',
+          objects: { 'shape-1': { type: 'rect' }, '': null },
+        },
+      },
+    };
+    const result = cleanFile(data);
+    const comp = result.components['comp-1'];
+    assert.ok(comp.objects['shape-1']);
+    assert.equal(comp.objects[''], undefined);
+  });
+
+  it('handles null data gracefully', () => {
+    const result = cleanFile(null);
+    assert.equal(result, null);
   });
 });

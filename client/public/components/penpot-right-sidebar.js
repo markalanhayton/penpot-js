@@ -3,6 +3,7 @@ import './penpot-gradient-editor.js';
 import './penpot-shadow-editor.js';
 import './penpot-layout-panel.js';
 import './penpot-tokens-panel.js';
+import './penpot-interaction-panel.js';
 
 const template = document.createElement('template');
 template.innerHTML = `<style>
@@ -40,6 +41,7 @@ template.innerHTML = `<style>
   </style>
   <div class="penpot-rside__sidebar-tabs">
     <button class="penpot-rside__sidebar-tab penpot-rside__active" data-tab="design">Design</button>
+    <button class="penpot-rside__sidebar-tab" data-tab="prototype">Prototype</button>
     <button class="penpot-rside__sidebar-tab" data-tab="inspect">Inspect</button>
   </div>
   <div class="penpot-rside__sidebar-content" id="content">
@@ -102,6 +104,12 @@ export class PenpotRightSidebar extends PenpotElement {
     if (this.#activeTab === 'inspect') {
       content.innerHTML = this.#renderInspect(s);
       this.#bindInspectEvents(content, s);
+      return;
+    }
+
+    if (this.#activeTab === 'prototype') {
+      content.innerHTML = this.#renderPrototype(s);
+      this.#bindPrototypeEvents(content, s);
       return;
     }
 
@@ -228,6 +236,13 @@ export class PenpotRightSidebar extends PenpotElement {
       for (const ab of alignButtons) {
         html += `<button class="penpot-rside__bool-btn ${ab.value === currentAlign ? 'penpot-rside__active' : ''}" data-text-prop="textAlign" data-align="${ab.value}" title="${ab.title}">${ab.label}</button>`;
       }
+      html += `</div>`;
+
+      const isSub = s.verticalAlign === 'sub' || s.subscript;
+      const isSup = s.verticalAlign === 'super' || s.superscript;
+      html += `<div class="penpot-rside__prop-row" style="gap:6px;"><span class="penpot-rside__prop-label">Style</span>`;
+      html += `<button class="penpot-rside__bool-btn ${isSub ? 'penpot-rside__active' : ''}" data-text-prop="subscript" title="Subscript">X<sub>2</sub></button>`;
+      html += `<button class="penpot-rside__bool-btn ${isSup ? 'penpot-rside__active' : ''}" data-text-prop="superscript" title="Superscript">X<sup>2</sup></button>`;
       html += `</div>`;
 
       const growType = s.growType || s['grow-type'] || 'fixed';
@@ -362,6 +377,68 @@ export class PenpotRightSidebar extends PenpotElement {
       html += `<div class="penpot-rside__prop-row"><span class="penpot-rside__prop-label" style="width:16px">px</span><input class="penpot-rside__prop-input" value="${blur}" type="number" min="0" step="1" data-prop="blur"></div>`;
       html += `</div>`;
     }
+
+    const filters = s.filters || [];
+    html += `<div class="penpot-rside__properties-section">`;
+    html += `<h4>Filters</h4>`;
+    for (let fi = 0; fi < filters.length; fi++) {
+      const f = filters[fi];
+      const ft = f.filterType || f['filter-type'] || 'drop-shadow';
+      html += `<div class="penpot-rside__prop-row" style="gap:4px;flex-wrap:wrap;">`;
+      html += `<select class="penpot-rside__prop-select" data-filter-type="${fi}" style="flex:1;min-width:80px;">`;
+      html += `<option value="drop-shadow"${ft === 'drop-shadow' ? ' selected' : ''}>Drop Shadow</option>`;
+      html += `<option value="color-matrix"${ft === 'color-matrix' ? ' selected' : ''}>Color Matrix</option>`;
+      html += `<option value="turbulence"${ft === 'turbulence' ? ' selected' : ''}>Turbulence</option>`;
+      html += `<option value="flood"${ft === 'flood' ? ' selected' : ''}>Flood Fill</option>`;
+      html += `</select>`;
+      html += `<button class="penpot-rside__icon-btn" data-filter-remove="${fi}" title="Remove filter" style="width:20px;height:20px;font-size:12px;padding:0;border:1px solid var(--penpot-border,#444);border-radius:3px;background:none;color:var(--penpot-text-dim,#999);cursor:pointer;">✕</button>`;
+      html += `</div>`;
+      if (ft === 'drop-shadow') {
+        const dx = f.offsetX ?? f['offset-x'] ?? 2;
+        const dy = f.offsetY ?? f['offset-y'] ?? 2;
+        const dev = f.stdDeviation ?? f.deviation ?? 3;
+        const color = f.color ?? '#000000';
+        const opacity = f.opacity ?? 0.5;
+        html += `<div class="penpot-rside__prop-row" style="gap:2px;flex-wrap:wrap;">`;
+        html += `<span class="penpot-rside__prop-label" style="width:20px">X</span><input class="penpot-rside__prop-input" type="number" value="${dx}" data-filter-prop="${fi}:offsetX" style="width:42px">`;
+        html += `<span class="penpot-rside__prop-label" style="width:20px">Y</span><input class="penpot-rside__prop-input" type="number" value="${dy}" data-filter-prop="${fi}:offsetY" style="width:42px">`;
+        html += `<span class="penpot-rside__prop-label" style="width:20px">σ</span><input class="penpot-rside__prop-input" type="number" value="${dev}" data-filter-prop="${fi}:stdDeviation" style="width:42px">`;
+        html += `</div>`;
+        html += `<div class="penpot-rside__prop-row" style="gap:4px;">`;
+        html += `<input type="color" value="${color}" data-filter-prop="${fi}:color" style="width:24px;height:20px;padding:0;border:1px solid var(--penpot-border,#444);">`;
+        html += `<span class="penpot-rside__prop-label" style="width:16px">α</span><input class="penpot-rside__prop-input" type="number" value="${opacity}" min="0" max="1" step="0.1" data-filter-prop="${fi}:opacity" style="width:42px">`;
+        html += `</div>`;
+      } else if (ft === 'color-matrix') {
+        const matrixType = f.matrixType ?? f['matrix-type'] ?? 'saturate';
+        const values = f.values ?? '0';
+        html += `<div class="penpot-rside__prop-row" style="gap:4px;">`;
+        html += `<select class="penpot-rside__prop-select" data-filter-prop="${fi}:matrixType" style="flex:1;">`;
+        html += `<option value="saturate"${matrixType === 'saturate' ? ' selected' : ''}>Saturate</option>`;
+        html += `<option value="hue-rotate"${matrixType === 'hue-rotate' ? ' selected' : ''}>Hue Rotate</option>`;
+        html += `<option value="luminance-to-alpha"${matrixType === 'luminance-to-alpha' ? ' selected' : ''}>Luminance→Alpha</option>`;
+        html += `</select>`;
+        html += `<input class="penpot-rside__prop-input" type="text" value="${values}" data-filter-prop="${fi}:values" style="width:60px;" placeholder="0">`;
+        html += `</div>`;
+      } else if (ft === 'turbulence') {
+        const baseFreq = f.baseFrequency ?? f['base-frequency'] ?? '0.05';
+        const numOctaves = f.numOctaves ?? f['num-octaves'] ?? 2;
+        const scale = f.scale ?? 10;
+        html += `<div class="penpot-rside__prop-row" style="gap:2px;flex-wrap:wrap;">`;
+        html += `<span class="penpot-rside__prop-label" style="width:24px">Freq</span><input class="penpot-rside__prop-input" type="text" value="${baseFreq}" data-filter-prop="${fi}:baseFrequency" style="width:52px">`;
+        html += `<span class="penpot-rside__prop-label" style="width:24px">Oct</span><input class="penpot-rside__prop-input" type="number" value="${numOctaves}" data-filter-prop="${fi}:numOctaves" style="width:36px" min="1" max="10">`;
+        html += `<span class="penpot-rside__prop-label" style="width:24px">Sc</span><input class="penpot-rside__prop-input" type="number" value="${scale}" data-filter-prop="${fi}:scale" style="width:42px">`;
+        html += `</div>`;
+      } else if (ft === 'flood') {
+        const floodColor = f.color ?? '#000000';
+        const floodOpacity = f.opacity ?? 0.5;
+        html += `<div class="penpot-rside__prop-row" style="gap:4px;">`;
+        html += `<input type="color" value="${floodColor}" data-filter-prop="${fi}:color" style="width:24px;height:20px;padding:0;border:1px solid var(--penpot-border,#444);">`;
+        html += `<span class="penpot-rside__prop-label" style="width:16px">α</span><input class="penpot-rside__prop-input" type="number" value="${floodOpacity}" min="0" max="1" step="0.1" data-filter-prop="${fi}:opacity" style="width:42px">`;
+        html += `</div>`;
+      }
+    }
+    html += `<button class="penpot-rside__bool-btn" data-action="add-filter" style="width:100%;margin-top:4px;">+ Add Filter</button>`;
+    html += `</div>`;
 
     if ((s.type === 'frame' || (s.type === 'rect' && !s.componentRoot && !s.componentId)) && s.width && s.height) {
       const PRESETS = [
@@ -621,6 +698,18 @@ export class PenpotRightSidebar extends PenpotElement {
       });
     });
 
+    content.querySelectorAll('[data-text-prop="subscript"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.emit('penpot-property-change', { prop: 'subscript', value: !btn.classList.contains('penpot-rside__active'), shapeId: s.id });
+      });
+    });
+
+    content.querySelectorAll('[data-text-prop="superscript"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.emit('penpot-property-change', { prop: 'superscript', value: !btn.classList.contains('penpot-rside__active'), shapeId: s.id });
+      });
+    });
+
     const growTypeSelect = content.querySelector('#text-grow-type');
     if (growTypeSelect) {
       growTypeSelect.addEventListener('change', () => {
@@ -680,6 +769,54 @@ export class PenpotRightSidebar extends PenpotElement {
         this.emit('penpot-reset-overrides', { shapeId: s.id, group: 'stroke-group' });
       });
     }
+
+    content.querySelectorAll('[data-action="add-filter"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const newFilters = [...(s.filters || []), { filterType: 'drop-shadow', offsetX: 2, offsetY: 2, stdDeviation: 3, color: '#000000', opacity: 0.5 }];
+        this.emit('penpot-property-change', { prop: 'filters', value: newFilters, shapeId: s.id });
+      });
+    });
+
+    content.querySelectorAll('[data-filter-remove]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.filterRemove, 10);
+        const newFilters = [...(s.filters || [])];
+        newFilters.splice(idx, 1);
+        this.emit('penpot-property-change', { prop: 'filters', value: newFilters, shapeId: s.id });
+      });
+    });
+
+    content.querySelectorAll('[data-filter-type]').forEach(select => {
+      select.addEventListener('change', () => {
+        const idx = parseInt(select.dataset.filterType, 10);
+        const newFilters = [...(s.filters || [])];
+        const defaults = {
+          'drop-shadow': { filterType: 'drop-shadow', offsetX: 2, offsetY: 2, stdDeviation: 3, color: '#000000', opacity: 0.5 },
+          'color-matrix': { filterType: 'color-matrix', matrixType: 'saturate', values: '0' },
+          'turbulence': { filterType: 'turbulence', baseFrequency: '0.05', numOctaves: 2, scale: 10 },
+          'flood': { filterType: 'flood', color: '#000000', opacity: 0.5 },
+        };
+        newFilters[idx] = { ...(defaults[select.value] || defaults['drop-shadow']) };
+        this.emit('penpot-property-change', { prop: 'filters', value: newFilters, shapeId: s.id });
+      });
+    });
+
+    content.querySelectorAll('[data-filter-prop]').forEach(input => {
+      const eventType = input.tagName === 'SELECT' ? 'change' : (input.type === 'color' ? 'input' : 'change');
+      input.addEventListener(eventType, () => {
+        const [idxStr, prop] = input.dataset.filterProp.split(':');
+        const idx = parseInt(idxStr, 10);
+        const newFilters = [...(s.filters || [])];
+        if (!newFilters[idx]) return;
+        newFilters[idx] = { ...newFilters[idx] };
+        if (input.type === 'number') {
+          newFilters[idx][prop] = Number(input.value) || 0;
+        } else {
+          newFilters[idx][prop] = input.value;
+        }
+        this.emit('penpot-property-change', { prop: 'filters', value: newFilters, shapeId: s.id });
+      });
+    });
 
     content.querySelectorAll('[data-align]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -743,7 +880,9 @@ export class PenpotRightSidebar extends PenpotElement {
     const addExportPresetBtn = content.querySelector('#add-export-preset');
     if (addExportPresetBtn) {
       addExportPresetBtn.addEventListener('click', () => {
-        const exports = [...(s.exports || []), { format: 'png', scale: 1, suffix: '' }];
+        const newScale = (s.exports || []).length === 0 ? 1 : Math.max(...(s.exports || []).map(e => e.scale || 1)) + 1;
+        const newSuffix = `@${newScale}x`;
+        const exports = [...(s.exports || []), { format: 'png', scale: newScale, suffix: newSuffix }];
         this.emit('penpot-property-change', { prop: 'exports', value: exports, shapeId: s.id });
       });
     }
@@ -769,11 +908,17 @@ export class PenpotRightSidebar extends PenpotElement {
       const updateExport = () => {
         const exports = [...(s.exports || [])];
         if (exports[idx]) {
+          const oldScale = exports[idx].scale || 1;
+          const newScale = Number(scaleSelect?.value) || 1;
+          let newSuffix = suffixInput?.value || '';
+          if (/^@\d+x$/.test(newSuffix) || newSuffix === '') {
+            newSuffix = `@${newScale}x`;
+          }
           exports[idx] = {
             ...exports[idx],
             format: formatSelect?.value || 'png',
-            scale: Number(scaleSelect?.value) || 1,
-            suffix: suffixInput?.value || '',
+            scale: newScale,
+            suffix: newSuffix,
           };
           this.emit('penpot-property-change', { prop: 'exports', value: exports, shapeId: s.id });
         }
@@ -995,6 +1140,32 @@ export class PenpotRightSidebar extends PenpotElement {
     if (!s || !s.componentId || !s.touched) return '';
     const touched = s.touched instanceof Set ? s.touched : Array.isArray(s.touched) ? new Set(s.touched) : new Set(Object.keys(s.touched));
     return touched.has(group) ? '<span class="penpot-rside__override-dot" title="Override">●</span>' : '';
+  }
+
+  #renderPrototype(s) {
+    if (!s) return '<div class="penpot-rside__empty-state">Select a shape to add prototype interactions</div>';
+    return `<penpot-interaction-panel id="interaction-panel"></penpot-interaction-panel>`;
+  }
+
+  #bindPrototypeEvents(content, s) {
+    const panel = content.querySelector('#interaction-panel');
+    if (panel) {
+      panel.selectedShape = s;
+      panel.objects = this.#fileData?.objects || {};
+      const state = this.#toolManager?.workspace?.store?.getState?.();
+      const pages = state?.pages || [];
+      const currentPage = pages.find(p => p.id === state?.currentPageId);
+      const frames = currentPage ? Object.values(currentPage.objects || {}).filter(obj => obj.type === 'frame' && obj.id !== '00000000-0000-0000-0000-000000000000') : [];
+      panel.frames = frames;
+      panel.addEventListener('penpot-interaction-change', (e) => {
+        const { shapeId, interactions } = e.detail;
+        this.dispatchEvent(new CustomEvent('penpot-property-change', {
+          detail: { shapeId, prop: 'interactions', value: interactions },
+          bubbles: true,
+          composed: true
+        }));
+      });
+    }
   }
 }
 

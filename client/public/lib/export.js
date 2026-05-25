@@ -121,6 +121,27 @@ export function downloadBlobURL(blobUrl, filename) {
 export async function exportAndDownload(page, format = 'png', options = {}) {
   const filename = options.filename || `penpot-export.${format}`;
 
+  if (options.shapeFilter) {
+    const shape = findShapeById(page, options.shapeFilter);
+    if (!shape) {
+      console.warn('[export] Shape not found for export:', options.shapeFilter);
+      return;
+    }
+    const shapeOpts = {
+      ...options,
+      viewport: {
+        x: shape.x || 0,
+        y: shape.y || 0,
+        width: shape.width || 100,
+        height: shape.height || 100,
+      },
+      width: options.width || Math.round((shape.width || 100) * (options.scale || 1)),
+      height: options.height || Math.round((shape.height || 100) * (options.scale || 1)),
+    };
+    const filteredPage = { ...page, objects: filterShapeAndChildren(page, shape.id) };
+    return exportAndDownload(filteredPage, format, { ...shapeOpts, filename, shapeFilter: undefined });
+  }
+
   switch (format) {
     case 'png': {
       const dataUrl = await exportToPNG(page, options);
@@ -301,6 +322,36 @@ function renderShapeToSVG(shape) {
         fill: '#ccc',
       });
   }
+}
+
+function findShapeById(page, id) {
+  const objects = page.objects || page.children || {};
+  const shapes = Array.isArray(objects) ? objects : Object.values(objects);
+  for (const s of shapes) {
+    if (s.id === id) return s;
+    if (s.children) {
+      const found = findShapeById({ objects: s.children }, id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function filterShapeAndChildren(page, shapeId) {
+  const objects = page.objects || page.children || {};
+  const shapes = Array.isArray(objects) ? objects : Object.values(objects);
+  const result = [];
+  for (const s of shapes) {
+    if (s.id === shapeId) {
+      result.push(s);
+    } else if (s.children) {
+      const filtered = filterShapeAndChildren({ objects: s.children }, shapeId);
+      if (filtered.length > 0) {
+        result.push({ ...s, children: filtered });
+      }
+    }
+  }
+  return result;
 }
 
 function loadImage(url) {

@@ -186,4 +186,110 @@ describe('changes', () => {
       assert.equal(result, null);
     });
   });
+
+  describe('set-guide changes', () => {
+    it('adds a guide to a page', () => {
+      const data = makeFileData();
+      const result = cfc.processChanges(data, [{
+        type: 'set-guide',
+        'page-id': 'page-1',
+        id: 'guide-1',
+        params: { axis: 'x', position: 100 },
+      }]);
+      assert.ok(result['pages-index']['page-1'].guides);
+      assert.deepEqual(result['pages-index']['page-1'].guides['guide-1'], {
+        id: 'guide-1',
+        axis: 'x',
+        position: 100,
+      });
+    });
+
+    it('updates an existing guide', () => {
+      const data = {
+        ...makeFileData(),
+        'pages-index': {
+          ...makeFileData()['pages-index'],
+          'page-1': {
+            ...makeFileData()['pages-index']['page-1'],
+            guides: {
+              'guide-1': { id: 'guide-1', axis: 'x', position: 100 },
+            },
+          },
+        },
+      };
+      const result = cfc.processChanges(data, [{
+        type: 'set-guide',
+        'page-id': 'page-1',
+        id: 'guide-1',
+        params: { axis: 'x', position: 200 },
+      }]);
+      assert.equal(result['pages-index']['page-1'].guides['guide-1'].position, 200);
+    });
+
+    it('deletes a guide when params is null', () => {
+      const data = {
+        ...makeFileData(),
+        'pages-index': {
+          ...makeFileData()['pages-index'],
+          'page-1': {
+            ...makeFileData()['pages-index']['page-1'],
+            guides: {
+              'guide-1': { id: 'guide-1', axis: 'x', position: 100 },
+            },
+          },
+        },
+      };
+      const result = cfc.processChanges(data, [{
+        type: 'set-guide',
+        'page-id': 'page-1',
+        id: 'guide-1',
+        params: null,
+      }]);
+      assert.equal(result['pages-index']['page-1'].guides, undefined);
+    });
+
+    it('handles guide with frame-id', () => {
+      const data = makeFileData();
+      const result = cfc.processChanges(data, [{
+        type: 'set-guide',
+        'page-id': 'page-1',
+        id: 'guide-2',
+        params: { axis: 'y', position: 50, 'frame-id': 'frame-1' },
+      }]);
+      assert.equal(result['pages-index']['page-1'].guides['guide-2']['frame-id'], 'frame-1');
+    });
+
+    it('handles guide with color', () => {
+      const data = makeFileData();
+      const result = cfc.processChanges(data, [{
+        type: 'set-guide',
+        'page-id': 'page-1',
+        id: 'guide-3',
+        params: { axis: 'x', position: 150, color: '#ff0000' },
+      }]);
+      assert.equal(result['pages-index']['page-1'].guides['guide-3'].color, '#ff0000');
+    });
+
+    it('removes guides key entirely when last guide is deleted', () => {
+      const data = {
+        ...makeFileData(),
+        'pages-index': {
+          ...makeFileData()['pages-index'],
+          'page-1': {
+            ...makeFileData()['pages-index']['page-1'],
+            guides: {
+              'guide-1': { id: 'guide-1', axis: 'x', position: 100 },
+            },
+          },
+        },
+      };
+      const result = cfc.processChanges(data, [{
+        type: 'set-guide',
+        'page-id': 'page-1',
+        id: 'guide-1',
+        params: null,
+      }]);
+      assert.equal(result['pages-index']['page-1'].guides, undefined);
+    });
+  });
 });

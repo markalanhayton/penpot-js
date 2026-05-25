@@ -134,6 +134,57 @@ export function renderShape(shape, depth = 0) {
   }
 }
 
+function buildFilterDefs(shape) {
+  const filterPrimitives = [];
+  const blur = shape.blur && shape.blur > 0 ? shape.blur : 0;
+  const filters = shape.filters || [];
+
+  if (blur > 0) {
+    filterPrimitives.push(el('feGaussianBlur', { in: 'SourceGraphic', stdDeviation: String(blur) }));
+  }
+
+  for (let i = 0; i < filters.length; i++) {
+    const f = filters[i];
+    const ft = f.filterType || f['filter-type'];
+    switch (ft) {
+      case 'drop-shadow': {
+        const dx = f.offsetX ?? f['offset-x'] ?? 2;
+        const dy = f.offsetY ?? f['offset-y'] ?? 2;
+        const stdDev = f.stdDeviation ?? f.deviation ?? 3;
+        const color = f.color ?? '#000000';
+        const opacity = f.opacity ?? 0.5;
+        filterPrimitives.push(el('feDropShadow', { dx: String(dx), dy: String(dy), stdDeviation: String(stdDev), 'flood-color': color, 'flood-opacity': String(opacity) }));
+        break;
+      }
+      case 'color-matrix': {
+        const type = f.matrixType ?? f['matrix-type'] ?? 'saturate';
+        const values = f.values ?? '0';
+        filterPrimitives.push(el('feColorMatrix', { type: String(type), values: String(values) }));
+        break;
+      }
+      case 'turbulence': {
+        const baseFreq = f.baseFrequency ?? f['base-frequency'] ?? '0.05';
+        const numOctaves = f.numOctaves ?? f['num-octaves'] ?? 2;
+        const seed = f.seed ?? 0;
+        const stitchTiles = f.stitchTiles ?? 'stitch';
+        filterPrimitives.push(el('feTurbulence', { type: 'fractalNoise', baseFrequency: String(baseFreq), numOctaves: String(numOctaves), seed: String(seed), stitchTiles: String(stitchTiles), result: `turbulence-${i}` }));
+        filterPrimitives.push(el('feDisplacementMap', { in: 'SourceGraphic', in2: `turbulence-${i}`, scale: String(f.scale ?? 10), xChannelSelector: 'R', yChannelSelector: 'G' }));
+        break;
+      }
+      case 'flood': {
+        const floodColor = f.color ?? '#000000';
+        const floodOpacity = f.opacity ?? 0.5;
+        filterPrimitives.push(el('feFlood', { 'flood-color': String(floodColor), 'flood-opacity': String(floodOpacity), result: `flood-${i}` }));
+        filterPrimitives.push(el('feComposite', { in: `flood-${i}`, in2: 'SourceGraphic', operator: 'in' }));
+        break;
+      }
+    }
+  }
+
+  if (filterPrimitives.length === 0) return null;
+  return el('filter', { id: `filter-${shape.id}`, x: '-50%', y: '-50%', width: '200%', height: '200%' }, filterPrimitives);
+}
+
 function applyStrokeAttrs(attrs, shape) {
   const stroke = shapeStrokes(shape);
   if (stroke) {
@@ -148,7 +199,7 @@ function applyStrokeAttrs(attrs, shape) {
 }
 
 function renderFrame(shape, depth) {
-  const hasBlur = shape.blur && shape.blur > 0;
+  const hasBlur = (shape.blur && shape.blur > 0) || (shape.filters && shape.filters.length > 0);
   const attrs = {
     id: `shape-${shape.id}`,
     x: shape.x,
@@ -172,7 +223,7 @@ function renderFrame(shape, depth) {
   if (!hasIndividualCorners && r1 > 0) attrs.rx = r1;
   const transform = shapeTransform(shape);
   if (transform) attrs.transform = transform;
-  if (hasBlur) attrs.filter = `url(#blur-${shape.id})`;
+  if (hasBlur) attrs.filter = `url(#filter-${shape.id})`;
 
   const objects = shape.objects || shape.children || [];
   const childShapes = Array.isArray(objects) ? objects : Object.values(objects || {});
@@ -198,11 +249,12 @@ function renderFrame(shape, depth) {
       pathAttrs['stroke-width'] = 1;
     }
     if (transform) pathAttrs.transform = transform;
-    if (hasBlur) pathAttrs.filter = `url(#blur-${shape.id})`;
+    if (hasBlur) pathAttrs.filter = `url(#filter-${shape.id})`;
 
     if (hasBlur) {
+      const filterDefs = buildFilterDefs(shape);
       return el('g', {}, [
-        el('defs', {}, [el('filter', { id: `blur-${shape.id}` }, [el('feGaussianBlur', { in: 'SourceGraphic', stdDeviation: String(shape.blur) })])]),
+        filterDefs ? el('defs', {}, [filterDefs]) : el('defs', {}),
         el('path', pathAttrs, children),
       ]);
     }
@@ -210,8 +262,9 @@ function renderFrame(shape, depth) {
   }
 
   if (hasBlur) {
+    const filterDefs = buildFilterDefs(shape);
     return el('g', {}, [
-      el('defs', {}, [el('filter', { id: `blur-${shape.id}` }, [el('feGaussianBlur', { in: 'SourceGraphic', stdDeviation: String(shape.blur) })])]),
+      filterDefs ? el('defs', {}, [filterDefs]) : el('defs', {}),
       el('rect', attrs, children),
     ]);
   }
@@ -294,7 +347,7 @@ function renderRect(shape) {
   const r3 = shape.r3 ?? rx ?? 0;
   const r4 = shape.r4 ?? rx ?? 0;
   const hasIndividualCorners = r1 !== r2 || r2 !== r3 || r3 !== r4;
-  const hasBlur = shape.blur && shape.blur > 0;
+  const hasBlur = (shape.blur && shape.blur > 0) || (shape.filters && shape.filters.length > 0);
 
   const transform = shapeTransform(shape);
 
@@ -314,10 +367,10 @@ function renderRect(shape) {
       pathAttrs['stroke-width'] = 0;
     }
     if (transform) pathAttrs.transform = transform;
-    if (hasBlur) pathAttrs.filter = `url(#blur-${shape.id})`;
+    if (hasBlur) pathAttrs.filter = `url(#filter-${shape.id})`;
 
     const children = [];
-    if (hasBlur) children.push(el('defs', {}, [el('filter', { id: `blur-${shape.id}` }, [el('feGaussianBlur', { in: 'SourceGraphic', stdDeviation: String(shape.blur) })])]));
+    if (hasBlur) { const filterDefs = buildFilterDefs(shape); if (filterDefs) children.push(el('defs', {}, [filterDefs])); }
     return el('g', {}, [el('path', pathAttrs), ...children]);
   }
 
@@ -337,12 +390,11 @@ function renderRect(shape) {
     attrs['stroke-width'] = 0;
   };
   if (transform) attrs.transform = transform;
-  if (hasBlur) attrs.filter = `url(#blur-${shape.id})`;
+  if (hasBlur) attrs.filter = `url(#filter-${shape.id})`;
 
   if (hasBlur) {
-    const children = [
-      el('defs', {}, [el('filter', { id: `blur-${shape.id}` }, [el('feGaussianBlur', { in: 'SourceGraphic', stdDeviation: String(shape.blur) })])]),
-    ];
+    const filterDefs = buildFilterDefs(shape);
+    const children = filterDefs ? [el('defs', {}, [filterDefs])] : [el('defs', {})];
     return el('g', {}, [el('rect', attrs), ...children]);
   }
   return el('rect', attrs);
@@ -395,6 +447,13 @@ function renderText(shape) {
     const transform = shapeTransform(shape);
     if (transform) textAttrs.transform = transform;
     const textPathEl = el('textPath', { href: `#${pathId}`, startOffset: shape.pathOffset || '0%' }, typeof content === 'string' ? content : 'Text');
+    if (shape.subscript || shape.verticalAlign === 'sub') {
+      textAttrs['font-size'] = fontSize * 0.7;
+      textAttrs['baseline-shift'] = 'sub';
+    } else if (shape.superscript || shape.verticalAlign === 'super') {
+      textAttrs['font-size'] = fontSize * 0.7;
+      textAttrs['baseline-shift'] = 'super';
+    }
     const textEl = el('text', textAttrs, [textPathEl]);
     return el('g', {}, [defs, textEl]);
   }
@@ -418,6 +477,13 @@ function renderText(shape) {
   if (transform) attrs.transform = transform;
 
   const text = typeof content === 'string' ? content : shape.name || 'Text';
+  if (shape.subscript || shape.verticalAlign === 'sub') {
+    attrs['font-size'] = fontSize * 0.7;
+    attrs['baseline-shift'] = 'sub';
+  } else if (shape.superscript || shape.verticalAlign === 'super') {
+    attrs['font-size'] = fontSize * 0.7;
+    attrs['baseline-shift'] = 'super';
+  }
   return el('text', attrs, text);
 }
 

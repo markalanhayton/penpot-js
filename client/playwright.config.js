@@ -17,6 +17,7 @@ export default defineConfig({
       port: 6060,
       reuseExistingServer: true,
       timeout: 15000,
+      env: { PENPOT_INITIAL_ADMIN_EMAIL: 'admin@penpot.local', PENPOT_INITIAL_ADMIN_PASSWORD: 'penpot123' },
     },
     {
       command: 'node server.js',

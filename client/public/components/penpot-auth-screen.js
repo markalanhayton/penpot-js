@@ -179,7 +179,7 @@ export class PenpotAuthScreen extends PenpotElement {
     const password = pwEl ? pwEl.value : '';
     const fullname = nameEl ? nameEl.value.trim() : '';
 
-    if (this.#route !== 'recovery' && this.#route !== 'recovery-request' && !email) {
+    if (!email) {
       this.#error = 'Email is required.';
       this.#loading = false;
       if (this.isConnected) this.render();

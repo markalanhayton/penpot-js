@@ -186,4 +186,30 @@ describe('geom/snap', () => {
     const points = snap.guideToSnapPoints(guide, null);
     assert.equal(points.size, 1);
   });
+
+  it('guideToSnapPoints returns empty set for non-root frame', () => {
+    const guide = { axis: 'x', position: 50 };
+    const frame = { id: 'frame-1', 'parent-id': 'parent-1', rotated: false };
+    const points = snap.guideToSnapPoints(guide, frame);
+    assert.equal(points.size, 0);
+  });
+
+  it('guideToSnapPoints returns point for root frame', () => {
+    const guide = { axis: 'x', position: 100 };
+    const frame = { id: 'frame-root', 'parent-id': '00000000-0000-0000-0000-000000000000', rotated: false };
+    const points = snap.guideToSnapPoints(guide, frame);
+    assert.equal(points.size, 1);
+  });
+
+  it('guideToSnapPoints returns point when frame is null', () => {
+    const guide = { axis: 'x', position: 100 };
+    const points = snap.guideToSnapPoints(guide, null);
+    assert.equal(points.size, 1);
+  });
+
+  it('guideToSnapPoints with guide color', () => {
+    const guide = { axis: 'y', position: 200, color: '#ff0000' };
+    const points = snap.guideToSnapPoints(guide, null);
+    assert.equal(points.size, 1);
+  });
 });

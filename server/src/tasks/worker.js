@@ -305,55 +305,15 @@ registerHandler('offload-file-data', async (params, pool) => {
 
 /**
  * File-gc task handler — analyzes a file's data and marks unused media/thumbnails.
- * Delegates to the scheduler's fileGcFile logic for individual files.
+ * Delegates to the file-gc module's fileGcFile for full GC processing.
  */
 registerHandler('file-gc', async (params, pool) => {
   const { fileId, revn } = params;
   if (!fileId) return;
 
-  const { decode } = await import('../files/blob.js');
+  const { fileGcFile } = await import('./file-gc.js');
   const now = new Date().toISOString();
-  const usedMediaIds = new Set();
-
-  // Collect used media IDs from file data
-  const fileDataRow = pool.get(
-    "SELECT * FROM file_data WHERE file_id = ? AND type = 'main' AND deleted_at IS NULL ORDER BY modified_at DESC LIMIT 1",
-    [fileId]
-  );
-
-  if (fileDataRow && fileDataRow.data) {
-    try {
-      const data = await decode(fileDataRow.data);
-      // Note: full shape walking is done in the scheduler's fileGc function.
-      // Here we just collect from the media map keys.
-      if (data && data.media && typeof data.media === 'object') {
-        for (const key of Object.keys(data.media)) {
-          usedMediaIds.add(key);
-        }
-      }
-    } catch {
-      // Can't decode data — skip media collection
-    }
-  }
-
-  // Mark unused media as deleted
-  if (usedMediaIds.size > 0) {
-    const placeholders = [...usedMediaIds].map(() => '?').join(',');
-    pool.run(
-      `UPDATE file_media_object SET deleted_at = ? WHERE file_id = ? AND id NOT IN (${placeholders}) AND deleted_at IS NULL`,
-      [now, fileId, ...usedMediaIds]
-    );
-  }
-
-  // Mark old thumbnails as deleted
-  const fileRevn = revn || 0;
-  pool.run(
-    "UPDATE file_thumbnail SET deleted_at = ? WHERE file_id = ? AND revn < ? AND deleted_at IS NULL",
-    [now, fileId, fileRevn]
-  );
-
-  // Mark file as media-trimmed
-  pool.run("UPDATE file SET has_media_trimmed = '1', modified_at = ? WHERE id = ?", [now, fileId]);
+  await fileGcFile(pool, fileId, revn || 0, now);
 });
 
 /**

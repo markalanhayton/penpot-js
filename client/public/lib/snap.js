@@ -14,7 +14,7 @@ export class SnapGuides {
     this.#canvas = canvas;
   }
 
-  snap(shape, allShapes, viewport) {
+  snap(shape, allShapes, viewport, rulerGuides) {
     const guides = [];
     let bestDx = null;
     let bestDy = null;
@@ -61,6 +61,29 @@ export class SnapGuides {
             if (bestDy === null || Math.abs(delta) < Math.abs(bestDy)) bestDy = delta;
           }
           guides.push({ type: isVertical ? 'vertical' : 'horizontal', pos: canvasEdgeVal });
+        }
+      }
+    }
+
+    if (rulerGuides && rulerGuides.length > 0) {
+      for (const guide of rulerGuides) {
+        const guidePos = guide.position;
+        const isXAxis = guide.axis === 'x';
+        for (const [edgeName, edgeVal] of Object.entries(edges)) {
+          const isVerticalEdge = edgeName === 'left' || edgeName === 'right' || edgeName === 'centerX';
+          if (isXAxis && isVerticalEdge) {
+            if (Math.abs(edgeVal - guidePos) < SNAP_THRESHOLD) {
+              const delta = guidePos - edgeVal;
+              if (bestDx === null || Math.abs(delta) < Math.abs(bestDx)) bestDx = delta;
+              guides.push({ type: 'vertical', pos: guidePos });
+            }
+          } else if (!isXAxis && !isVerticalEdge) {
+            if (Math.abs(edgeVal - guidePos) < SNAP_THRESHOLD) {
+              const delta = guidePos - edgeVal;
+              if (bestDy === null || Math.abs(delta) < Math.abs(bestDy)) bestDy = delta;
+              guides.push({ type: 'horizontal', pos: guidePos });
+            }
+          }
         }
       }
     }

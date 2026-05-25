@@ -341,14 +341,14 @@ function handleSetPluginData(data, change) {
 }
 
 function handleSetGuide(data, change) {
-  const { pageId, id, gridType, params } = change;
+  const { pageId, id, params } = change;
   const page = getPage(data, pageId);
   if (!page) return;
   if (!page.guides) page.guides = {};
-  if (params === undefined) {
+  if (params == null) {
     delete page.guides[id];
   } else {
-    page.guides[id] = { id, type: gridType, ...params };
+    page.guides[id] = { ...params, id };
   }
 }
 

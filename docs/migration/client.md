@@ -18,7 +18,7 @@ The canvas is rendered by WASM/Skia to a single `<canvas>` element. React's virt
 
 | Component | Files | Lines | Status |
 |-----------|-------|-------|--------|
-| `client/public/` | 80 | ~15,600 | Working auth + dashboard + workspace with drawing tools, snap guides, rulers, SVG import, Inspect panel, OT collaboration framework. **10 critical gaps, 22 high-priority gaps remain** — see `tracking.md` Phase 2b for details. |
+| `client/public/` | 93 | ~24,200 | Working auth + dashboard + workspace with drawing tools, snap guides, rulers, SVG import, Inspect panel, OT collaboration, flex/grid layout, design tokens, bool ops. **6 P0 items completed, all P1 items done** — see `tracking.md` Phase 2b for details. |
 | `frontend/src/app/main/` (ClojureScript) | 544 | ~129K | Production frontend, fully functional |
 
 ### Target
@@ -225,7 +225,7 @@ These 14 files are **already in JavaScript** and can be copied/adapted directly:
 
 ## 3. Existing ES JS Front-End
 
-The `client/` directory contains a fully functional front-end with 87 source files and ~21,000 lines of JS:
+The `client/` directory contains a fully functional front-end with 93 source files and ~24,000 lines of JS:
 
 ```
 client/
@@ -248,7 +248,7 @@ client/
     ├── index.html                # SPA shell (CSS custom properties, dark theme)
     ├── app.js                    # Bootstrap: auth check → route → render component
     ├── styles/tokens.css         # Design token CSS custom properties
-    ├── lib/                      # 30 files (~7000 lines)
+    ├── lib/                      # 31 files (~9150 lines)
 │   ├── store.js              # Potok-like store: events, effects, signals, subscriptions
     │   ├── router.js             # 12 routes, auth guards, param extraction, history API
     │   ├── rpc.js                # Transit+JSON, GET/POST, retry, SSE streaming, file upload
@@ -267,7 +267,7 @@ client/
     │   ├── shortcuts.js           # Keyboard shortcut registry wired to tool-manager actions
     │   ├── svg-import.js          # SVG file parser (rect, circle, path, text, group, etc.)
     │   └── ...
-    └── components/              # 50 files (~10500 lines)
+    └── components/              # 60 files (~14750 lines)
         ├── penpot-workspace.js   # Full workspace: toolbar, tools, sidebars, canvas, persistence, shortcuts, drag-drop
         ├── penpot-canvas.js      # SVG rendering, zoom, pan, selection highlight, rulers
         ├── penpot-rulers.js      # Horizontal + vertical canvas rulers with zoom
@@ -284,20 +284,25 @@ client/
 - Full auth flow: login, register, password recovery via backend RPC
 - Dashboard: team sidebar, project grid, file grid, search, fonts, libraries, deleted files
 - Workspace: full design editor with all drawing tools
-- Drawing: rect, ellipse, frame, text, path, image, select (with snap guides)
+- Drawing: rect, ellipse, frame, text, path, Bezier pen, image, select (with snap guides)
 - Selection: click, shift+click multi-select, marquee, resize handles, rotation
 - Persistence: `update-file` RPC with debounced batching, retry, conflict resolution
 - Undo/redo: local history stack + toolbar buttons + Ctrl+Z/Ctrl+Shift+Z
 - Properties: position, size, rotation, opacity, fills, shadows, strokes, booleans
 - Inspect panel: CSS/SVG code output with copy-to-clipboard
-- Canvas: zoom, pan, rulers, selection highlights, snap guide lines
-- SVG import: drag-drop + file picker, parses rect/circle/ellipse/path/text/group
-- .penpot import: file import with page/shape normalization
+- Canvas: zoom, pan, rulers, selection highlights, snap guide lines, Canvas2D fallback for 100+ shapes
+- SVG import: drag-drop + file picker, parses rect/circle/ellipse/path/text/group + gradient/mask/clip
+- .penpot import: file import with v1/v3 format detection, data normalization, media extraction, library linking
 - Keyboard shortcuts: 30+ shortcuts wired to tool-manager actions
 - Font management: team font loading, font family grouping, upload with chunked pipeline
-- Component system: create/detach/sync, instance placement from asset panel
+- Component system: create/detach/sync, instance placement from asset panel, swap component, **drag-to-apply from asset panel**
+- Interaction prototyping: Prototype tab in right sidebar, canvas visualization (curved arrows), viewer playback (navigate/overlay/prev-screen)
 - Version history: create/restore/rename/lock/delete snapshots
 - Thumbnail generation: client-side canvas rendering + upload via RPC
+- Collaboration: OT-based real-time change broadcast, cursor overlay, selection-update
+- Flex/Grid layout editor: direction, gap, wrap, padding, justify, align, grid rows/columns
+- Design tokens: colors, typography, sets, themes tabs
+- Boolean path operations: union, difference, intersection, exclusion
 - E2E coverage: 170+ tests across 13 spec files, all passing
 
 ---

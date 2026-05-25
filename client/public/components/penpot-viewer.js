@@ -31,6 +31,9 @@ template.innerHTML = `
     .penpot-viewer__inspect-empty { color: var(--penpot-text-dim, #999); padding: var(--penpot-spacing-l, 16px) var(--penpot-spacing-m, 12px); font-size: var(--penpot-font-size-xs, 10px); text-align: center; }
     .penpot-viewer__svg-shape { cursor: pointer; }
     .penpot-viewer__svg-shape:hover { filter: brightness(1.15); }
+    .penpot-viewer__svg-interactive { cursor: pointer !important; }
+    .penpot-viewer__svg-interactive:hover { filter: brightness(1.25) drop-shadow(0 0 4px rgba(49,239,184,0.5)); }
+    .penpot-viewer__overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 50; display: none; }
     .penpot-viewer__empty { color: var(--penpot-text-dim, #999); text-align: center; padding: var(--penpot-spacing-xxl, 32px); font-size: var(--penpot-font-size-m, 13px); }
   </style>
   <div class="penpot-viewer__toolbar">
@@ -52,6 +55,7 @@ template.innerHTML = `
       <div class="penpot-viewer__canvas-inner" id="canvas-inner">
         <div class="penpot-viewer__empty" id="empty-msg">Loading file...</div>
       </div>
+      <div class="penpot-viewer__overlay"></div>
     </div>
     <div class="penpot-viewer__inspect" id="inspect-panel">
       <div class="penpot-viewer__inspect-title">Inspect</div>
@@ -67,6 +71,7 @@ export class PenpotViewer extends PenpotElement {
   #currentPageIndex = 0;
   #zoom = 1;
   #selectedShape = null;
+  #pageHistory = [];
 
   connectedCallback() {
     super.connectedCallback();
@@ -93,6 +98,7 @@ export class PenpotViewer extends PenpotElement {
       this.querySelector('#title').textContent = file.name || 'Untitled';
       this.#pages = this.#extractPages(file);
       this.#currentPageIndex = 0;
+      this.#pageHistory = [0];
       this.#zoom = 1;
       this.renderPageList();
       this.renderCurrentPage();
@@ -183,6 +189,10 @@ export class PenpotViewer extends PenpotElement {
       const shapeId = el.id.replace('shape-', '');
       el.setAttribute('data-shape-id', shapeId);
       el.classList.add('penpot-viewer__svg-shape');
+      const shape = (page.objects || {})[shapeId];
+      if (shape && shape.interactions && shape.interactions.length > 0) {
+        el.classList.add('penpot-viewer__svg-interactive');
+      }
       el.addEventListener('click', (e) => {
         e.stopPropagation();
         const page = this.#pages[this.#currentPageIndex];
@@ -190,8 +200,12 @@ export class PenpotViewer extends PenpotElement {
         const objects = page.objects || {};
         const shape = objects[shapeId];
         if (shape) {
-          this.#selectedShape = shape;
-          this.renderInspectPanel();
+          if (shape.interactions && shape.interactions.length > 0) {
+            this.#handleInteraction(shape.interactions[0], objects);
+          } else {
+            this.#selectedShape = shape;
+            this.renderInspectPanel();
+          }
         }
       });
     });
@@ -205,8 +219,11 @@ export class PenpotViewer extends PenpotElement {
     this.renderPageList();
   }
 
-  goToPage(index) {
+  goToPage(index, addToHistory = true) {
     if (index < 0 || index >= this.#pages.length) return;
+    if (addToHistory) {
+      this.#pageHistory.push(index);
+    }
     this.#currentPageIndex = index;
     this.#zoom = 1;
     this.renderCurrentPage();
@@ -240,6 +257,92 @@ export class PenpotViewer extends PenpotElement {
     this.#zoom = Math.min(wrapW / pageW, wrapH / pageH, 2);
     this.#zoom = Math.max(0.1, Math.round(this.#zoom / 0.05) * 0.05);
     this.applyZoom();
+  }
+
+  #handleInteraction(interaction, objects) {
+    const actionType = interaction['action-type'];
+    const destination = interaction.destination;
+
+    if (actionType === 'navigate' && destination) {
+      const destPage = this.#findPageWithFrame(destination);
+      if (destPage != null) {
+        this.#currentPageIndex = destPage;
+        this.#zoom = 1;
+        this.renderCurrentPage();
+        setTimeout(() => this.#scrollToFrame(destination), 100);
+      }
+    } else if ((actionType === 'open-overlay' || actionType === 'toggle-overlay') && destination) {
+      this.#showOverlay(destination, objects);
+    } else if (actionType === 'close-overlay') {
+      this.#hideOverlay();
+    } else if (actionType === 'prev-screen') {
+      if (this.#pageHistory.length > 1) {
+        this.#pageHistory.pop();
+        this.#currentPageIndex = this.#pageHistory[this.#pageHistory.length - 1];
+        this.renderCurrentPage();
+      }
+    } else if (actionType === 'open-url' && interaction.url) {
+      window.open(interaction.url, '_blank', 'noopener');
+    }
+  }
+
+  #findPageWithFrame(frameId) {
+    for (let i = 0; i < this.#pages.length; i++) {
+      const objects = this.#pages[i].objects || {};
+      if (objects[frameId]) return i;
+    }
+    return null;
+  }
+
+  #scrollToFrame(frameId) {
+    const page = this.#pages[this.#currentPageIndex];
+    if (!page) return;
+    const objects = page.objects || {};
+    const frame = objects[frameId];
+    if (!frame) return;
+    const wrapEl = this.querySelector('#canvas-wrap');
+    if (!wrapEl) return;
+    const innerEl = this.querySelector('#canvas-inner');
+    if (!innerEl) return;
+    const fx = (frame.x || 0) * this.#zoom;
+    const fy = (frame.y || 0) * this.#zoom;
+    wrapEl.scrollTo({ left: fx - 40, top: fy - 40, behavior: 'smooth' });
+  }
+
+  #showOverlay(frameId, allObjects) {
+    const overlayEl = this.querySelector('.penpot-viewer__overlay');
+    if (!overlayEl) return;
+    const page = this.#pages[this.#currentPageIndex];
+    if (!page) return;
+    const objects = page.objects || {};
+    const frame = objects[frameId];
+    if (!frame) return;
+
+    const existingOverlay = overlayEl.querySelector('.penpot-viewer__overlay-frame');
+    if (existingOverlay) existingOverlay.remove();
+
+    const viewport = { x: 0, y: 0, width: page.width || 1200, height: page.height || 800 };
+    const overlaySvg = renderPage({ ...page, objects: { [frameId]: frame } }, viewport, []);
+    overlaySvg.style.position = 'absolute';
+    overlaySvg.style.left = `${(frame.x || 0) * this.#zoom}px`;
+    overlaySvg.style.top = `${(frame.y || 0) * this.#zoom}px`;
+    overlaySvg.style.transform = `scale(${this.#zoom})`;
+    overlaySvg.style.transformOrigin = 'top left';
+    overlaySvg.classList.add('penpot-viewer__overlay-frame');
+
+    overlayEl.appendChild(overlaySvg);
+    overlayEl.style.display = 'block';
+
+    overlayEl.onclick = () => this.#hideOverlay();
+  }
+
+  #hideOverlay() {
+    const overlayEl = this.querySelector('.penpot-viewer__overlay');
+    if (overlayEl) {
+      overlayEl.style.display = 'none';
+      const frame = overlayEl.querySelector('.penpot-viewer__overlay-frame');
+      if (frame) frame.remove();
+    }
   }
 
   updatePageButtons() {
@@ -285,6 +388,17 @@ export class PenpotViewer extends PenpotElement {
         const color = stroke['stroke-color'] || stroke.color || '#000';
         const width = stroke['stroke-width'] || stroke.width || 1;
         html += `<div class="penpot-viewer__inspect-row"><div class="penpot-viewer__inspect-swatch" style="background:${color};"></div><span class="penpot-viewer__inspect-value">${color} ${width}px</span></div>`;
+      }
+    }
+    if (s.interactions && s.interactions.length > 0) {
+      const EVENT_LABELS = { 'click': 'Click', 'mouse-press': 'Press', 'mouse-over': 'Hover', 'mouse-enter': 'Enter', 'mouse-leave': 'Leave', 'after-delay': 'Delay' };
+      const ACTION_LABELS = { 'navigate': 'Navigate', 'open-overlay': 'Open Overlay', 'toggle-overlay': 'Toggle Overlay', 'close-overlay': 'Close Overlay', 'prev-screen': 'Previous', 'open-url': 'Open URL' };
+      html += `<div class="penpot-viewer__inspect-row" style="margin-top:4px;"><span class="penpot-viewer__inspect-label" style="font-weight:600;">Interactions</span></div>`;
+      for (const inter of s.interactions) {
+        const evt = EVENT_LABELS[inter['event-type']] || inter['event-type'] || '?';
+        const act = ACTION_LABELS[inter['action-type']] || inter['action-type'] || '?';
+        const dest = inter.destination ? ` → ${inter.destination.substring(0, 8)}…` : '';
+        html += `<div class="penpot-viewer__inspect-row"><span class="penpot-viewer__inspect-value" style="color:var(--penpot-primary,#31efb8);">${evt} → ${act}${dest}</span></div>`;
       }
     }
     panel.innerHTML = html;

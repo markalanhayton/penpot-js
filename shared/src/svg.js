@@ -383,7 +383,7 @@ export function inheritAttributes(groupAttrs, node) {
     groupInheritable.style = inheritStyle;
   }
 
-  let merged = { ...groupInheritable, ...attrs };
+  let merged = deepMerge(groupInheritable, attrs);
   for (const k of Object.keys(merged)) {
     if (merged[k] == null) delete merged[k];
   }
@@ -412,4 +412,282 @@ export function reduceNodes(redfn, value, node) {
 
 export function calculateRatio(width, height) {
   return mth.hypot(width, height) / mth.sqrt(2);
+}
+
+export const svgTagDefaults = {
+  linearGradient: { units: 'gradientUnits', default: 'objectBoundingBox', objectBoundingBox: {}, userSpaceOnUse: { x1: '0%', y1: '0%', x2: '100%', y2: '0%' } },
+  radialGradient: { units: 'gradientUnits', default: 'objectBoundingBox', objectBoundingBox: {}, userSpaceOnUse: { cx: '50%', cy: '50%', r: '50%' } },
+  mask: { units: 'maskUnits', default: 'userSpaceOnUse', objectBoundingBox: {}, userSpaceOnUse: { x: '-10%', y: '-10%', width: '120%', height: '120%' } },
+  filter: { units: 'filterUnits', default: 'objectBoundingBox', objectBoundingBox: {}, userSpaceOnUse: { x: '-10%', y: '-10%', width: '120%', height: '120%' } },
+  feBlend: { units: 'filterUnits', default: 'objectBoundingBox', objectBoundingBox: {}, userSpaceOnUse: { x: '-10%', y: '-10%', width: '120%', height: '120%' } },
+  feColorMatrix: { units: 'filterUnits', default: 'objectBoundingBox', objectBoundingBox: {}, userSpaceOnUse: { x: '-10%', y: '-10%', width: '120%', height: '120%' } },
+  feComponentTransfer: { units: 'filterUnits', default: 'objectBoundingBox', objectBoundingBox: {}, userSpaceOnUse: { x: '-10%', y: '-10%', width: '120%', height: '120%' } },
+  feComposite: { units: 'filterUnits', default: 'objectBoundingBox', objectBoundingBox: {}, userSpaceOnUse: { x: '-10%', y: '-10%', width: '120%', height: '120%' } },
+  feConvolveMatrix: { units: 'filterUnits', default: 'objectBoundingBox', objectBoundingBox: {}, userSpaceOnUse: { x: '-10%', y: '-10%', width: '120%', height: '120%' } },
+  feDiffuseLighting: { units: 'filterUnits', default: 'objectBoundingBox', objectBoundingBox: {}, userSpaceOnUse: { x: '-10%', y: '-10%', width: '120%', height: '120%' } },
+  feDisplacementMap: { units: 'filterUnits', default: 'objectBoundingBox', objectBoundingBox: {}, userSpaceOnUse: { x: '-10%', y: '-10%', width: '120%', height: '120%' } },
+  feFlood: { units: 'filterUnits', default: 'objectBoundingBox', objectBoundingBox: {}, userSpaceOnUse: { x: '-10%', y: '-10%', width: '120%', height: '120%' } },
+  feGaussianBlur: { units: 'filterUnits', default: 'objectBoundingBox', objectBoundingBox: {}, userSpaceOnUse: { x: '-10%', y: '-10%', width: '120%', height: '120%' } },
+  feImage: { units: 'filterUnits', default: 'objectBoundingBox', objectBoundingBox: {}, userSpaceOnUse: { x: '-10%', y: '-10%', width: '120%', height: '120%' } },
+  feMerge: { units: 'filterUnits', default: 'objectBoundingBox', objectBoundingBox: {}, userSpaceOnUse: { x: '-10%', y: '-10%', width: '120%', height: '120%' } },
+  feMorphology: { units: 'filterUnits', default: 'objectBoundingBox', objectBoundingBox: {}, userSpaceOnUse: { x: '-10%', y: '-10%', width: '120%', height: '120%' } },
+  feOffset: { units: 'filterUnits', default: 'objectBoundingBox', objectBoundingBox: {}, userSpaceOnUse: { x: '-10%', y: '-10%', width: '120%', height: '120%' } },
+  feSpecularLighting: { units: 'filterUnits', default: 'objectBoundingBox', objectBoundingBox: {}, userSpaceOnUse: { x: '-10%', y: '-10%', width: '120%', height: '120%' } },
+  feTile: { units: 'filterUnits', default: 'objectBoundingBox', objectBoundingBox: {}, userSpaceOnUse: { x: '-10%', y: '-10%', width: '120%', height: '120%' } },
+  feTurbulence: { units: 'filterUnits', default: 'objectBoundingBox', objectBoundingBox: {}, userSpaceOnUse: { x: '-10%', y: '-10%', width: '120%', height: '120%' } },
+};
+
+export function fixDefaultValues(svgData) {
+  function addDefaults(node) {
+    const tag = node.tag;
+    const tagDefault = svgTagDefaults[tag];
+    if (!tagDefault) return node;
+    const prop = tagDefault.units;
+    const defaultUnits = tagDefault.default;
+    const units = node.attrs?.[prop] ?? defaultUnits;
+    const unitDefaults = tagDefault[units] || {};
+    return { ...node, attrs: { ...unitDefaults, ...(node.attrs || {}) } };
+  }
+  return mapNodes((node) => {
+    if (svgTagDefaults[node.tag]) return addDefaults(node);
+    return node;
+  }, svgData);
+}
+
+export function fixPercents(svgData) {
+  const vbox = {
+    x: svgData['offset-x'],
+    y: svgData['offset-y'] ?? svgData.offsetY,
+    width: svgData.width,
+    height: svgData.height,
+    ratio: calculateRatio(svgData.width, svgData.height)
+  };
+  function fixLength(propLength, val) {
+    return (vbox[propLength] * val) / 100;
+  }
+  function fixCoord(propCoord, propLength, val) {
+    return vbox[propCoord] + fixLength(propLength, val);
+  }
+  const isX = new Set(['x', 'x1', 'x2', 'cx']);
+  const isY = new Set(['y', 'y1', 'y2', 'cy']);
+  const isWidth = new Set(['width']);
+  const isHeight = new Set(['height']);
+  const isOther = new Set(['r', 'stroke-width']);
+  function fixPercentAttrViewbox(attrKey, attrVal) {
+    if (typeof attrVal !== 'string') return attrVal;
+    if (!attrVal.endsWith('%')) return attrVal;
+    const attrNum = parseFloat(attrVal.replace(/%$/, ''));
+    if (isX.has(attrKey)) return String(fixCoord('x', 'width', attrNum));
+    if (isY.has(attrKey)) return String(fixCoord('y', 'height', attrNum));
+    if (isWidth.has(attrKey)) return String(fixLength('width', attrNum));
+    if (isHeight.has(attrKey)) return String(fixLength('height', attrNum));
+    if (isOther.has(attrKey)) return String(fixLength('ratio', attrNum));
+    return attrVal;
+  }
+  function fixPercentAttrsViewbox(attrs) {
+    const result = {};
+    for (const [k, v] of Object.entries(attrs)) {
+      result[k] = fixPercentAttrViewbox(k, v);
+    }
+    return result;
+  }
+  function fixPercentValues(node) {
+    if (node == null || typeof node !== 'object') return node;
+    const units = node.attrs?.filterUnits ?? node.attrs?.gradientUnits ?? node.attrs?.patternUnits ?? node.attrs?.clipUnits;
+    if (units === 'objectBoundingBox' || units == null) {
+      const newAttrs = { ...node.attrs };
+      for (const [key, val] of Object.entries(newAttrs)) {
+        if (key === 'style' || key === 'unicode') continue;
+        if (typeof key === 'string' && key.startsWith('data-')) continue;
+        if (typeof val === 'string' && val.endsWith('%')) {
+          const numVal = parseFloat(val.replace(/%$/, ''));
+          newAttrs[key] = String(numVal / 100);
+        }
+      }
+      node = { ...node, attrs: newAttrs };
+    }
+    if (units !== 'objectBoundingBox') {
+      node = { ...node, attrs: fixPercentAttrsViewbox(node.attrs) };
+    }
+    return node;
+  }
+  return mapNodes(fixPercentValues, svgData);
+}
+
+export function extractDefs(node) {
+  if (node == null || typeof node !== 'object') return [{}, node];
+  const removeNodeQ = (child) => child.tag != null && (tagsToRemove.has(child.tag) || !svgTags.has(child.tag));
+  const recResult = (node.content || []).map(extractDefs);
+  const filteredContent = recResult.map(([, child]) => child).filter((child) => !removeNodeQ(child));
+  const currentNodeDefs = node.attrs?.id ? { [node.attrs.id]: node } : {};
+  const nodeDefs = recResult.reduce((acc, [defs]) => ({ ...acc, ...defs }), currentNodeDefs);
+  const newNode = { ...node, content: filteredContent };
+  return [nodeDefs, newNode];
+}
+
+export function findAttrReferences(attrs) {
+  const results = [];
+  for (const [, val] of Object.entries(attrs)) {
+    if (typeof val === 'string') {
+      results.push(...extractIds(val));
+    } else if (val != null && typeof val === 'object') {
+      results.push(...findAttrReferences(val));
+    }
+  }
+  return results;
+}
+
+export function findNodeReferences(node) {
+  const current = new Set(findAttrReferences(node.attrs || {}));
+  const children = (node.content || []).flatMap(findNodeReferences);
+  for (const c of children) current.add(c);
+  return [...current];
+}
+
+export function findDefReferences(defs, references) {
+  const result = new Set(references);
+  const checked = new Set();
+  const pending = [...references];
+  while (pending.length > 0) {
+    const toCheck = pending.pop();
+    if (checked.has(toCheck)) continue;
+    checked.add(toCheck);
+    const node = defs[toCheck];
+    if (node == null) continue;
+    const newRefs = findNodeReferences(node);
+    for (const ref of newRefs) {
+      if (!result.has(ref)) {
+        result.add(ref);
+        pending.push(ref);
+      }
+    }
+  }
+  return [...result];
+}
+
+export function filterValidDefReferences(refIds, defs) {
+  const isStyleFragment = (refId) => {
+    if (hexColorStringQ('#' + refId)) return true;
+    if (refId.includes(';')) return true;
+    if (refId.includes('stop-opacity')) return true;
+    if (refId.includes('stop-color')) return true;
+    return false;
+  };
+  return refIds.filter((id) => !isStyleFragment(id) && defs[id] != null);
+}
+
+function hexColorStringQ(str) {
+  return typeof str === 'string' && /^#(?:[0-9a-fA-F]{3}){1,2}$/.test(str);
+}
+
+export function processGradientStops(stops) {
+  return stops.map((stop) => {
+    const stopAttrs = stop.attrs || {};
+    const stopStyle = stopAttrs.style;
+    let parsedStyle = null;
+    if (typeof stopStyle === 'string' && stopStyle.length > 0) {
+      parsedStyle = parseStyle(stopStyle);
+    }
+    const styleStopColor = parsedStyle?.['stop-color'];
+    const styleStopOpacity = parsedStyle?.['stop-opacity'];
+    let finalAttrs = { ...stopAttrs };
+    if (styleStopColor && !('stop-color' in stopAttrs)) {
+      finalAttrs['stop-color'] = styleStopColor;
+    }
+    if (styleStopOpacity && !('stop-opacity' in stopAttrs)) {
+      finalAttrs['stop-opacity'] = styleStopOpacity;
+    }
+    if (styleStopColor || styleStopOpacity) {
+      delete finalAttrs.style;
+      if (parsedStyle) {
+        const remaining = { ...parsedStyle };
+        delete remaining['stop-color'];
+        delete remaining['stop-opacity'];
+        if (Object.keys(remaining).length > 0) {
+          finalAttrs.style = remaining;
+        }
+      }
+    }
+    return { ...stop, attrs: finalAttrs };
+  });
+}
+
+export function resolveGradientHref(defs) {
+  function resolveGradient(gradientId, gradientNode, defs, visited) {
+    if (visited.has(gradientId)) {
+      return gradientNode;
+    }
+    const attrs = gradientNode.attrs || {};
+    const hrefId = attrs.href || attrs['xlink:href'];
+    const cleanHref = typeof hrefId === 'string' && hrefId.length > 0 ? hrefId.slice(1) : null;
+    const baseGradient = cleanHref && defs[cleanHref] ? defs[cleanHref] : null;
+    if (!baseGradient) {
+      const processedContent = processGradientStops(gradientNode.content || []);
+      return { ...gradientNode, content: processedContent };
+    }
+    const resolvedBase = resolveGradient(cleanHref, baseGradient, defs, new Set([...visited, gradientId]));
+    const baseAttrs = resolvedBase.attrs || {};
+    const refAttrs = gradientNode.attrs || {};
+    let baseAttrsClean = { ...baseAttrs };
+    delete baseAttrsClean.id;
+    let refAttrsClean = { ...refAttrs };
+    delete refAttrsClean.href;
+    delete refAttrsClean['xlink:href'];
+    delete refAttrsClean.id;
+    const baseTransform = baseAttrs.gradientTransform;
+    const refTransform = refAttrs.gradientTransform;
+    let combinedTransform;
+    if (baseTransform && refTransform) {
+      combinedTransform = baseTransform + ' ' + refTransform;
+    } else {
+      combinedTransform = refTransform || baseTransform;
+    }
+    let mergedAttrs = deepMerge(baseAttrsClean, refAttrsClean);
+    if (combinedTransform) {
+      mergedAttrs.gradientTransform = combinedTransform;
+    }
+    mergedAttrs.id = gradientId;
+    const finalContent = (gradientNode.content && gradientNode.content.length > 0)
+      ? processGradientStops(gradientNode.content)
+      : processGradientStops(resolvedBase.content || []);
+    return { tag: gradientNode.tag, attrs: mergedAttrs, content: finalContent };
+  }
+  const gradientTagSet = new Set(['linearGradient', 'radialGradient']);
+  const result = {};
+  for (const [id, node] of Object.entries(defs)) {
+    if (gradientTagSet.has(node.tag)) {
+      result[id] = resolveGradient(id, node, defs, new Set());
+    } else {
+      result[id] = node;
+    }
+  }
+  return result;
+}
+
+function deepMerge(a, b) {
+  const result = { ...a };
+  for (const key of Object.keys(b)) {
+    if (b[key] != null && typeof b[key] === 'object' && !Array.isArray(b[key]) &&
+        a[key] != null && typeof a[key] === 'object' && !Array.isArray(a[key])) {
+      result[key] = deepMerge(a[key], b[key]);
+    } else {
+      result[key] = b[key];
+    }
+  }
+  return result;
+}
+
+export function collectImages(svgData) {
+  const images = [];
+  reduceNodes((acc, node) => {
+    if (node.tag === 'image') {
+      images.push({
+        href: node.attrs?.href || node.attrs?.['xlink:href'],
+        width: node.attrs?.width,
+        height: node.attrs?.height,
+      });
+    }
+    return acc;
+  }, [], svgData);
+  return images;
 }

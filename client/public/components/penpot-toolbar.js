@@ -40,6 +40,7 @@ template.innerHTML = `<style>
     <button class="penpot-toolbar__toolbar-btn" id="align-bottom-btn" title="Align Bottom">&#8675;</button>
     <button class="penpot-toolbar__toolbar-btn" id="export-btn" title="Export (Ctrl+E)">Export</button>
     <button class="penpot-toolbar__toolbar-btn" id="version-btn" title="Version History">&#128337;</button>
+    <button class="penpot-toolbar__toolbar-btn" id="mcp-btn" title="MCP Panel (Ctrl+Shift+M)">&#x1F916;</button>
     <button class="penpot-toolbar__toolbar-btn" id="share-btn" title="Share">Share</button>
     <button class="penpot-toolbar__toolbar-btn penpot-toolbar__primary" id="save-btn">Save</button>
   </div>`;
@@ -68,6 +69,9 @@ export class PenpotToolbar extends PenpotElement {
     });
     this.querySelector('#version-btn').addEventListener('click', () => {
       this.emit('penpot-version-toggle', {});
+    });
+    this.querySelector('#mcp-btn').addEventListener('click', () => {
+      this.emit('penpot-mcp-toggle', {});
     });
     this.querySelector('#comment-btn').addEventListener('click', () => {
       this.emit('penpot-comment-toggle', {});

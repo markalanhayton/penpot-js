@@ -2,6 +2,7 @@ import { PenpotElement } from './base.js';
 import { renderPage, renderEmptyCanvas } from '../lib/shapes.js';
 import { Canvas2DRenderer } from '../lib/canvas2d-renderer.js';
 import './penpot-rulers.js';
+import './penpot-guide-overlay.js';
 
 const template = document.createElement('template');
 template.innerHTML = `<style>
@@ -11,6 +12,7 @@ template.innerHTML = `<style>
     .penpot-canvas__canvas-container svg, .penpot-canvas__canvas-container canvas { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
     .penpot-canvas__canvas-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
     .penpot-canvas__rulers { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+    .penpot-canvas__guides { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 6; }
     .penpot-canvas__canvas-message { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; }
     .penpot-canvas__canvas-message.penpot-canvas__loading { color: var(--penpot-text-dim, #999); font-size: var(--penpot-font-size-m, 13px); }
     .penpot-canvas__canvas-message.penpot-canvas__empty { color: var(--penpot-text-dim, #999); font-size: var(--penpot-font-size-m, 13px); }
@@ -22,6 +24,7 @@ template.innerHTML = `<style>
     <div class="penpot-canvas__canvas-message penpot-canvas__loading" id="message">Loading...</div>
   </div>
   <div class="penpot-canvas__rulers"><penpot-rulers id="rulers"></penpot-rulers></div>
+  <div class="penpot-canvas__guides"><penpot-guide-overlay id="guides"></penpot-guide-overlay></div>
   <div class="penpot-canvas__zoom-indicator" id="zoom-indicator">100%</div>`;
 
 export class PenpotCanvas extends PenpotElement {
@@ -35,6 +38,7 @@ export class PenpotCanvas extends PenpotElement {
   #canvas2d = null;
   #renderMode = 'svg';
   #boundHandlers = {};
+  #guides = [];
 
   static get observedAttributes() { return ['zoom']; }
 
@@ -339,6 +343,159 @@ export class PenpotCanvas extends PenpotElement {
     this.#svgEl.appendChild(posLabel);
   }
 
+  showInteractions(objects, frames) {
+    if (!this.#svgEl) return;
+    this.#svgEl.querySelectorAll('.penpot-canvas__interaction').forEach(el => el.remove());
+    if (!objects) return;
+    const NS = 'http://www.w3.org/2000/svg';
+    const actionColors = {
+      'navigate': '#31efb8',
+      'open-overlay': '#4dabf7',
+      'toggle-overlay': '#4dabf7',
+      'close-overlay': '#ff6b6b',
+      'prev-screen': '#ffd43b',
+      'open-url': '#adb5bd'
+    };
+    const actionIcons = {
+      'navigate': '→',
+      'open-overlay': '⬜',
+      'toggle-overlay': '⬜',
+      'close-overlay': '✕',
+      'prev-screen': '↩',
+      'open-url': '🔗'
+    };
+
+    for (const shape of Object.values(objects)) {
+      if (!shape.interactions || shape.interactions.length === 0) continue;
+      if (shape.type === 'frame' && shape.id === '00000000-0000-0000-0000-000000000000') continue;
+
+      const fromX = (shape.x || 0) + (shape.width || 0) / 2;
+      const fromY = (shape.y || 0) + (shape.height || 0) / 2;
+
+      for (const interaction of shape.interactions) {
+        const destId = interaction.destination;
+        if (!destId) continue;
+        const destShape = objects[destId];
+        if (!destShape) continue;
+
+        const toX = (destShape.x || 0) + (destShape.width || 0) / 2;
+        const toY = (destShape.y || 0) + (destShape.height || 0) / 2;
+        const color = actionColors[interaction['action-type']] || '#31efb8';
+
+        const groupId = `interaction-${shape.id}-${destId}`;
+        const g = document.createElementNS(NS, 'g');
+        g.classList.add('penpot-canvas__interaction');
+        g.setAttribute('id', groupId);
+        g.setAttribute('pointer-events', 'none');
+
+        const path = document.createElementNS(NS, 'path');
+        const dx = toX - fromX;
+        const dy = toY - fromY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const curveOffset = Math.min(dist * 0.3, 40);
+        const perpX = dist > 0 ? -dy / dist * curveOffset : 0;
+        const perpY = dist > 0 ? dx / dist * curveOffset : 0;
+        const cx1 = fromX + dx * 0.25 + perpX;
+        const cy1 = fromY + dy * 0.25 + perpY;
+        const cx2 = fromX + dx * 0.75 + perpX;
+        const cy2 = fromY + dy * 0.75 + perpY;
+        path.setAttribute('d', `M${fromX},${fromY} C${cx1},${cy1} ${cx2},${cy2} ${toX},${toY}`);
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke', color);
+        path.setAttribute('stroke-width', '1.5');
+        path.setAttribute('stroke-dasharray', '6,3');
+        path.setAttribute('opacity', '0.7');
+        g.appendChild(path);
+
+        const arrowSize = 8;
+        const angle = Math.atan2(toY - fromY, toX - fromX);
+        const ax1 = toX - arrowSize * Math.cos(angle - 0.4);
+        const ay1 = toY - arrowSize * Math.sin(angle - 0.4);
+        const ax2 = toX - arrowSize * Math.cos(angle + 0.4);
+        const ay2 = toY - arrowSize * Math.sin(angle + 0.4);
+        const arrow = document.createElementNS(NS, 'polygon');
+        arrow.setAttribute('points', `${toX},${toY} ${ax1},${ay1} ${ax2},${ay2}`);
+        arrow.setAttribute('fill', color);
+        arrow.setAttribute('opacity', '0.7');
+        g.appendChild(arrow);
+
+        const destDot = document.createElementNS(NS, 'circle');
+        destDot.setAttribute('cx', String(toX));
+        destDot.setAttribute('cy', String(toY));
+        destDot.setAttribute('r', '4');
+        destDot.setAttribute('fill', color);
+        destDot.setAttribute('opacity', '0.5');
+        g.appendChild(destDot);
+
+        const sourceDot = document.createElementNS(NS, 'circle');
+        sourceDot.setAttribute('cx', String(fromX));
+        sourceDot.setAttribute('cy', String(fromY));
+        sourceDot.setAttribute('r', '3');
+        sourceDot.setAttribute('fill', color);
+        sourceDot.setAttribute('opacity', '0.5');
+        g.appendChild(sourceDot);
+
+        const icon = actionIcons[interaction['action-type']] || '→';
+        const midX = (fromX + toX) / 2;
+        const midY = (fromY + toY) / 2;
+        const label = document.createElementNS(NS, 'text');
+        label.setAttribute('x', String(midX));
+        label.setAttribute('y', String(midY - 6));
+        label.setAttribute('fill', color);
+        label.setAttribute('font-size', '9');
+        label.setAttribute('font-weight', '600');
+        label.setAttribute('pointer-events', 'none');
+        label.setAttribute('text-anchor', 'middle');
+        label.textContent = icon;
+        g.appendChild(label);
+
+        this.#svgEl.appendChild(g);
+      }
+    }
+
+    if (frames) {
+      for (const frame of frames) {
+        const flows = frame.flows || {};
+        for (const flow of Object.values(flows)) {
+          const startFrame = objects[flow['starting-frame']];
+          if (!startFrame) continue;
+          const fx = (startFrame.x || 0);
+          const fy = (startFrame.y || 0);
+          const fw = (startFrame.width || 100);
+          const fh = (startFrame.height || 100);
+
+          const playCircle = document.createElementNS(NS, 'circle');
+          playCircle.classList.add('penpot-canvas__interaction');
+          playCircle.setAttribute('cx', String(fx + fw - 10));
+          playCircle.setAttribute('cy', String(fy + 10));
+          playCircle.setAttribute('r', '8');
+          playCircle.setAttribute('fill', '#31efb8');
+          playCircle.setAttribute('opacity', '0.6');
+          playCircle.setAttribute('stroke', '#31efb8');
+          playCircle.setAttribute('stroke-width', '1.5');
+          playCircle.setAttribute('pointer-events', 'stroke');
+          playCircle.style.cursor = 'pointer';
+          playCircle.dataset.flowId = flow.id;
+          playCircle.dataset.frameId = startFrame.id;
+
+          const playText = document.createElementNS(NS, 'text');
+          playText.classList.add('penpot-canvas__interaction');
+          playText.setAttribute('x', String(fx + fw - 10));
+          playText.setAttribute('y', String(fy + 13.5));
+          playText.setAttribute('fill', '#fff');
+          playText.setAttribute('font-size', '9');
+          playText.setAttribute('font-weight', 'bold');
+          playText.setAttribute('text-anchor', 'middle');
+          playText.setAttribute('pointer-events', 'none');
+          playText.textContent = '▸';
+
+          this.#svgEl.appendChild(playCircle);
+          this.#svgEl.appendChild(playText);
+        }
+      }
+    }
+  }
+
   panBy(dx, dy) {
     this.#panX += dx;
     this.#panY += dy;
@@ -364,6 +521,36 @@ export class PenpotCanvas extends PenpotElement {
       width: container.clientWidth - 20,
       height: container.clientHeight - 20,
     };
+    this.#updateGuideOverlay();
+  }
+
+  #updateGuideOverlay() {
+    const guides = this.querySelector('#guides');
+    if (!guides) return;
+    const container = this.querySelector('#container');
+    if (!container) return;
+    guides.viewport = {
+      zoom: this.#zoom,
+      panX: this.#panX,
+      panY: this.#panY,
+      width: container.clientWidth - 20,
+      height: container.clientHeight - 20,
+    };
+  }
+
+  setGuides(guides) {
+    this.#guides = guides || [];
+    const overlay = this.querySelector('#guides');
+    const rulers = this.querySelector('#rulers');
+    if (overlay) overlay.guides = this.#guides;
+    if (rulers) rulers.guides = this.#guides;
+  }
+
+  set onGuideCreate(fn) {
+    const overlay = this.querySelector('#guides');
+    const rulers = this.querySelector('#rulers');
+    if (overlay) overlay.onGuideChange = fn;
+    if (rulers) rulers.onGuideCreate = fn;
   }
 
   #handleWheel(e) {

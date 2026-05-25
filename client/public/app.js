@@ -45,6 +45,10 @@ import './components/penpot-version-panel.js';
 import './components/penpot-shortcuts-reference.js';
 import './components/penpot-workspace.js';
 import './components/penpot-viewer.js';
+import './components/penpot-import-dialog.js';
+import './components/penpot-rulers.js';
+import './components/penpot-guide-overlay.js';
+import './components/penpot-mcp-panel.js';
 import { init, subscribe, current, navigate } from './lib/router.js';
 import { cmd, setAuthToken, clearAuthToken } from './lib/rpc.js';
 import { appStore } from './lib/store.js';
@@ -87,6 +91,8 @@ function render(route) {
     case 'settings-password':
     case 'settings-tokens':
     case 'settings-feedback':
+    case 'settings-nudge':
+    case 'settings-notifications':
       currentEl = document.createElement('penpot-settings');
       currentEl.setAttribute('section', route.name.replace('settings-', ''));
       break;

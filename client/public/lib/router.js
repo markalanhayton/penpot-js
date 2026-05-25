@@ -25,11 +25,12 @@ const ROUTE_MAP = [
   { pattern: /^\/settings\/tokens$/, name: 'settings-tokens' },
   { pattern: /^\/settings\/feedback$/, name: 'settings-feedback' },
   { pattern: /^\/settings\/nudge$/, name: 'settings-nudge' },
+  { pattern: /^\/settings\/notifications$/, name: 'settings-notifications' },
 ];
 
 const AUTH_REQUIRED = new Set([
   'dashboard', 'dashboard-search', 'dashboard-fonts', 'dashboard-libraries',
-  'workspace', 'settings-profile', 'settings-password', 'settings-tokens', 'settings-feedback', 'settings-nudge',
+  'workspace', 'settings-profile', 'settings-password', 'settings-tokens', 'settings-feedback', 'settings-nudge', 'settings-notifications',
 ]);
 
 export function registerRoute(name, handler) {
@@ -87,12 +88,13 @@ function routeToPath(name, params = {}) {
     case 'settings-tokens': return '/settings/tokens';
     case 'settings-feedback': return '/settings/feedback';
     case 'settings-nudge': return '/settings/nudge';
+    case 'settings-notifications': return '/settings/notifications';
     default: return '/dashboard';
   }
 }
 
 function parseRoute(pathname, search) {
-  const path = pathname.replace(/^\/|\/$/g, '');
+  const path = pathname;
   const query = Object.fromEntries(new URLSearchParams(search));
 
   for (const route of ROUTE_MAP) {

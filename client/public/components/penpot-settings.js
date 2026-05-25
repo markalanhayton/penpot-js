@@ -42,6 +42,11 @@ template.innerHTML = `<style>
     .penpot-settings__token-delete:hover { background: rgba(244,68,68,0.1); }
     .penpot-settings__create-row { display: flex; gap: var(--penpot-spacing-s, 8px); margin-top: var(--penpot-spacing-m, 12px); }
     .penpot-settings__create-row input { flex: 1; }
+    .penpot-settings__notif-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--penpot-border, #444); }
+    .penpot-settings__notif-label { font-size: var(--penpot-font-size-m, 13px); color: var(--penpot-text, #e6e6e6); }
+    .penpot-settings__notif-desc { font-size: var(--penpot-font-size-s, 11px); color: var(--penpot-text-dim, #999); margin-top: 2px; }
+    .penpot-settings__notif-select { background: var(--penpot-input-bg, #333); border: 1px solid var(--penpot-input-border, #555); border-radius: var(--penpot-radius-s, 4px); color: var(--penpot-text, #e6e6e6); padding: 4px 8px; font-size: var(--penpot-font-size-s, 11px); outline: none; }
+    .penpot-settings__notif-select:focus { border-color: var(--penpot-primary, #31efb8); }
   
   </style>
   <div class="penpot-settings__settings-layout">
@@ -52,6 +57,7 @@ template.innerHTML = `<style>
       <button class="penpot-settings__nav-item" data-section="tokens">Access Tokens</button>
       <button class="penpot-settings__nav-item" data-section="feedback">Feedback</button>
       <button class="penpot-settings__nav-item" data-section="nudge">Nudge</button>
+      <button class="penpot-settings__nav-item" data-section="notifications">Notifications</button>
     </nav>
     <div class="penpot-settings__settings-content" id="content"></div>
   </div>`;
@@ -110,6 +116,7 @@ export class PenpotSettings extends PenpotElement {
       case 'tokens': this.#renderTokens(content); break;
       case 'feedback': this.#renderFeedback(content); break;
       case 'nudge': this.#renderNudge(content); break;
+      case 'notifications': this.#renderNotifications(content); break;
     }
   }
 
@@ -340,6 +347,65 @@ export class PenpotSettings extends PenpotElement {
       localStorage.setItem('penpot-nudge-big', String(big));
       this.#message = 'Nudge settings saved.';
       this.#messageType = 'success';
+      this.#showMessage(content);
+    });
+  }
+
+  #renderNotifications(content) {
+    const p = this.#profile || {};
+    let props = {};
+    try { props = typeof p.props === 'string' ? JSON.parse(p.props) : (p.props || {}); } catch { props = {}; }
+    const notifs = props.notifications || {};
+    const dc = notifs.dashboardComments || 'all';
+    const ec = notifs.emailComments || 'all';
+    const ei = notifs.emailInvites || 'all';
+    const opts = (val) => `<option value="all" ${val === 'all' ? 'selected' : ''}>All</option><option value="mentions" ${val === 'mentions' ? 'selected' : ''}>Mentions only</option><option value="none" ${val === 'none' ? 'selected' : ''}>None</option>`;
+
+    content.innerHTML = `
+      <button class="penpot-settings__back-link">&larr; Back to Dashboard</button>
+      <h2>Notification Preferences</h2>
+      <div id="msg"></div>
+      <p style="font-size:var(--penpot-font-size-s,11px);color:var(--penpot-text-dim,#999);margin-bottom:16px;">Choose which notifications you want to receive.</p>
+      <div class="penpot-settings__notif-row">
+        <div>
+          <div class="penpot-settings__notif-label">Dashboard comments</div>
+          <div class="penpot-settings__notif-desc">Notify when someone comments on files you have access to</div>
+        </div>
+        <select class="penpot-settings__notif-select" id="notif-dashboard-comments">${opts(dc)}</select>
+      </div>
+      <div class="penpot-settings__notif-row">
+        <div>
+          <div class="penpot-settings__notif-label">Email comments</div>
+          <div class="penpot-settings__notif-desc">Receive email notifications for comments on your designs</div>
+        </div>
+        <select class="penpot-settings__notif-select" id="notif-email-comments">${opts(ec)}</select>
+      </div>
+      <div class="penpot-settings__notif-row">
+        <div>
+          <div class="penpot-settings__notif-label">Email invites</div>
+          <div class="penpot-settings__notif-desc">Receive email notifications when you are invited to a team or project</div>
+        </div>
+        <select class="penpot-settings__notif-select" id="notif-email-invites">${opts(ei)}</select>
+      </div>
+      <button class="penpot-settings__save-btn" id="save-notifications" style="margin-top:16px;">Save Preferences</button>
+    `;
+
+    content.querySelector('.penpot-settings__back-link').addEventListener('click', () => {
+      this.emit('navigate', { route: 'dashboard' });
+    });
+
+    content.querySelector('#save-notifications').addEventListener('click', async () => {
+      const dashboardComments = content.querySelector('#notif-dashboard-comments').value;
+      const emailComments = content.querySelector('#notif-email-comments').value;
+      const emailInvites = content.querySelector('#notif-email-invites').value;
+      try {
+        await cmd('update-profile-notifications', { dashboardComments, emailComments, emailInvites });
+        this.#message = 'Notification preferences saved.';
+        this.#messageType = 'success';
+      } catch (err) {
+        this.#message = err.hint || err.message || 'Failed to save preferences.';
+        this.#messageType = 'error';
+      }
       this.#showMessage(content);
     });
   }

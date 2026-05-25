@@ -63,6 +63,13 @@ export function nilv(v, fallback) {
   return v == null ? fallback : v;
 }
 
+export function parseDouble(v, fallback) {
+  if (v == null) return fallback;
+  if (typeof v === 'number') return v;
+  const n = parseFloat(v);
+  return isNaN(n) ? (fallback ?? v) : n;
+}
+
 export function formatNumber(num, precision) {
   const factor = Math.pow(10, precision);
   return Math.round(num * factor) / factor;
@@ -343,6 +350,16 @@ export function assert(hint, fn) {
   }
 }
 
+export function withoutQualified(data) {
+  if (data == null) return data;
+  const result = {};
+  for (const [k, v] of Object.entries(data)) {
+    if (typeof k === 'string' && k.includes('/')) continue;
+    result[k] = v;
+  }
+  return result;
+}
+
 export function withoutKeys(obj, keys) {
   const keySet = new Set(keys);
   const result = { ...obj };
@@ -360,6 +377,32 @@ export function insertAtIndex(arr, index, items) {
 
 export function unstableSort(comp, items) {
   return [...items].sort(comp);
+}
+
+export function uniqueName(basename, used, prefixFirst = false) {
+  if (typeof basename !== 'string') return basename;
+  if (basename.length > 1000) return basename;
+
+  const match = basename.match(/^(.*)-([0-9]+)$/);
+  let prefix, initial;
+  if (match) {
+    prefix = match[1];
+    initial = parseInt(match[2], 10) + 1;
+  } else {
+    prefix = basename;
+    initial = 1;
+  }
+
+  if (!prefixFirst && !used.has(basename)) {
+    return basename;
+  }
+
+  let counter = initial;
+  while (true) {
+    const candidate = (counter === 1 && prefixFirst) ? prefix : `${prefix}-${counter}`;
+    if (!used.has(candidate)) return candidate;
+    counter++;
+  }
 }
 
 export { SENTINEL as sentinel };
