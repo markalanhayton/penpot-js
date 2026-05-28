@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module middleware/quotes
  * @description Resource usage quota/limit checking — mirrors `app.rpc.quotes`

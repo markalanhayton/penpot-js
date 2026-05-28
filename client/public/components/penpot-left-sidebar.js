@@ -1,3 +1,4 @@
+'use strict';
 import { PenpotElement } from './base.js';
 import './penpot-layer-panel.js';
 import './penpot-asset-panel.js';

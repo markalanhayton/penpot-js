@@ -1,9 +1,11 @@
+'use strict';
 import { PenpotElement } from './base.js';
 import './penpot-gradient-editor.js';
 import './penpot-shadow-editor.js';
 import './penpot-layout-panel.js';
 import './penpot-tokens-panel.js';
 import './penpot-interaction-panel.js';
+import { SYSTEM_FONTS } from '@penpot/shared/constants';
 
 const template = document.createElement('template');
 template.innerHTML = `<style>
@@ -37,6 +39,28 @@ template.innerHTML = `<style>
     .penpot-rside__bool-flatten-btn:hover { color: var(--penpot-text, #e6e6e6); border-color: var(--penpot-text-dim, #999); }
     .penpot-rside__inspect-value { color: var(--penpot-text, #e6e6e6); font-family: var(--penpot-font-family, monospace); font-size: var(--penpot-font-size-xs, 10px); }
     .penpot-rside__inspect-code { background: var(--penpot-bg, #1c1c1c); color: var(--penpot-primary, #31efb8); font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; font-size: 10px; line-height: 1.4; padding: var(--penpot-spacing-s, 8px); border-radius: var(--penpot-radius-s, 4px); margin: var(--penpot-spacing-xs, 4px) 0; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+    .penpot-rside__inspect-subtabs { display: flex; border-bottom: 1px solid var(--penpot-border, #444); flex-shrink: 0; background: var(--penpot-surface, #2a2a2a); }
+    .penpot-rside__inspect-subtab { flex: 1; padding: 4px 0; font-size: 9px; text-align: center; cursor: pointer; color: var(--penpot-text-dim, #999); border: none; border-bottom: 2px solid transparent; background: none; font-family: inherit; }
+    .penpot-rside__inspect-subtab:hover { color: var(--penpot-text, #e6e6e6); }
+    .penpot-rside__inspect-subtab.penpot-rside__active { color: var(--penpot-primary, #31efb8); border-bottom-color: var(--penpot-primary, #31efb8); }
+    .penpot-rside__inspect-collapsible-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
+    .penpot-rside__inspect-collapsible-header h4 { display: inline; }
+    .penpot-rside__inspect-collapse-arrow { font-size: 8px; color: var(--penpot-text-dim, #999); transition: transform 0.15s ease; display: inline-block; margin-left: 4px; }
+    .penpot-rside__inspect-collapsible-header[data-collapsed="true"] .penpot-rside__inspect-collapse-arrow { transform: rotate(-90deg); }
+    .penpot-rside__inspect-collapsible-body { overflow: hidden; }
+    .penpot-rside__inspect-collapsible-body[data-hidden="true"] { display: none; }
+    .penpot-rside__copy-prop-btn { background: none; border: none; color: var(--penpot-text-dim, #999); cursor: pointer; font-size: 10px; padding: 0 2px; opacity: 0; transition: opacity 0.15s; flex-shrink: 0; }
+    .penpot-rside__prop-row:hover .penpot-rside__copy-prop-btn { opacity: 1; }
+    .penpot-rside__copy-prop-btn:hover { color: var(--penpot-primary, #31efb8); }
+    .penpot-rside__inspect-token-badge { display: inline-block; background: rgba(49,239,184,0.15); color: var(--penpot-primary, #31efb8); font-size: 8px; padding: 0 4px; border-radius: 2px; margin-left: 4px; vertical-align: middle; }
+    .penpot-rside__inspect-export-row { display: flex; align-items: center; gap: var(--penpot-spacing-xs, 4px); margin-bottom: var(--penpot-spacing-xs, 4px); font-size: var(--penpot-font-size-s, 11px); }
+    .penpot-rside__inspect-export-row select, .penpot-rside__inspect-export-row input { background: var(--penpot-input-bg, #333); border: 1px solid var(--penpot-input-border, #555); border-radius: var(--penpot-radius-s, 4px); color: var(--penpot-text, #e6e6e6); padding: 2px 4px; font-size: 10px; outline: none; }
+    .penpot-rside__inspect-export-row input:focus, .penpot-rside__inspect-export-row select:focus { border-color: var(--penpot-primary, #31efb8); }
+    .penpot-rside__copy-code-btn { background: none; border: 1px solid var(--penpot-border, #444); color: var(--penpot-text-dim, #999); font-size: 9px; padding: 2px 6px; border-radius: var(--penpot-radius-s, 4px); cursor: pointer; }
+    .penpot-rside__copy-code-btn:hover { color: var(--penpot-primary, #31efb8); border-color: var(--penpot-primary, #31efb8); }
+    .penpot-rside__missing-font-warning { background: rgba(255, 152, 0, 0.15); border: 1px solid rgba(255, 152, 0, 0.4); border-radius: var(--penpot-radius-s, 4px); padding: var(--penpot-spacing-s, 8px); margin-bottom: var(--penpot-spacing-s, 8px); font-size: var(--penpot-font-size-s, 11px); color: #ff9800; line-height: 1.4; }
+    .penpot-rside__missing-font-warning strong { color: #ffb74d; }
+    .penpot-rside__missing-font-list { margin-top: 4px; font-size: var(--penpot-font-size-xs, 10px); color: #ffcc80; }
   
   </style>
   <div class="penpot-rside__sidebar-tabs">
@@ -55,6 +79,7 @@ export class PenpotRightSidebar extends PenpotElement {
   #activeTab = 'design';
   #teamFonts = [];
   #fileData = null;
+  #missingFonts = [];
 
   set fileData(val) { this.#fileData = val; }
   #toolManager = null;
@@ -82,6 +107,11 @@ export class PenpotRightSidebar extends PenpotElement {
   }
 
   get teamFonts() { return this.#teamFonts; }
+
+  set missingFonts(val) {
+    this.#missingFonts = val || [];
+    if (this.#activeTab === 'design' && this.#selectedShape) this.render();
+  }
 
   set selectedShape(shape) {
     this.#selectedShape = shape;
@@ -192,24 +222,26 @@ export class PenpotRightSidebar extends PenpotElement {
     html += `</div>`;
 
     if (s.type === 'text') {
-      const systemFontFamilies = [
-        { value: 'sans-serif', label: 'Sans-serif' },
-        { value: 'serif', label: 'Serif' },
-        { value: 'monospace', label: 'Monospace' },
-        { value: 'Inter, sans-serif', label: 'Inter' },
-        { value: 'Roboto, sans-serif', label: 'Roboto' },
-        { value: 'Open Sans, sans-serif', label: 'Open Sans' },
-        { value: 'Lato, sans-serif', label: 'Lato' },
-        { value: 'Montserrat, sans-serif', label: 'Montserrat' },
-        { value: 'Playfair Display, serif', label: 'Playfair Display' },
-        { value: 'Source Code Pro, monospace', label: 'Source Code Pro' },
-      ];
+      const systemFontEntries = SYSTEM_FONTS.map(f => ({
+        value: f.family,
+        label: f.label,
+      }));
       const teamFontEntries = this.#teamFonts.map(f => ({
         value: f.fontFamily,
         label: `★ ${f.fontFamily}`,
       }));
-      const fontFamilies = [...systemFontFamilies, ...teamFontEntries];
+      const fontFamilies = [...systemFontEntries, ...teamFontEntries];
       const currentFont = s.fontFamily || 'sans-serif';
+
+      if (this.#missingFonts.length > 0) {
+        const uniqueNames = [...new Set(this.#missingFonts.map(f => f.fontFamily))];
+        html += `<div class="penpot-rside__missing-font-warning">`;
+        html += `<strong>⚠ Missing font${uniqueNames.length > 1 ? 's' : ''}</strong><br>`;
+        html += `Font${uniqueNames.length > 1 ? 's' : ''} not found: ${this.escHtml(uniqueNames.join(', '))}. A substitute will be used.`;
+        html += `<div class="penpot-rside__missing-font-list">${uniqueNames.map(n => this.escHtml(n)).join('<br>')}</div>`;
+        html += `</div>`;
+      }
+
       html += `<div class="penpot-rside__prop-row"><span class="penpot-rside__prop-label">Font</span><select class="penpot-rside__prop-input" data-text-prop="fontFamily" style="width:140px;">`;
       for (const ff of fontFamilies) {
         html += `<option value="${ff.value}" ${ff.value === currentFont ? 'selected' : ''}>${ff.label}</option>`;
@@ -937,160 +969,700 @@ export class PenpotRightSidebar extends PenpotElement {
     });
   }
 
+  #inspectColorFormat = 'hex';
+  #inspectSubTab = 'styles';
+  #collapsedSections = new Set();
+
   #renderInspect(s) {
     if (!s) return '<div class="penpot-rside__empty-state">Select a shape to inspect.</div>';
 
+    let html = '';
+
+    html += `<div class="penpot-rside__properties-section">`;
+    html += `<span class="penpot-rside__shape-type-badge">${this.escHtml(s.type || 'shape')}</span>`;
+    html += `</div>`;
+
+    html += `<div class="penpot-rside__inspect-subtabs">`;
+    html += `<button class="penpot-rside__inspect-subtab${this.#inspectSubTab === 'styles' ? ' penpot-rside__active' : ''}" data-inspect-tab="styles">Styles</button>`;
+    html += `<button class="penpot-rside__inspect-subtab${this.#inspectSubTab === 'code' ? ' penpot-rside__active' : ''}" data-inspect-tab="code">Code</button>`;
+    html += `<button class="penpot-rside__inspect-subtab${this.#inspectSubTab === 'exports' ? ' penpot-rside__active' : ''}" data-inspect-tab="exports">Exports</button>`;
+    html += `</div>`;
+
+    if (this.#inspectSubTab === 'styles') {
+      html += this.#renderInspectStyles(s);
+    } else if (this.#inspectSubTab === 'code') {
+      html += this.#renderInspectCode(s);
+    } else if (this.#inspectSubTab === 'exports') {
+      html += this.#renderInspectExports(s);
+    }
+
+    return html;
+  }
+
+  #renderInspectStyles(s) {
     const x = Math.round(s.x || 0);
     const y = Math.round(s.y || 0);
     const w = Math.round(s.width || 0);
     const h = Math.round(s.height || 0);
     const opacity = s.opacity ?? 1;
     const rotation = Math.round((s.rotation || 0) * 180 / Math.PI);
+    const fmt = this.#inspectColorFormat;
 
     let html = '';
 
-    html += `<div class="penpot-rside__properties-section">`;
-    html += `<span class="penpot-rside__shape-type-badge">${this.escHtml(s.type || 'shape')}</span>`;
-    html += `<h4>Position & Size</h4>`;
-    html += `<div class="penpot-rside__prop-row"><span class="penpot-rside__prop-label" style="width:50px">X</span><span class="penpot-rside__inspect-value">${x}</span></div>`;
-    html += `<div class="penpot-rside__prop-row"><span class="penpot-rside__prop-label" style="width:50px">Y</span><span class="penpot-rside__inspect-value">${y}</span></div>`;
-    html += `<div class="penpot-rside__prop-row"><span class="penpot-rside__prop-label" style="width:50px">W</span><span class="penpot-rside__inspect-value">${w}</span></div>`;
-    html += `<div class="penpot-rside__prop-row"><span class="penpot-rside__prop-label" style="width:50px">H</span><span class="penpot-rside__inspect-value">${h}</span></div>`;
-    if (rotation !== 0) {
-      html += `<div class="penpot-rside__prop-row"><span class="penpot-rside__prop-label" style="width:50px">Rot</span><span class="penpot-rside__inspect-value">${rotation}&deg;</span></div>`;
-    }
-    html += `</div>`;
+    html += `<div class="penpot-rside__properties-section" style="padding-bottom:4px;">`;
+    html += `<div style="display:flex;justify-content:flex-end;align-items:center;gap:4px;">`;
+    html += `<span style="font-size:9px;color:var(--penpot-text-dim,#999);">Color:</span>`;
+    html += `<select id="inspect-color-fmt" class="penpot-rside__tb-select" style="width:auto;font-size:10px;padding:1px 4px">`;
+    html += `<option value="hex"${fmt === 'hex' ? ' selected' : ''}>HEX</option>`;
+    html += `<option value="rgba"${fmt === 'rgba' ? ' selected' : ''}>RGBA</option>`;
+    html += `<option value="hsla"${fmt === 'hsla' ? ' selected' : ''}>HSLA</option>`;
+    html += `</select>`;
+    html += `</div></div>`;
+
+    html += this.#inspectCollapsibleSection('geometry', 'Geometry', [
+      this.#propRow('X', `${x}px`, `left: ${x}px;`),
+      this.#propRow('Y', `${y}px`, `top: ${y}px;`),
+      this.#propRow('W', `${w}px`, `width: ${w}px;`),
+      this.#propRow('H', `${h}px`, `height: ${h}px;`),
+      ...(rotation !== 0 ? [this.#propRow('Rotation', `${rotation}\u00B0`, `transform: rotate(${rotation}deg);`)] : []),
+      ...this.#inspectBorderRadius(s),
+    ]);
 
     if (opacity < 1) {
-      html += `<div class="penpot-rside__properties-section">`;
-    html += `<h4>Opacity${this.#overrideDot('layer-effects-group')}</h4>`;
-      html += `<div class="penpot-rside__prop-row"><span class="penpot-rside__inspect-value">${(opacity * 100).toFixed(0)}%</span></div>`;
-      html += `</div>`;
+      html += this.#inspectCollapsibleSection('opacity', 'Opacity', [
+        this.#propRow('Opacity', `${(opacity * 100).toFixed(0)}%`, `opacity: ${opacity};`),
+      ]);
+    }
+
+    if (s.blendMode && s.blendMode !== 'normal') {
+      html += this.#inspectCollapsibleSection('blendmode', 'Blend Mode', [
+        this.#propRow('Mode', s.blendMode, `mix-blend-mode: ${s.blendMode};`),
+      ]);
+    }
+
+    if (s.layout && (s.layout === 'flex' || s.layout === 'grid')) {
+      html += this.#inspectCollapsibleSection('layout', 'Layout', this.#inspectLayoutSection(s));
     }
 
     const fills = s.fills || [];
     if (fills.length > 0) {
-      html += `<div class="penpot-rside__properties-section">`;
-      html += `<h4>Fills</h4>`;
-      for (const fill of fills) {
-        const fillType = fill.fillType || fill.type || 'solid';
-        if (fillType === 'solid') {
-          html += `<div class="penpot-rside__prop-row"><div class="penpot-rside__prop-color-swatch" style="background:${fill.color || '#ccc'}"></div><span class="penpot-rside__inspect-value">Solid ${fill.color || '#ccc'}</span></div>`;
-        } else if (fillType === 'linear-gradient') {
-          html += `<div class="penpot-rside__prop-row"><div class="penpot-rside__prop-color-swatch" style="background:linear-gradient(90deg, ${(fill.stops || []).map(st => `${st.color || '#ccc'} ${(st.offset * 100).toFixed(0)}%`).join(', ')})"></div><span class="penpot-rside__inspect-value">Linear Gradient</span></div>`;
-        } else if (fillType === 'radial-gradient') {
-          html += `<div class="penpot-rside__prop-row"><div class="penpot-rside__prop-color-swatch" style="background:radial-gradient(circle, ${(fill.stops || []).map(st => `${st.color || '#ccc'} ${(st.offset * 100).toFixed(0)}%`).join(', ')})"></div><span class="penpot-rside__inspect-value">Radial Gradient</span></div>`;
-        }
-      }
-      html += `</div>`;
-    }
-
-    const shadows = s.shadows || [];
-    if (shadows.length > 0) {
-      html += `<div class="penpot-rside__properties-section">`;
-    html += `<h4>Shadows${this.#overrideDot('shadow-group')}</h4>`;
-      for (const shadow of shadows) {
-        const style = shadow.style === 'inner-shadow' ? 'inset' : '';
-        html += `<div class="penpot-rside__prop-row"><span class="penpot-rside__inspect-value">${shadow.style === 'inner-shadow' ? 'Inner ' : 'Drop '}${shadow.offsetX || 0}px ${shadow.offsetY || 0}px ${shadow.blur || 0}px ${shadow.color || '#000'}</span></div>`;
-      }
-      html += `</div>`;
+      const rows = fills.map((fill, i) => this.#inspectFillRow(fill, i, fmt));
+      html += this.#inspectCollapsibleSection('fills', 'Fills', rows);
     }
 
     const strokes = s.strokes || [];
     if (strokes.length > 0) {
-      html += `<div class="penpot-rside__properties-section">`;
-      html += `<h4>Strokes</h4>`;
-      for (const stroke of strokes) {
-        html += `<div class="penpot-rside__prop-row"><div class="penpot-rside__prop-color-swatch" style="background:${stroke.color || stroke.strokeColor || '#000'}"></div><span class="penpot-rside__inspect-value">${stroke.width || stroke.strokeWidth || 1}px</span></div>`;
-      }
-      html += `</div>`;
+      const rows = strokes.map((stroke, i) => this.#inspectStrokeRow(stroke, i, fmt));
+      html += this.#inspectCollapsibleSection('strokes', 'Strokes', rows);
+    }
+
+    const shadows = s.shadows || [];
+    if (shadows.length > 0) {
+      const rows = shadows.map((shadow, i) => this.#inspectShadowRow(shadow, i, fmt));
+      html += this.#inspectCollapsibleSection('shadows', 'Shadows', rows);
+    }
+
+    if (s.blur && s.blur.value) {
+      html += this.#inspectCollapsibleSection('blur', 'Blur', [
+        this.#propRow('Blur', `${s.blur.value}px`, `filter: blur(${s.blur.value}px);`),
+      ]);
     }
 
     if (s.type === 'text') {
-      html += `<div class="penpot-rside__properties-section">`;
-      html += `<h4>Text</h4>`;
-      html += `<div class="penpot-rside__prop-row"><span class="penpot-rside__inspect-value" style="word-break:break-all">${this.escHtml(s.content || '')}</span></div>`;
-      if (s.fontSize) html += `<div class="penpot-rside__prop-row"><span class="penpot-rside__prop-label" style="width:50px">Size</span><span class="penpot-rside__inspect-value">${s.fontSize}px</span></div>`;
-      if (s.fontFamily) html += `<div class="penpot-rside__prop-row"><span class="penpot-rside__prop-label" style="width:50px">Font</span><span class="penpot-rside__inspect-value">${this.escHtml(s.fontFamily)}</span></div>`;
-      html += `</div>`;
+      html += this.#inspectTextSection(s, fmt);
     }
 
+    const tokenRefs = this.#extractTokenRefs(s);
+    if (tokenRefs.length > 0) {
+      html += this.#inspectCollapsibleSection('tokens', 'Design Tokens', tokenRefs);
+    }
+
+    return html;
+  }
+
+  #renderInspectCode(s) {
+    const fmt = this.#inspectColorFormat;
+    let html = '';
+
+    html += `<div class="penpot-rside__properties-section" style="padding-bottom:4px;">`;
+    html += `<div style="display:flex;justify-content:flex-end;align-items:center;gap:4px;">`;
+    html += `<span style="font-size:9px;color:var(--penpot-text-dim,#999);">Color:</span>`;
+    html += `<select id="inspect-color-fmt" class="penpot-rside__tb-select" style="width:auto;font-size:10px;padding:1px 4px">`;
+    html += `<option value="hex"${fmt === 'hex' ? ' selected' : ''}>HEX</option>`;
+    html += `<option value="rgba"${fmt === 'rgba' ? ' selected' : ''}>RGBA</option>`;
+    html += `<option value="hsla"${fmt === 'hsla' ? ' selected' : ''}>HSLA</option>`;
+    html += `</select>`;
+    html += `</div></div>`;
+
+    html += this.#inspectCollapsibleSection('css-code', 'CSS', [
+      `<pre class="penpot-rside__inspect-code" id="inspect-css-code">${this.escHtml(this.#generateCSS(s))}</pre>`,
+      `<button class="penpot-rside__bool-btn" id="copy-css-btn" style="width:100%;margin-top:4px;">Copy CSS</button>`,
+    ]);
+
+    html += this.#inspectCollapsibleSection('svg-code', 'SVG', [
+      `<pre class="penpot-rside__inspect-code" id="inspect-svg-code">${this.escHtml(this.#generateSVG(s))}</pre>`,
+      `<button class="penpot-rside__bool-btn" id="copy-svg-btn" style="width:100%;margin-top:4px;">Copy SVG</button>`,
+    ]);
+
+    html += this.#inspectCollapsibleSection('svg-markup', 'SVG Markup', [
+      `<pre class="penpot-rside__inspect-code" id="inspect-svg-markup-code">${this.escHtml(this.#generateSVGMarkup(s))}</pre>`,
+      `<button class="penpot-rside__bool-btn" id="copy-svg-markup-btn" style="width:100%;margin-top:4px;">Copy Markup</button>`,
+    ]);
+
+    return html;
+  }
+
+  #renderInspectExports(s) {
+    let html = '';
+
     html += `<div class="penpot-rside__properties-section">`;
-    html += `<h4>CSS</h4>`;
-    html += `<pre class="penpot-rside__inspect-code">${this.#generateCSS(s)}</pre>`;
-    html += `<button class="penpot-rside__bool-btn" id="copy-css-btn" style="width:100%;margin-top:4px;">Copy CSS</button>`;
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">`;
+    html += `<h4>Export Presets</h4>`;
+    html += `<button class="penpot-rside__copy-code-btn" id="inspect-add-export">+ Add</button>`;
+    html += `</div>`;
+
+    const exports = s.exports || [];
+    if (exports.length === 0) {
+      html += `<div style="color:var(--penpot-text-dim,#999);font-size:10px;padding:4px 0;">No export presets. Click "+ Add" to create one.</div>`;
+    } else {
+      exports.forEach((exp, i) => {
+        html += `<div class="penpot-rside__inspect-export-row">`;
+        html += `<select data-export-fmt="${i}" style="width:55px;">`;
+        html += `<option${exp.format === 'png' ? ' selected' : ''}>png</option>`;
+        html += `<option${exp.format === 'jpeg' ? ' selected' : ''}>jpeg</option>`;
+        html += `<option${exp.format === 'webp' ? ' selected' : ''}>webp</option>`;
+        html += `<option${exp.format === 'svg' ? ' selected' : ''}>svg</option>`;
+        html += `<option${exp.format === 'pdf' ? ' selected' : ''}>pdf</option>`;
+        html += `</select>`;
+        html += `<span style="font-size:10px;color:var(--penpot-text-dim,#999);">@</span>`;
+        html += `<select data-export-scale="${i}" style="width:40px;">`;
+        [1, 2, 3, 4].forEach(sc => {
+          html += `<option${(exp.scale || 1) === sc ? ' selected' : ''}>${sc}x</option>`;
+        });
+        html += `</select>`;
+        html += `<input data-export-suffix="${i}" value="${this.escHtml(exp.suffix || '')}" placeholder="suffix" style="width:50px;" />`;
+        html += `<button class="penpot-rside__copy-code-btn" data-export-remove="${i}" title="Remove">\u00D7</button>`;
+        html += `</div>`;
+      });
+    }
+
     html += `</div>`;
 
     html += `<div class="penpot-rside__properties-section">`;
-    html += `<h4>SVG</h4>`;
-    html += `<pre class="penpot-rside__inspect-code">${this.escHtml(this.#generateSVG(s))}</pre>`;
-    html += `<button class="penpot-rside__bool-btn" id="copy-svg-btn" style="width:100%;margin-top:4px;">Copy SVG</button>`;
+    html += `<button class="penpot-rside__bool-btn" id="inspect-export-btn" style="width:100%;">Export Shape</button>`;
     html += `</div>`;
 
     return html;
   }
 
+  #inspectCollapsibleSection(key, title, rows) {
+    if (!rows || rows.length === 0) return '';
+    const collapsed = this.#collapsedSections.has(key);
+    return `<div class="penpot-rside__properties-section">` +
+      `<div class="penpot-rside__inspect-collapsible-header" data-section="${key}" data-collapsed="${collapsed}">` +
+      `<h4>${title}</h4>` +
+      `<span class="penpot-rside__inspect-collapse-arrow">\u25BC</span>` +
+      `</div>` +
+      `<div class="penpot-rside__inspect-collapsible-body" data-hidden="${collapsed}">${rows.join('')}</div>` +
+      `</div>`;
+  }
+
+  #inspectSection(title, rows) {
+    if (!rows || rows.length === 0) return '';
+    return this.#inspectCollapsibleSection(title.toLowerCase(), title, rows);
+  }
+
+  #propRow(label, value, copyValue) {
+    const cv = this.escHtml(copyValue || value);
+    return `<div class="penpot-rside__prop-row"><span class="penpot-rside__prop-label" style="width:60px">${label}</span><span class="penpot-rside__inspect-value">${this.escHtml(value)}</span><button class="penpot-rside__copy-prop-btn" data-copy="${cv}" title="Copy value">\u2398</button></div>`;
+  }
+
+  #inspectBorderRadius(s) {
+    const r1 = s.r1 ?? s.rx ?? 0;
+    const r2 = s.r2 ?? s.rx ?? 0;
+    const r3 = s.r3 ?? s.rx ?? 0;
+    const r4 = s.r4 ?? s.rx ?? 0;
+    if (!r1 && !r2 && !r3 && !r4) return [];
+    if (r1 === r2 && r2 === r3 && r3 === r4) {
+      return [this.#propRow('Radius', `${r1}px`, `border-radius: ${r1}px;`)];
+    }
+    return [
+      this.#propRow('TL', `${r1}px`, `border-top-left-radius: ${r1}px;`),
+      this.#propRow('TR', `${r2}px`, `border-top-right-radius: ${r2}px;`),
+      this.#propRow('BR', `${r3}px`, `border-bottom-right-radius: ${r3}px;`),
+      this.#propRow('BL', `${r4}px`, `border-bottom-left-radius: ${r4}px;`),
+    ];
+  }
+
+  #inspectFillRow(fill, index, fmt) {
+    const fillType = fill.fillType || fill.type || 'solid';
+    const tokenRef = fill.fillColorRefId ? ` <span class="penpot-rside__inspect-token-badge">token</span>` : '';
+    if (fillType === 'solid') {
+      const color = fill.color || '#000000';
+      const formatted = this.#formatColorForInspect(color, fill.opacity, fmt);
+      return `<div class="penpot-rside__prop-row"><div class="penpot-rside__prop-color-swatch" style="background:${color}"></div><span class="penpot-rside__inspect-value">Solid ${formatted}${tokenRef}</span><button class="penpot-rside__copy-prop-btn" data-copy="background-color: ${formatted};" title="Copy value">\u2398</button></div>`;
+    }
+    if (fillType === 'linear-gradient') {
+      const stops = (fill.stops || []).map(st => `${st.color || '#ccc'} ${(st.offset * 100).toFixed(0)}%`).join(', ');
+      const css = `linear-gradient(${fill.angle || 0}deg, ${stops})`;
+      return `<div class="penpot-rside__prop-row"><div class="penpot-rside__prop-color-swatch" style="background:${css}"></div><span class="penpot-rside__inspect-value">Linear ${Math.round(fill.angle || 0)}\u00B0${tokenRef}</span><button class="penpot-rside__copy-prop-btn" data-copy="background: ${css};" title="Copy value">\u2398</button></div>`;
+    }
+    if (fillType === 'radial-gradient') {
+      const stops = (fill.stops || []).map(st => `${st.color || '#ccc'} ${(st.offset * 100).toFixed(0)}%`).join(', ');
+      const css = `radial-gradient(circle, ${stops})`;
+      return `<div class="penpot-rside__prop-row"><div class="penpot-rside__prop-color-swatch" style="background:${css}"></div><span class="penpot-rside__inspect-value">Radial${tokenRef}</span><button class="penpot-rside__copy-prop-btn" data-copy="background: ${css};" title="Copy value">\u2398</button></div>`;
+    }
+    return '';
+  }
+
+  #inspectStrokeRow(stroke, index, fmt) {
+    const color = stroke.color || stroke.strokeColor || '#000000';
+    const width = stroke.width || stroke.strokeWidth || 1;
+    const style = stroke.style || stroke.strokeStyle || 'solid';
+    const alignment = stroke.alignment || stroke.strokeAlignment || 'center';
+    const formatted = this.#formatColorForInspect(color, 1, fmt);
+    const tokenRef = stroke.strokeColorRefId ? ` <span class="penpot-rside__inspect-token-badge">token</span>` : '';
+    return `<div class="penpot-rside__prop-row"><div class="penpot-rside__prop-color-swatch" style="background:${color}"></div><span class="penpot-rside__inspect-value">${width}px ${style} ${alignment}${tokenRef}</span><button class="penpot-rside__copy-prop-btn" data-copy="border: ${width}px ${style} ${formatted};" title="Copy value">\u2398</button></div>`;
+  }
+
+  #inspectShadowRow(shadow, index, fmt) {
+    const isInner = shadow.style === 'inner-shadow';
+    const color = shadow.color || '#000000';
+    const formatted = this.#formatColorForInspect(color, 1, fmt);
+    const label = isInner ? 'Inner' : 'Drop';
+    const ox = shadow.offsetX || 0;
+    const oy = shadow.offsetY || 0;
+    const blur = shadow.blur || 0;
+    const spread = shadow.spread || 0;
+    const inset = isInner ? 'inset ' : '';
+    const cssVal = `${inset}${ox}px ${oy}px ${blur}px ${spread}px ${formatted}`;
+    return `<div class="penpot-rside__prop-row"><div class="penpot-rside__prop-color-swatch" style="background:${color}"></div><span class="penpot-rside__inspect-value">${label} ${ox}/${oy}/${blur}</span><button class="penpot-rside__copy-prop-btn" data-copy="box-shadow: ${cssVal};" title="Copy value">\u2398</button></div>`;
+  }
+
+  #inspectTextSection(s, fmt) {
+    const content = s.content;
+    let textContent = '';
+    if (content && typeof content === 'object' && content.type === 'root') {
+      const paragraphs = [];
+      function walk(node) {
+        if (node.type === 'paragraph') {
+          const t = (node.children || []).map(c => c.text || '').join('');
+          paragraphs.push(t);
+        } else if (node.text !== undefined) {
+          paragraphs.push(node.text);
+        }
+        if (node.children) node.children.forEach(walk);
+      }
+      walk(content);
+      textContent = paragraphs.join('\n');
+    } else {
+      textContent = content || '';
+    }
+
+    const rows = [];
+    const preview = textContent.length > 100 ? textContent.slice(0, 100) + '\u2026' : textContent;
+    rows.push(`<div class="penpot-rside__prop-row"><span class="penpot-rside__inspect-value" style="word-break:break-all">${this.escHtml(preview)}</span></div>`);
+
+    if (s.fontFamily) rows.push(this.#propRow('Font', s.fontFamily, `font-family: ${s.fontFamily};`));
+    if (s.fontSize) rows.push(this.#propRow('Size', `${s.fontSize}px`, `font-size: ${s.fontSize}px;`));
+    if (s.fontWeight) rows.push(this.#propRow('Weight', String(s.fontWeight), `font-weight: ${s.fontWeight};`));
+    if (s.fontStyle && s.fontStyle !== 'normal') rows.push(this.#propRow('Style', s.fontStyle, `font-style: ${s.fontStyle};`));
+    if (s.lineHeight) rows.push(this.#propRow('Line H', String(s.lineHeight), `line-height: ${s.lineHeight};`));
+    if (s.letterSpacing) rows.push(this.#propRow('Letter', `${s.letterSpacing}px`, `letter-spacing: ${s.letterSpacing}px;`));
+    if (s.textAlign) rows.push(this.#propRow('Align', s.textAlign, `text-align: ${s.textAlign};`));
+    if (s.textDecoration && s.textDecoration !== 'none') rows.push(this.#propRow('Decor', s.textDecoration, `text-decoration: ${s.textDecoration};`));
+    if (s.textTransform && s.textTransform !== 'none') rows.push(this.#propRow('Transform', s.textTransform, `text-transform: ${s.textTransform};`));
+
+    const fills = s.fills || [];
+    if (fills.length > 0 && (fills[0].fillType || fills[0].type) === 'solid') {
+      const color = fills[0].color || '#000000';
+      const formatted = this.#formatColorForInspect(color, fills[0].opacity, fmt);
+      rows.push(this.#propRow('Color', formatted, `color: ${formatted};`));
+    }
+
+    return this.#inspectCollapsibleSection('typography', 'Typography', rows);
+  }
+
+  #inspectLayoutSection(s) {
+    const rows = [];
+    const layout = s.layout || 'flex';
+    rows.push(this.#propRow('Type', layout, `display: ${layout === 'flex' ? 'flex' : 'grid'};`));
+    if (s.layoutDir) {
+      const dirMap = { row: 'row', 'row-reverse': 'row-reverse', col: 'column', 'col-reverse': 'column-reverse' };
+      rows.push(this.#propRow('Dir', dirMap[s.layoutDir] || s.layoutDir, `flex-direction: ${dirMap[s.layoutDir] || s.layoutDir};`));
+    }
+    if (s.gap) rows.push(this.#propRow('Gap', `${s.gap}px`, `gap: ${s.gap}px;`));
+    if (s.paddingTop != null) rows.push(this.#propRow('Pad T', `${s.paddingTop}px`, `padding-top: ${s.paddingTop}px;`));
+    if (s.paddingRight != null) rows.push(this.#propRow('Pad R', `${s.paddingRight}px`, `padding-right: ${s.paddingRight}px;`));
+    if (s.paddingBottom != null) rows.push(this.#propRow('Pad B', `${s.paddingBottom}px`, `padding-bottom: ${s.paddingBottom}px;`));
+    if (s.paddingLeft != null) rows.push(this.#propRow('Pad L', `${s.paddingLeft}px`, `padding-left: ${s.paddingLeft}px;`));
+    return rows;
+  }
+
+  #extractTokenRefs(s) {
+    const rows = [];
+    const seen = new Set();
+    const fileData = this.#fileData;
+
+    const addToken = (refId, refFile, type, value) => {
+      if (!refId || seen.has(refId)) return;
+      seen.add(refId);
+      let tokenName = refId;
+      if (fileData) {
+        const tokensLib = fileData.data?.tokensLib || fileData.tokensLib;
+        if (tokensLib) {
+          const sets = tokensLib.setsRefs || tokensLib.sets || {};
+          for (const setName of Object.keys(sets)) {
+            const set = sets[setName];
+            const token = set?.[refId] || set?.values?.[refId];
+            if (token) {
+              tokenName = token.name || tokenName;
+              break;
+            }
+          }
+        }
+      }
+      rows.push(this.#propRow(type, `${tokenName}`, value));
+    };
+
+    (s.fills || []).forEach(fill => {
+      if (fill.fillColorRefId) {
+        const formatted = this.#formatColorForInspect(fill.color || '#000000', fill.opacity, this.#inspectColorFormat);
+        addToken(fill.fillColorRefId, fill.fillColorRefFile, 'Fill', `background-color: ${formatted};`);
+      }
+    });
+
+    (s.strokes || []).forEach(stroke => {
+      if (stroke.strokeColorRefId) {
+        const color = stroke.color || stroke.strokeColor || '#000000';
+        const formatted = this.#formatColorForInspect(color, 1, this.#inspectColorFormat);
+        addToken(stroke.strokeColorRefId, stroke.strokeColorRefFile, 'Stroke', `border-color: ${formatted};`);
+      }
+    });
+
+    if (s.typographyRefId) {
+      addToken(s.typographyRefId, s.typographyRefFile, 'Typo', `font: ${s.fontFamily || 'inherit'};`);
+    }
+
+    return rows;
+  }
+
+  #generateSVGMarkup(s) {
+    let html = `<svg xmlns="http://www.w3.org/2000/svg"`;
+    html += ` width="${Math.round(s.width || 0)}" height="${Math.round(s.height || 0)}"`;
+    html += ` viewBox="0 0 ${Math.round(s.width || 0)} ${Math.round(s.height || 0)}"`;
+    html += `>\n`;
+
+    const inner = this.#generateSVG(s);
+    if (inner.includes('<defs>')) {
+      html += `  ${inner}\n`;
+    } else {
+      const tag = s.type === 'circle' || s.type === 'ellipse' ? 'ellipse' : s.type === 'text' ? 'text' : s.type === 'path' ? 'path' : s.type === 'image' ? 'image' : 'rect';
+      html += `  ${inner}\n`;
+    }
+
+    html += `</svg>`;
+    return html;
+  }
+
+  #formatColorForInspect(color, opacity, fmt) {
+    if (fmt === 'hex') {
+      return color;
+    }
+    const rgb = this.#parseColorToRGB(color);
+    if (!rgb) return color;
+    if (fmt === 'rgba') {
+      const a = opacity != null && opacity < 1 ? ` / ${opacity}` : '';
+      return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}${a})`;
+    }
+    if (fmt === 'hsla') {
+      const hsl = this.#rgbToHSL(rgb.r, rgb.g, rgb.b);
+      const a = opacity != null && opacity < 1 ? ` / ${opacity}` : '';
+      return `hsla(${hsl.h}, ${hsl.s}%, ${hsl.l}%${a})`;
+    }
+    return color;
+  }
+
+  #parseColorToRGB(color) {
+    if (!color || typeof color !== 'string') return null;
+    if (color.startsWith('#')) {
+      const hex = color.slice(1);
+      if (hex.length === 3) {
+        return { r: parseInt(hex[0] + hex[0], 16), g: parseInt(hex[1] + hex[1], 16), b: parseInt(hex[2] + hex[2], 16) };
+      }
+      if (hex.length === 6) {
+        return { r: parseInt(hex.slice(0, 2), 16), g: parseInt(hex.slice(2, 4), 16), b: parseInt(hex.slice(4, 6), 16) };
+      }
+    }
+    const rgbMatch = color.match(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/);
+    if (rgbMatch) return { r: parseInt(rgbMatch[1]), g: parseInt(rgbMatch[2]), b: parseInt(rgbMatch[3]) };
+    return null;
+  }
+
+  #rgbToHSL(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const l = (max + min) / 2;
+    let h = 0, s = 0;
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+        case g: h = ((b - r) / d + 2) / 6; break;
+        case b: h = ((r - g) / d + 4) / 6; break;
+      }
+    }
+    return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+  }
+
   #bindInspectEvents(content, s) {
     if (!s) return;
+
+    content.querySelectorAll('.penpot-rside__inspect-subtab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        this.#inspectSubTab = tab.dataset.inspectTab;
+        this.render();
+      });
+    });
+
+    content.querySelectorAll('.penpot-rside__inspect-collapsible-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const key = header.dataset.section;
+        const collapsed = header.dataset.collapsed === 'true';
+        if (collapsed) {
+          this.#collapsedSections.delete(key);
+        } else {
+          this.#collapsedSections.add(key);
+        }
+        this.render();
+      });
+    });
+
+    const fmtSelect = content.querySelector('#inspect-color-fmt');
+    if (fmtSelect) {
+      fmtSelect.addEventListener('change', () => {
+        this.#inspectColorFormat = fmtSelect.value;
+        this.render();
+      });
+    }
+
+    content.querySelectorAll('.penpot-rside__copy-prop-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const val = btn.getAttribute('data-copy');
+        if (val) {
+          navigator.clipboard.writeText(val).catch(err => {
+            console.warn('[inspect] Failed to copy property:', err?.message || err);
+          });
+        }
+      });
+    });
+
     const copyCssBtn = content.querySelector('#copy-css-btn');
     if (copyCssBtn) {
       copyCssBtn.addEventListener('click', () => {
-        navigator.clipboard.writeText(this.#generateCSS(s)).catch(() => {});
+        navigator.clipboard.writeText(this.#generateCSS(s)).catch(err => {
+          console.warn('[inspect] Failed to copy CSS:', err?.message || err);
+        });
       });
     }
     const copySvgBtn = content.querySelector('#copy-svg-btn');
     if (copySvgBtn) {
       copySvgBtn.addEventListener('click', () => {
-        navigator.clipboard.writeText(this.#generateSVG(s)).catch(() => {});
+        navigator.clipboard.writeText(this.#generateSVG(s)).catch(err => {
+          console.warn('[inspect] Failed to copy SVG:', err?.message || err);
+        });
+      });
+    }
+    const copySvgMarkupBtn = content.querySelector('#copy-svg-markup-btn');
+    if (copySvgMarkupBtn) {
+      copySvgMarkupBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(this.#generateSVGMarkup(s)).catch(err => {
+          console.warn('[inspect] Failed to copy SVG markup:', err?.message || err);
+        });
+      });
+    }
+
+    const addExportBtn = content.querySelector('#inspect-add-export');
+    if (addExportBtn) {
+      addExportBtn.addEventListener('click', () => {
+        if (!s.exports) s.exports = [];
+        s.exports.push({ format: 'png', scale: 1, suffix: '' });
+        this.render();
+        this.dispatchEvent(new CustomEvent('penpot-property-change', {
+          detail: { shapeId: s.id, prop: 'exports', value: s.exports },
+          bubbles: true, composed: true
+        }));
+      });
+    }
+
+    content.querySelectorAll('[data-export-remove]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.exportRemove);
+        if (s.exports) {
+          s.exports.splice(idx, 1);
+          this.render();
+          this.dispatchEvent(new CustomEvent('penpot-property-change', {
+            detail: { shapeId: s.id, prop: 'exports', value: s.exports },
+            bubbles: true, composed: true
+          }));
+        }
+      });
+    });
+
+    content.querySelectorAll('[data-export-fmt]').forEach(sel => {
+      sel.addEventListener('change', () => {
+        const idx = parseInt(sel.dataset.exportFmt);
+        if (s.exports && s.exports[idx]) {
+          s.exports[idx].format = sel.value;
+          this.dispatchEvent(new CustomEvent('penpot-property-change', {
+            detail: { shapeId: s.id, prop: 'exports', value: s.exports },
+            bubbles: true, composed: true
+          }));
+        }
+      });
+    });
+
+    content.querySelectorAll('[data-export-scale]').forEach(sel => {
+      sel.addEventListener('change', () => {
+        const idx = parseInt(sel.dataset.exportScale);
+        if (s.exports && s.exports[idx]) {
+          s.exports[idx].scale = parseInt(sel.value);
+          this.dispatchEvent(new CustomEvent('penpot-property-change', {
+            detail: { shapeId: s.id, prop: 'exports', value: s.exports },
+            bubbles: true, composed: true
+          }));
+        }
+      });
+    });
+
+    content.querySelectorAll('[data-export-suffix]').forEach(input => {
+      input.addEventListener('change', () => {
+        const idx = parseInt(input.dataset.exportSuffix);
+        if (s.exports && s.exports[idx]) {
+          s.exports[idx].suffix = input.value;
+          this.dispatchEvent(new CustomEvent('penpot-property-change', {
+            detail: { shapeId: s.id, prop: 'exports', value: s.exports },
+            bubbles: true, composed: true
+          }));
+        }
+      });
+    });
+
+    const exportBtn = content.querySelector('#inspect-export-btn');
+    if (exportBtn) {
+      exportBtn.addEventListener('click', () => {
+        this.dispatchEvent(new CustomEvent('penpot-export', {
+          detail: { shapeId: s.id },
+          bubbles: true, composed: true
+        }));
       });
     }
   }
 
   #generateCSS(s) {
     const lines = [];
-    lines.push(`position: absolute;`);
+    lines.push('position: absolute;');
     lines.push(`left: ${Math.round(s.x || 0)}px;`);
     lines.push(`top: ${Math.round(s.y || 0)}px;`);
     lines.push(`width: ${Math.round(s.width || 0)}px;`);
     lines.push(`height: ${Math.round(s.height || 0)}px;`);
     if (s.rotation) lines.push(`transform: rotate(${Math.round((s.rotation || 0) * 180 / Math.PI)}deg);`);
     if (s.opacity != null && s.opacity < 1) lines.push(`opacity: ${s.opacity};`);
+    if (s.blendMode && s.blendMode !== 'normal') lines.push(`mix-blend-mode: ${s.blendMode};`);
+
+    const r1 = s.r1 ?? s.rx ?? 0;
+    const r2 = s.r2 ?? s.rx ?? 0;
+    const r3 = s.r3 ?? s.rx ?? 0;
+    const r4 = s.r4 ?? s.rx ?? 0;
+    if (r1 || r2 || r3 || r4) {
+      if (r1 === r2 && r2 === r3 && r3 === r4) {
+        lines.push(`border-radius: ${r1}px;`);
+      } else {
+        lines.push(`border-radius: ${r1}px ${r2}px ${r3}px ${r4}px;`);
+      }
+    }
+
     const fills = s.fills || [];
     if (fills.length > 0) {
       for (const fill of fills) {
         const fillType = fill.fillType || fill.type || 'solid';
         if (fillType === 'solid') {
-          lines.push(`background-color: ${fill.color || '#ccc'};`);
+          const color = fill.color || '#ccc';
+          const formatted = this.#formatColorForInspect(color, fill.opacity, this.#inspectColorFormat);
+          lines.push(`background-color: ${formatted};`);
         } else if (fillType === 'linear-gradient') {
-          const stops = (fill.stops || []).map(st => `${st.color || '#ccc'} ${(st.offset * 100).toFixed(0)}%`).join(', ');
+          const stops = (fill.stops || []).map(st => {
+            const c = this.#formatColorForInspect(st.color || '#ccc', st.opacity, this.#inspectColorFormat);
+            return `${c} ${(st.offset * 100).toFixed(0)}%`;
+          }).join(', ');
           lines.push(`background: linear-gradient(${fill.angle || 0}deg, ${stops});`);
         } else if (fillType === 'radial-gradient') {
-          const stops = (fill.stops || []).map(st => `${st.color || '#ccc'} ${(st.offset * 100).toFixed(0)}%`).join(', ');
+          const stops = (fill.stops || []).map(st => {
+            const c = this.#formatColorForInspect(st.color || '#ccc', st.opacity, this.#inspectColorFormat);
+            return `${c} ${(st.offset * 100).toFixed(0)}%`;
+          }).join(', ');
           lines.push(`background: radial-gradient(circle, ${stops});`);
         }
       }
     }
+
     const shadows = s.shadows || [];
     if (shadows.length > 0) {
       const shadowStrs = shadows.map(sh => {
         const inset = sh.style === 'inner-shadow' ? 'inset ' : '';
-        return `${inset}${sh.offsetX || 0}px ${sh.offsetY || 0}px ${sh.blur || 0}px ${sh.color || '#000'}`;
+        const color = this.#formatColorForInspect(sh.color || '#000', 1, this.#inspectColorFormat);
+        const spread = sh.spread || 0;
+        return `${inset}${sh.offsetX || 0}px ${sh.offsetY || 0}px ${sh.blur || 0}px ${spread}px ${color}`;
       });
-      lines.push(`box-shadow: ${shadowStrs.join(', ')};`);
+      lines.push(`box-shadow: ${shadowStrs.join(',\n           ')};`);
     }
+
     const strokes = s.strokes || [];
     if (strokes.length > 0) {
-      const stroke = strokes[0];
-      lines.push(`border: ${stroke.width || stroke.strokeWidth || 1}px solid ${stroke.color || stroke.strokeColor || '#000'};`);
+      for (const stroke of strokes) {
+        const color = this.#formatColorForInspect(stroke.color || stroke.strokeColor || '#000', 1, this.#inspectColorFormat);
+        const width = stroke.width || stroke.strokeWidth || 1;
+        const style = stroke.style || stroke.strokeStyle || 'solid';
+        const alignment = stroke.alignment || stroke.strokeAlignment || 'center';
+        lines.push(`border: ${width}px ${style} ${color};`);
+        if (alignment === 'inner') {
+          lines.push(`box-sizing: border-box;`);
+          lines.push(`/* stroke-alignment: inner */`);
+        } else if (alignment === 'outer') {
+          lines.push(`/* stroke-alignment: outer — add ${width}px to dimensions */`);
+        }
+      }
     }
+
+    if (s.blur && s.blur.value) {
+      lines.push(`filter: blur(${s.blur.value}px);`);
+    }
+
     if (s.type === 'text') {
-      if (s.fontSize) lines.push(`font-size: ${s.fontSize}px;`);
       if (s.fontFamily) lines.push(`font-family: ${s.fontFamily};`);
-      if (s.content) lines.push(`color: ${(s.fills && s.fills[0] && s.fills[0].color) || '#e6e6e6'};`);
+      if (s.fontSize) lines.push(`font-size: ${s.fontSize}px;`);
+      if (s.fontWeight) lines.push(`font-weight: ${s.fontWeight};`);
+      if (s.fontStyle && s.fontStyle !== 'normal') lines.push(`font-style: ${s.fontStyle};`);
+      if (s.lineHeight) lines.push(`line-height: ${s.lineHeight};`);
+      if (s.letterSpacing) lines.push(`letter-spacing: ${s.letterSpacing}px;`);
+      if (s.textAlign) lines.push(`text-align: ${s.textAlign};`);
+      if (s.textDecoration && s.textDecoration !== 'none') lines.push(`text-decoration: ${s.textDecoration};`);
+      if (s.textTransform && s.textTransform !== 'none') lines.push(`text-transform: ${s.textTransform};`);
+      if (s.fills && s.fills.length > 0 && (s.fills[0].fillType || s.fills[0].type) === 'solid') {
+        const color = this.#formatColorForInspect(s.fills[0].color || '#000', s.fills[0].opacity, this.#inspectColorFormat);
+        lines.push(`color: ${color};`);
+      }
     }
-    if (s.type === 'rect' || s.type === 'frame') {
-      if (s.rx) lines.push(`border-radius: ${s.rx}px;`);
+
+    if (s.type === 'frame' || s.type === 'group') {
+      if (s.shapes && s.shapes.length > 0) {
+        lines.push(`/* contains ${s.shapes.length} child shape(s) */`);
+      }
     }
+
     return lines.join('\n');
   }
 
@@ -1101,36 +1673,104 @@ export class PenpotRightSidebar extends PenpotElement {
     if (s.y) attrs.push(`y="${Math.round(s.y)}"`);
     if (s.width) attrs.push(`width="${Math.round(s.width)}"`);
     if (s.height) attrs.push(`height="${Math.round(s.height)}"`);
-    if (s.rotation) attrs.push(`transform="rotate(${Math.round((s.rotation || 0) * 180 / Math.PI)} ${Math.round(s.x + s.width / 2)} ${Math.round(s.y + s.height / 2)})"`);
+    if (s.rotation) attrs.push(`transform="rotate(${Math.round((s.rotation || 0) * 180 / Math.PI)} ${Math.round((s.x || 0) + (s.width || 0) / 2)} ${Math.round((s.y || 0) + (s.height || 0) / 2)})"`);
     if (s.opacity != null && s.opacity < 1) attrs.push(`opacity="${s.opacity}"`);
 
     const fills = s.fills || [];
-    if (fills.length > 0 && (fills[0].fillType || fills[0].type) === 'solid') {
-      attrs.push(`fill="${fills[0].color || '#ccc'}"`);
-    } else {
-      attrs.push('fill="#ccc"');
-    }
-
     const strokes = s.strokes || [];
+    let defs = '';
+    let fillAttr = 'fill="none"';
+
+    if (fills.length > 0) {
+      const fill = fills[0];
+      const fillType = fill.fillType || fill.type || 'solid';
+      if (fillType === 'solid') {
+        fillAttr = `fill="${fill.color || '#ccc'}"`;
+      } else if (fillType === 'linear-gradient' && fill.stops && fill.stops.length > 0) {
+        const gid = `grad-${s.id}`;
+        const stops = fill.stops.map(st => `  <stop offset="${(st.offset * 100).toFixed(1)}%" stop-color="${st.color || '#ccc'}" />`).join('\n');
+        defs = `<defs>\n  <linearGradient id="${gid}" gradientTransform="rotate(${fill.angle || 0})">\n${stops}\n  </linearGradient>\n</defs>\n`;
+        fillAttr = `fill="url(#${gid})"`;
+      } else if (fillType === 'radial-gradient' && fill.stops && fill.stops.length > 0) {
+        const gid = `grad-${s.id}`;
+        const stops = fill.stops.map(st => `  <stop offset="${(st.offset * 100).toFixed(1)}%" stop-color="${st.color || '#ccc'}" />`).join('\n');
+        defs = `<defs>\n  <radialGradient id="${gid}">\n${stops}\n  </radialGradient>\n</defs>\n`;
+        fillAttr = `fill="url(#${gid})"`;
+      }
+    }
+    attrs.push(fillAttr);
+
     if (strokes.length > 0) {
-      attrs.push(`stroke="${strokes[0].color || strokes[0].strokeColor || '#000'}"`);
-      attrs.push(`stroke-width="${strokes[0].width || strokes[0].strokeWidth || 1}"`);
+      const stroke = strokes[0];
+      attrs.push(`stroke="${stroke.color || stroke.strokeColor || '#000'}"`);
+      attrs.push(`stroke-width="${stroke.width || stroke.strokeWidth || 1}"`);
+      if (stroke.style === 'dashed' || stroke.strokeStyle === 'dashed') attrs.push('stroke-dasharray="8 4"');
+      if (stroke.style === 'dotted' || stroke.strokeStyle === 'dotted') attrs.push('stroke-dasharray="2 4"');
     }
 
-    const tag = s.type === 'circle' || s.type === 'ellipse' ? 'ellipse' : s.type === 'text' ? 'text' : s.type === 'path' ? 'path' : 'rect';
+    const r1 = s.r1 ?? s.rx ?? 0;
+    if (r1 && (s.type === 'rect' || s.type === 'frame')) attrs.push(`rx="${Math.round(r1)}"`);
+
+    const tag = s.type === 'circle' || s.type === 'ellipse' ? 'ellipse' : s.type === 'text' ? 'text' : s.type === 'path' ? 'path' : s.type === 'image' ? 'image' : s.type === 'group' || s.type === 'frame' || s.type === 'bool' ? 'g' : 'rect';
+
     if (tag === 'ellipse') {
-      attrs.push(`cx="${Math.round(s.x + s.width / 2)}"`);
-      attrs.push(`cy="${Math.round(s.y + s.height / 2)}"`);
-      attrs.push(`rx="${Math.round(s.width / 2)}"`);
-      attrs.push(`ry="${Math.round(s.height / 2)}"`);
+      attrs.push(`cx="${Math.round((s.x || 0) + (s.width || 0) / 2)}"`);
+      attrs.push(`cy="${Math.round((s.y || 0) + (s.height || 0) / 2)}"`);
+      attrs.push(`rx="${Math.round((s.width || 0) / 2)}"`);
+      attrs.push(`ry="${Math.round((s.height || 0) / 2)}"`);
+      const xIdx = attrs.findIndex(a => a.startsWith('x='));
+      const yIdx = attrs.findIndex(a => a.startsWith('y='));
+      if (xIdx >= 0) attrs.splice(xIdx, 1);
+      if (yIdx >= 0) attrs.splice(yIdx > xIdx ? yIdx - 1 : yIdx, 1);
     }
+
     if (tag === 'text') {
       if (s.fontSize) attrs.push(`font-size="${s.fontSize}"`);
-      attrs.push(`x="${Math.round(s.x)}"`);
-      attrs.push(`y="${Math.round(s.y + (s.fontSize || 14))}"`);
+      if (s.fontFamily) attrs.push(`font-family="${s.fontFamily}"`);
+      if (s.fontWeight) attrs.push(`font-weight="${s.fontWeight}"`);
+      if (s.fontStyle && s.fontStyle !== 'normal') attrs.push(`font-style="${s.fontStyle}"`);
+      attrs.push(`x="${Math.round(s.x || 0)}"`);
+      attrs.push(`y="${Math.round((s.y || 0) + (s.fontSize || 14))}"`);
+      let textContent = '';
+      const content = s.content;
+      if (content && typeof content === 'object' && content.type === 'root') {
+        const paragraphs = [];
+        function walk(node) {
+          if (node.type === 'paragraph') {
+            const t = (node.children || []).map(c => c.text || '').join('');
+            paragraphs.push(t);
+          } else if (node.text !== undefined) {
+            paragraphs.push(node.text);
+          }
+          if (node.children) node.children.forEach(walk);
+        }
+        walk(content);
+        textContent = paragraphs.join('\n');
+      } else {
+        textContent = content || '';
+      }
+      return `${defs}<${tag} ${attrs.join(' ')}>${this.escHtml(textContent)}</${tag}>`;
     }
 
-    return `<${tag} ${attrs.join(' ')} />`;
+    if (tag === 'path') {
+      if (s.d || s.pathData) attrs.push(`d="${s.d || s.pathData}"`);
+      return `${defs}<${tag} ${attrs.join(' ')} />`;
+    }
+
+    if (tag === 'image') {
+      if (s.href || s.url || s.src) attrs.push(`href="${s.href || s.url || s.src}"`);
+      return `${defs}<${tag} ${attrs.join(' ')} />`;
+    }
+
+    if (tag === 'g') {
+      const children = s.shapes || s.children || [];
+      if (children.length === 0) {
+        return `${defs}<${tag} ${attrs.join(' ')} />`;
+      }
+      return `${defs}<${tag} ${attrs.join(' ')}>\n  <!-- ${children.length} child shape(s) -->\n</${tag}>`;
+    }
+
+    return `${defs}<${tag} ${attrs.join(' ')} />`;
   }
 
   escHtml(str) { const el = document.createElement('span'); el.textContent = str || ''; return el.innerHTML; }

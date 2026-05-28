@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc/files_snapshots
  * @description File snapshot (version history) RPC commands — mirrors

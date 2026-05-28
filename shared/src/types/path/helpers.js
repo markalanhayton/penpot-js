@@ -575,6 +575,7 @@ export function isPointInGeomDataQ(point, contentGeom) {
       }
     })
     .flat()
+    .filter(Boolean)
     .map(x => x[1])
     .reduce((a, b) => a + b, 0) !== 0;
 }

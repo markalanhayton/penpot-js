@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc/files_update
  * @description File update RPC command — mirrors `app.rpc.commands.files-update`

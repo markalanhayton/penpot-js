@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc/auth
  * @description Authentication RPC commands — mirrors `app.rpc.commands.auth`

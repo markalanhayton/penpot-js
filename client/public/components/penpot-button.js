@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module components/penpot-button
  * @description Reusable button Web Component.

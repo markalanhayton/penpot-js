@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc/ldap
  * @description LDAP authentication RPC command — mirrors `app.rpc.commands.ldap` from the Clojure backend.

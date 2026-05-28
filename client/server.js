@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const ROOT = join(__dirname, 'public');
+const SHARED_ROOT = join(__dirname, '..', 'shared', 'src');
 const PORT = 3449;
 const BACKEND = 'http://localhost:6060';
 
@@ -30,6 +31,18 @@ const server = http.createServer(async (req, res) => {
     return proxy(req, res, url);
   }
 
+  if (pathname.startsWith('/shared/')) {
+    const sharedPath = join(SHARED_ROOT, pathname.slice('/shared/'.length));
+    try {
+      const s = await stat(sharedPath);
+      if (s.isFile()) {
+        const data = await readFile(sharedPath);
+        res.writeHead(200, { 'Content-Type': MIME[extname(sharedPath)] || 'application/octet-stream' });
+        return res.end(data);
+      }
+    } catch {}
+  }
+
   let filePath = join(ROOT, pathname === '/' ? 'index.html' : pathname);
 
   try {
@@ -39,6 +52,11 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': MIME[extname(filePath)] || 'application/octet-stream' });
     return res.end(data);
   } catch {
+    const ext = extname(pathname);
+    if (ext && ext !== '.html') {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      return res.end('Not found');
+    }
     try {
       const data = await readFile(join(ROOT, 'index.html'));
       res.writeHead(200, { 'Content-Type': 'text/html' });

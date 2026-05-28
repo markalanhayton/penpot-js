@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module i18n
  * @description Internationalization with async locale loading, browser detection,
@@ -130,7 +131,7 @@ export async function autoDetectAndInit() {
       await loadLocale(base, `/locales/${base}.json`);
     }
     if (locale !== base && !loadedLocales.has(locale)) {
-      await loadLocale(locale, `/locales/${locale}.json`).catch(() => {});
+      await loadLocale(locale, `/locales/${locale}.json`).catch(() => { console.debug('[i18n] Locale variant unavailable:', locale); });
     }
   }
   setLocale(locale);
@@ -145,7 +146,7 @@ export async function initLocale(preferenceLocale) {
   if (locale !== 'en' && !loadedLocales.has(locale)) {
     try {
       await loadLocale(locale, `/locales/${locale}.json`);
-    } catch {}
+    } catch (err) { console.debug('[i18n] Locale load failed for', locale, ':', err?.message || err); }
   }
   setLocale(locale);
   return locale;

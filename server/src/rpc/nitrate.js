@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc/nitrate
  * @description Nitrate (enterprise/organization) RPC commands — mirrors `app.rpc.commands.nitrate` from the Clojure backend.

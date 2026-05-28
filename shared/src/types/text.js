@@ -418,3 +418,196 @@ export function changeText(content, text, styles = {}) {
     rootStyles
   );
 }
+
+export function createDefaultContent(text = 'Text', attrs = {}) {
+  const textAttrs = { ...getDefaultTextAttrs(), ...attrs };
+  return {
+    type: 'root',
+    ...defaultRootAttrs,
+    children: [{
+      type: 'paragraph-set',
+      children: [{
+        type: 'paragraph',
+        ...defaultParagraphAttrs,
+        children: [{ text, ...textAttrs }],
+      }],
+    }],
+  };
+}
+
+export function contentToPlainText(content) {
+  if (typeof content === 'string') return content;
+  if (!content || typeof content !== 'object') return '';
+  return contentToText(content);
+}
+
+export function isContentTree(content) {
+  return content && typeof content === 'object' && content.type === 'root';
+}
+
+/**
+ * Decorates every node in the content tree with `start` and `end` character
+ * offsets (absolute from the beginning of the text content, not relative to
+ * each paragraph). Text nodes get offsets covering their characters;
+ * paragraph/root/paragraph-set nodes get offsets spanning their children.
+ */
+export function decorateRangeInfo(content) {
+  let charOffset = 0;
+
+  function walk(node) {
+    if (isTextNodeQ(node)) {
+      const len = Array.from(node.text).length;
+      return { ...node, start: charOffset, end: charOffset + len };
+    }
+    if (isParagraphNodeQ(node)) {
+      let start = charOffset;
+      const children = node.children.map(walk);
+      return { ...node, start, end: charOffset, children };
+    }
+    if (isRootNodeQ(node) || isParagraphSetNodeQ(node)) {
+      let start = charOffset;
+      const children = node.children.map(walk);
+      return { ...node, start, end: charOffset, children };
+    }
+    return node;
+  }
+
+  return walk(content);
+}
+
+function splitTextNode(node, pos) {
+  const codePoints = Array.from(node.text);
+  if (pos <= 0 || pos >= codePoints.length) return [node];
+  return [
+    { ...node, text: codePoints.slice(0, pos).join('') },
+    { ...node, text: codePoints.slice(pos).join('') },
+  ];
+}
+
+export function updateTextRange(content, startOffset, endOffset, attrs) {
+  function walk(node) {
+    if (isTextNodeQ(node)) {
+      const textLen = Array.from(node.text).length;
+      const nodeStart = node.start ?? 0;
+      const nodeEnd = nodeStart + textLen;
+
+      if (nodeEnd <= startOffset || nodeStart >= endOffset) {
+        return removeRangeInfo(node);
+      }
+
+      if (nodeStart >= startOffset && nodeEnd <= endOffset) {
+        const updated = { ...node, ...attrs };
+        delete updated.start;
+        delete updated.end;
+        return updated;
+      }
+
+      const parts = [];
+      if (nodeStart < startOffset) {
+        const splitPos = startOffset - nodeStart;
+        const codePoints = Array.from(node.text);
+        parts.push({ ...node, text: codePoints.slice(0, splitPos).join('') });
+        const remaining = codePoints.slice(splitPos);
+        if (nodeEnd > endOffset) {
+          const innerSplit = endOffset - startOffset;
+          parts.push({ ...node, ...attrs, text: remaining.slice(0, innerSplit).join('') });
+          parts.push({ ...node, text: remaining.slice(innerSplit).join('') });
+        } else {
+          parts.push({ ...node, ...attrs, text: remaining.join('') });
+        }
+      } else {
+        const splitPos = endOffset - nodeStart;
+        const codePoints = Array.from(node.text);
+        parts.push({ ...node, ...attrs, text: codePoints.slice(0, splitPos).join('') });
+        parts.push({ ...node, text: codePoints.slice(splitPos).join('') });
+      }
+
+      return parts.map((p) => {
+        const cleaned = { ...p };
+        delete cleaned.start;
+        delete cleaned.end;
+        return cleaned;
+      });
+    }
+
+    if (node.children) {
+      const newChildren = [];
+      for (const child of node.children) {
+        const result = walk(child);
+        if (Array.isArray(result)) {
+          newChildren.push(...result);
+        } else {
+          newChildren.push(result);
+        }
+      }
+      return { ...node, children: newChildren };
+    }
+
+    return node;
+  }
+
+  const decorated = decorateRangeInfo(content);
+  return walk(decorated);
+}
+
+function removeRangeInfo(node) {
+  const cleaned = { ...node };
+  delete cleaned.start;
+  delete cleaned.end;
+  return cleaned;
+}
+
+export function updateRootAttrs(content, attrs) {
+  return { ...content, ...d.pick(attrs, rootAttrs) };
+}
+
+export function updateParagraphAttrs(content, attrs) {
+  const paragraphAttrsSubset = d.pick(attrs, [...paragraphAttrs, ...textNodeAttrs]);
+  return transformNodes(content, isParagraphNodeQ, (node) => ({
+    ...node,
+    ...paragraphAttrsSubset,
+  }));
+}
+
+export function updateTextAttrs(content, attrs) {
+  const textNodeAttrsSubset = d.pick(attrs, textNodeAttrs);
+  const paragraphAttrsSubset = d.pick(attrs, paragraphAttrs);
+
+  return transformNodes(content, isContentNodeQ, (node) => {
+    if (isParagraphNodeQ(node)) {
+      return { ...node, ...paragraphAttrsSubset };
+    }
+    if (isTextNodeQ(node)) {
+      return { ...node, ...textNodeAttrsSubset };
+    }
+    return node;
+  });
+}
+
+export function currentRootAttrs(content) {
+  return d.pick(content, rootAttrs);
+}
+
+export function currentParagraphAttrs(content) {
+  const paragraph = nodeSeq(content, isParagraphNodeQ)?.[0];
+  if (!paragraph) return { ...defaultParagraphAttrs };
+  return { ...defaultParagraphAttrs, ...d.pick(paragraph, [...paragraphAttrs, ...textNodeAttrs]) };
+}
+
+export function currentTextNodeAttrs(content) {
+  const textNode = nodeSeq(content, isTextNodeQ)?.[0];
+  if (!textNode) return { ...getDefaultTextAttrs() };
+  const result = { ...getDefaultTextAttrs() };
+  for (const attr of textNodeAttrs) {
+    if (textNode[attr] !== undefined) result[attr] = textNode[attr];
+  }
+  return result;
+}
+
+export function mergeTextNodeAttrs(base, override) {
+  const result = { ...base };
+  for (const attr of textNodeAttrs) {
+    if (override[attr] !== undefined) result[attr] = override[attr];
+  }
+  return result;
+}

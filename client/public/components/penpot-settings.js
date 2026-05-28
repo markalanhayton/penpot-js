@@ -1,7 +1,9 @@
+'use strict';
 import { PenpotElement } from './base.js';
 import { cmd } from '../lib/rpc.js';
 import { appStore } from '../lib/store.js';
 import { getAccessTokens, createAccessToken, deleteAccessToken, maskToken } from '../lib/access-tokens.js';
+import './penpot-webhook-list.js';
 
 const template = document.createElement('template');
 template.innerHTML = `<style>
@@ -57,7 +59,8 @@ template.innerHTML = `<style>
       <button class="penpot-settings__nav-item" data-section="tokens">Access Tokens</button>
       <button class="penpot-settings__nav-item" data-section="feedback">Feedback</button>
       <button class="penpot-settings__nav-item" data-section="nudge">Nudge</button>
-      <button class="penpot-settings__nav-item" data-section="notifications">Notifications</button>
+       <button class="penpot-settings__nav-item" data-section="notifications">Notifications</button>
+       <button class="penpot-settings__nav-item penpot-settings__webhooks-nav" data-section="webhooks" style="display:none;">Webhooks</button>
     </nav>
     <div class="penpot-settings__settings-content" id="content"></div>
   </div>`;
@@ -73,6 +76,9 @@ export class PenpotSettings extends PenpotElement {
 
   connectedCallback() {
     super.connectedCallback();
+    const flags = appStore.get('flags') || {};
+    const webhooksNav = this.querySelector('.penpot-settings__webhooks-nav');
+    if (webhooksNav && flags.webhooks) webhooksNav.style.display = '';
     const section = this.getAttribute('section');
     if (section) this.#section = section;
     this.querySelectorAll('.penpot-settings__nav-item').forEach(btn => {
@@ -97,9 +103,12 @@ export class PenpotSettings extends PenpotElement {
   }
 
   async #loadProfile() {
+    const content = this.querySelector('#content');
+    if (content) content.innerHTML = '<div class="penpot-settings__empty-state">Loading...</div>';
     try {
       this.#profile = await cmd('get-profile');
-    } catch {
+    } catch (err) {
+      console.error('[settings] Failed to load profile:', err);
       this.#profile = appStore.get('profile') || {};
     }
     this.#render();
@@ -117,6 +126,7 @@ export class PenpotSettings extends PenpotElement {
       case 'feedback': this.#renderFeedback(content); break;
       case 'nudge': this.#renderNudge(content); break;
       case 'notifications': this.#renderNotifications(content); break;
+      case 'webhooks': this.#renderWebhooks(content); break;
     }
   }
 
@@ -354,7 +364,7 @@ export class PenpotSettings extends PenpotElement {
   #renderNotifications(content) {
     const p = this.#profile || {};
     let props = {};
-    try { props = typeof p.props === 'string' ? JSON.parse(p.props) : (p.props || {}); } catch { props = {}; }
+      try { props = typeof p.props === 'string' ? JSON.parse(p.props) : (p.props || {}); } catch { /* malformed props, use defaults */ props = {}; }
     const notifs = props.notifications || {};
     const dc = notifs.dashboardComments || 'all';
     const ec = notifs.emailComments || 'all';
@@ -512,6 +522,35 @@ export class PenpotSettings extends PenpotElement {
     } catch (err) {
       listEl.innerHTML = '<div style="color:var(--penpot-danger,#f44);text-align:center;padding:12px;font-size:11px;">Failed to load tokens.</div>';
     }
+  }
+
+  #renderWebhooks(content) {
+    const profile = this.#profile || appStore.get('profile') || {};
+    const teams = profile.teams || [];
+    const currentTeamId = appStore.get('currentTeamId') || (teams.length > 0 ? teams[0].id : null);
+
+    content.innerHTML = `
+      <button class="penpot-settings__back-link">&larr; Back to Dashboard</button>
+      <h2>Webhooks</h2>
+      <p style="font-size:var(--penpot-font-size-s,11px);color:var(--penpot-text-dim,#999);margin-bottom:12px;">Webhooks send event notifications to external URLs when files in your team change. Only team owners and admins can manage webhooks.</p>
+      ${currentTeamId ? '' : '<p style="color:var(--penpot-danger,#f44);font-size:11px;">No team selected. Select a team in the dashboard first.</p>'}
+      <div class="penpot-settings__form-group" style="margin-bottom:8px;">
+        <label>Team</label>
+        <select id="webhook-team" style="width:100%;box-sizing:border-box;padding:8px;background:var(--penpot-input-bg,#333);border:1px solid var(--penpot-input-border,#555);border-radius:4px;color:var(--penpot-text,#e6e6e6);font-size:13px;outline:none;">
+          ${teams.map(t => `<option value="${this.escAttr(t.id)}" ${t.id === currentTeamId ? 'selected' : ''}>${this.escHtml(t.name)}</option>`).join('')}
+        </select>
+      </div>
+      <penpot-webhook-list id="webhook-list" ${currentTeamId ? `team-id="${this.escAttr(currentTeamId)}"` : ''}></penpot-webhook-list>
+    `;
+
+    content.querySelector('.penpot-settings__back-link').addEventListener('click', () => {
+      this.emit('navigate', { route: 'dashboard' });
+    });
+
+    content.querySelector('#webhook-team')?.addEventListener('change', (e) => {
+      const webhookList = content.querySelector('#webhook-list');
+      if (webhookList) webhookList.teamId = e.target.value;
+    });
   }
 
   #showMessage(content) {

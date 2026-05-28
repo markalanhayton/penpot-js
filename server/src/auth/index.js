@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module auth/index
  * @description Authentication utilities re-exported for convenience.

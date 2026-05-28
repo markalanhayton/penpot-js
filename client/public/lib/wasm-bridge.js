@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module wasm-bridge
  * @description WASM renderer bridge — detects WASM availability, initializes
@@ -36,7 +37,8 @@ export async function detectWasm() {
 
     const jsResponse = await fetch(WASM_JS_URL, { method: 'HEAD' });
     wasmAvailable = jsResponse.ok;
-  } catch {
+  } catch (err) {
+    console.info('[wasm] WASM renderer not available, using SVG fallback:', err?.message || 'file not found');
     wasmAvailable = false;
   }
 

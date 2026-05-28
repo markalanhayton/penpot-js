@@ -1,3 +1,4 @@
+'use strict';
 export function parseSVG(svgText) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(svgText, 'image/svg+xml');

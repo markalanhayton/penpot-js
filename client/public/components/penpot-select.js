@@ -1,3 +1,4 @@
+'use strict';
 import { PenpotElement } from './base.js';
 
 const ICONS = { plus: 'M12 5v14M5 12h14', minus: 'M5 12h14', cross: 'M6 6l12 12M18 6L6 18', chevron_down: 'M6 9l6 6 6-6' };

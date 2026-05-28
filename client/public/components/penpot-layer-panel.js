@@ -1,3 +1,4 @@
+'use strict';
 import { PenpotElement } from './base.js';
 import { isFrame, isGroup, isBool } from '../lib/types.js';
 import { isComponentInstance, isComponentMain } from '../lib/components-lib.js';

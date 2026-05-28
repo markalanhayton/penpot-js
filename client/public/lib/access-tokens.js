@@ -1,3 +1,4 @@
+'use strict';
 import { cmd } from './rpc.js';
 
 export async function getAccessTokens() {

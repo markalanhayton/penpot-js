@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc/demo
  * @description Demo profile RPC command — mirrors `app.rpc.commands.demo` from the Clojure backend.

@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module tasks/telemetry
  * @description Periodic telemetry data collection and upload — mirrors `app.tasks.telemetry`

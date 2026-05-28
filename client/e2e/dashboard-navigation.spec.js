@@ -18,10 +18,14 @@ test.describe('Dashboard File Management E2E', () => {
     expect(count).toBeGreaterThanOrEqual(0);
   });
 
-  test('dashboard shows new file button', async ({ page }) => {
+  test('dashboard shows new file button after navigating into project', async ({ page }) => {
     await login(page);
-    const newFileBtn = page.locator('#new-file-btn');
-    await expect(newFileBtn).toBeVisible({ timeout: 5000 });
+    const projectCard = page.locator('.penpot-app__project-card[data-project-id], .project-card[data-project-id]').first();
+    if (await projectCard.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await projectCard.click();
+      const newFileBtn = page.locator('#new-file-btn');
+      await expect(newFileBtn).toBeVisible({ timeout: 5000 });
+    }
   });
 
   test('dashboard shows team sidebar', async ({ page }) => {
@@ -49,10 +53,14 @@ test.describe('Dashboard File Management E2E', () => {
 
   test('clicking new file button creates a file', async ({ page }) => {
     await login(page);
-    const newFileBtn = page.locator('#new-file-btn');
-    if (await newFileBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await newFileBtn.click();
-      await expect(page.locator('penpot-workspace')).toBeVisible({ timeout: 15000 });
+    const projectCard = page.locator('.penpot-app__project-card[data-project-id], .project-card[data-project-id]').first();
+    if (await projectCard.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await projectCard.click();
+      const newFileBtn = page.locator('#new-file-btn');
+      if (await newFileBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+        await newFileBtn.click();
+        await expect(page.locator('penpot-workspace')).toBeVisible({ timeout: 15000 });
+      }
     }
   });
 

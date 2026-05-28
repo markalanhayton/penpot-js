@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module transit/test
  * @description Tests for the Transit+JSON encoder/decoder.

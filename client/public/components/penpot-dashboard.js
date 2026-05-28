@@ -1,3 +1,4 @@
+'use strict';
 import { cmd, setAuthToken, clearAuthToken } from '../lib/rpc.js';
 import { appStore, dispatch } from '../lib/store.js';
 import { t } from '../lib/i18n.js';
@@ -98,7 +99,14 @@ export class PenpotDashboard extends PenpotElement {
     super.connectedCallback();
 
     this.querySelector('#logout-btn').addEventListener('click', () => this.logout());
-    this.querySelector('#settings-btn').addEventListener('click', () => window.__penpot.navigate('settings-profile'));
+    this.querySelector('#settings-btn').addEventListener('click', () => {
+      console.log('[dashboard] Settings button clicked, navigating to settings');
+      try {
+        window.__penpot.navigate('settings-profile');
+      } catch (e) {
+        console.error('[dashboard] Settings navigation error:', e);
+      }
+    });
     this.querySelector('#nav-search').addEventListener('click', () => { this.#view = 'search'; this.renderCurrentView(); });
     this.querySelector('#nav-fonts').addEventListener('click', () => { this.#view = 'fonts'; this.renderCurrentView(); });
     this.querySelector('#nav-libraries').addEventListener('click', () => { this.#view = 'libraries'; this.renderCurrentView(); });
@@ -246,7 +254,8 @@ export class PenpotDashboard extends PenpotElement {
           recentSearches.unshift(query);
           localStorage.setItem('penpot-recent-searches', JSON.stringify(recentSearches.slice(0, 10)));
         }
-      } catch {
+      } catch (err) {
+        console.warn('[dashboard] Search failed:', err?.message || err);
         content.querySelector('#search-results').innerHTML = '<div class="penpot-app__empty-state">Search unavailable.</div>';
       }
     };
@@ -382,7 +391,12 @@ export class PenpotDashboard extends PenpotElement {
     try {
       const result = await cmd('get-team-libraries', { teamId: this.#currentTeamId });
       libraries = Array.isArray(result) ? result : [];
-    } catch { /* not available */ }
+    } catch (err) {
+      console.warn('[dashboard] get-team-libraries failed:', err?.message || err);
+      import('../components/penpot-notification.js').then(({ warning }) => {
+        warning('Could not load libraries. The feature may not be available on this server.');
+      });
+    }
 
     if (libraries.length === 0) {
       html += '<div class="penpot-app__empty-state">No shared libraries yet. Connect a library to reuse components and styles across files.</div>';
@@ -498,28 +512,31 @@ export class PenpotDashboard extends PenpotElement {
     try {
       const result = await cmd('get-builtin-templates');
       templates = Array.isArray(result) ? result : [];
-    } catch {
-      templates = [
-        { id: 'wireframe-kit', name: 'Wireframe Kit' },
-        { id: 'design-system', name: 'Design System' },
-        { id: 'landing-page', name: 'Landing Page' },
-        { id: 'mobile-app', name: 'Mobile App' },
-        { id: 'dashboard', name: 'Dashboard' },
-      ];
+      templates = templates.filter(t => t.id !== 'welcome' && t.id !== 'tutorial-for-beginners');
+    } catch (err) {
+      console.warn('[dashboard] get-builtin-templates failed:', err?.message || err);
+      import('../components/penpot-notification.js').then(({ warning }) => {
+        warning('Templates are not available on this server.');
+      });
+      templates = [];
     }
 
     let html = '<div class="penpot-app__content-header"><h2>Templates</h2><p style="font-size:var(--penpot-font-size-s,11px);color:var(--penpot-text-dim,#999);">Start from a pre-built template. Choose a template to create a new file in the current project.</p></div>';
+    if (templates.length === 0) {
+      html += '<div class="penpot-app__empty-state">No templates available.</div>';
+    } else {
     html += '<div class="penpot-app__project-grid">';
-    const templateIcons = { 'wireframe-kit': '📐', 'design-system': '🎨', 'landing-page': '🌐', 'mobile-app': '📱', 'dashboard': '📊' };
     for (const t of templates) {
-      const icon = templateIcons[t.id] || '📄';
+      const bgColor = t.color || 'var(--penpot-surface-high,#333)';
+      const iconHtml = t.icon ? `<span style="font-size:36px;line-height:1;">${t.icon}</span>` : `<span style="font-size:36px;line-height:1;color:var(--penpot-text-dim,#999);">${this.escHtml(t.name.charAt(0).toUpperCase())}</span>`;
       html += `<div class="penpot-app__project-card" data-template-id="${this.escAttr(t.id)}" style="cursor:pointer;">
-        <div style="height:80px;display:flex;align-items:center;justify-content:center;font-size:36px;background:var(--penpot-surface-high,#333);border-radius:var(--penpot-radius-s,4px) var(--penpot-radius-s,4px) 0 0;">${icon}</div>
+        <div style="height:80px;display:flex;align-items:center;justify-content:center;background:${bgColor};border-radius:var(--penpot-radius-s,4px) var(--penpot-radius-s,4px) 0 0;">${iconHtml}</div>
         <div class="penpot-app__project-name">${this.escHtml(t.name)}</div>
         <div class="penpot-app__project-meta">Template</div>
       </div>`;
     }
     html += '</div>';
+    }
     content.innerHTML = html;
 
     content.querySelectorAll('.penpot-app__project-card[data-template-id]').forEach(el => {
@@ -529,7 +546,7 @@ export class PenpotDashboard extends PenpotElement {
         if (!projectId) { alert('Select a project first.'); return; }
         try {
           const result = await cmd('clone-template', { projectId, templateId });
-          const newFileId = result.id || result;
+          const newFileId = Array.isArray(result) ? result[0] : (result.id || result);
           this.loadProjectFiles(projectId);
         } catch (err) {
           console.error('[dashboard] clone template error:', err);
@@ -552,7 +569,11 @@ export class PenpotDashboard extends PenpotElement {
       try {
         deletedFiles = await cmd('get-deleted-files', { teamId: this.#currentTeamId });
         deletedFiles = Array.isArray(deletedFiles) ? deletedFiles : [];
-      } catch {
+      } catch (err) {
+        console.warn('[dashboard] get-deleted-files failed:', err?.message || err);
+        import('../components/penpot-notification.js').then(({ warning }) => {
+          warning('Could not load deleted files.');
+        });
         deletedFiles = [];
       }
 
@@ -1014,8 +1035,8 @@ export class PenpotDashboard extends PenpotElement {
     }
   }
 
-  logout() {
-    try { cmd('logout'); } catch {}
+  async logout() {
+    try { await cmd('logout'); } catch (err) { console.warn('[dashboard] Logout RPC failed (continuing locally):', err?.message || err); }
     clearAuthToken();
     document.cookie = 'auth-token=; path=/; max-age=0';
     appStore.reset({ profile: null, teams: [], currentTeamId: null, currentProjectId: null, currentFileId: null });

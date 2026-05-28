@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc/profile
  * @description Profile management RPC commands — mirrors `app.rpc.commands.profile`

@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module process-changes
  * @description Full change processing engine for the frontend.

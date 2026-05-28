@@ -1,3 +1,4 @@
+'use strict';
 import { PenpotElement } from './base.js';
 
 const SHADOW_TYPES = ['drop-shadow', 'inner-shadow'];

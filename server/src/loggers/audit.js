@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module loggers/audit
  * @description Audit logging — mirrors `app.loggers.audit` from the Clojure backend.

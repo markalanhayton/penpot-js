@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module http/sse
  * @description Server-Sent Events endpoint — mirrors `app.http.sse` from the Clojure backend.

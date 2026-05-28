@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc/verify_token
  * @description Token verification and processing RPC command — mirrors

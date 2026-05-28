@@ -1,3 +1,4 @@
+'use strict';
 import { cmd } from './rpc.js';
 import { appStore } from './store.js';
 
@@ -156,9 +157,11 @@ export class PluginAPI {
   }
 
   #getCurrentPage() {
-    const currentIndex = appStore.get('currentFile')?.pages?.length
-      ? 0 : 0;
-    return { index: currentIndex };
+    const file = appStore.get('currentFile');
+    const currentPageId = appStore.get('currentPageId') || appStore.get('currentFile')?.currentPageId;
+    if (!file || !file.pages) return { index: 0 };
+    const pageIndex = file.pages.findIndex(p => p.id === currentPageId);
+    return { index: pageIndex >= 0 ? pageIndex : 0 };
   }
 
   #getSelectedShapes() {
@@ -179,35 +182,42 @@ export class PluginAPI {
 
   #createShape(params) {
     if (!params || !params.type) throw new Error('Shape type required');
+    const shapeId = params.id || crypto.randomUUID();
+    const shape = { ...params, id: shapeId };
     const workspace = document.querySelector('penpot-workspace');
     if (workspace) {
       workspace.dispatchEvent(new CustomEvent('penpot-shape-create', {
-        detail: { shape: params },
+        detail: { shape },
         bubbles: true,
         composed: true,
       }));
     }
-    return { success: true };
+    return { success: true, id: shapeId };
   }
 
   #updateShape(params) {
     if (!params || !params.id) throw new Error('Shape ID required');
     const workspace = document.querySelector('penpot-workspace');
     if (workspace) {
-      for (const [key, value] of Object.entries(params)) {
-        if (key === 'id' || key === 'type') continue;
-        workspace.dispatchEvent(new CustomEvent('penpot-property-change', {
-          detail: { shapeId: params.id, prop: key, value },
-          bubbles: true,
-          composed: true,
-        }));
-      }
+      workspace.dispatchEvent(new CustomEvent('penpot-shape-update', {
+        detail: { shapeId: params.id, updates: params },
+        bubbles: true,
+        composed: true,
+      }));
     }
-    return { success: true };
+    return { success: true, id: params.id };
   }
 
   #deleteShape(params) {
     if (!params || !params.id) throw new Error('Shape ID required');
+    const workspace = document.querySelector('penpot-workspace');
+    if (workspace) {
+      workspace.dispatchEvent(new CustomEvent('penpot-shape-delete', {
+        detail: { shapeId: params.id },
+        bubbles: true,
+        composed: true,
+      }));
+    }
     return { success: true, deleted: params.id };
   }
 
@@ -216,7 +226,16 @@ export class PluginAPI {
   }
 
   #getTheme() {
-    return { theme: 'dark', colors: { primary: '#31efb8', surface: '#2a2a2a', text: '#e6e6e6' } };
+    const root = document.documentElement;
+    const style = getComputedStyle(root);
+    return {
+      theme: style.getPropertyValue('--penpot-theme').trim() || 'dark',
+      colors: {
+        primary: style.getPropertyValue('--penpot-primary').trim() || '#31efb8',
+        surface: style.getPropertyValue('--penpot-surface').trim() || '#2a2a2a',
+        text: style.getPropertyValue('--penpot-text').trim() || '#e6e6e6',
+      },
+    };
   }
 
   #openUI(params) {

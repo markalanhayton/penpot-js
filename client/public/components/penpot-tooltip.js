@@ -1,3 +1,4 @@
+'use strict';
 import { PenpotElement } from './base.js';
 
 let tooltipCounter = 0;

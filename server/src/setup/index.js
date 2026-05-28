@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module setup
  * @description Instance setup and initial data seeding — mirrors `app.setup`

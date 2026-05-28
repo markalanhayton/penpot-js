@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module config
  * @description Application configuration module — mirrors `app.config` from the Clojure backend.
@@ -96,7 +97,7 @@ const defaultFlags = {
 };
 
 /** @type {Record<string, boolean>} Merged defaults + env overrides. */
-const mergedFlags = { ...defaultFlags, ...flags };
+export const mergedFlags = { ...defaultFlags, ...flags };
 
 /**
  * Public URI for the running instance. Auto-detected from `PENPOT_PUBLIC_URI`.
@@ -297,6 +298,7 @@ export const config = Object.freeze({
     referer: env('PENPOT_TELEMETRY_REFERER', ''),
   },
   initialProjectSkey: env('PENPOT_INITIAL_PROJECT_SKEY', 'initial-project'),
+  templatesPath: env('PENPOT_TEMPLATES_PATH', ''),
   frontendDir: env('PENPOT_FRONTEND_DIR', ''),
 });
 

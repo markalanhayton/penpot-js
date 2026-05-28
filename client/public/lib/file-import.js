@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module file-import
  * @description Import .penpot files (ZIP archives with manifest.json).
@@ -60,7 +61,7 @@ export async function analyzeFile(file) {
                 try {
                   const mediaContent = await mediaZipEntry.async('string');
                   mediaEntries[mediaId] = JSON.parse(mediaContent);
-                } catch {}
+                } catch (err) { console.warn('[file-import] Failed to parse media entry', mediaId, ':', err?.message || err); }
               } else if (fileData && fileData.media && fileData.media[mediaId]) {
                 mediaEntries[mediaId] = fileData.media[mediaId];
               }
@@ -307,7 +308,8 @@ export async function uploadAndImport(projectId, file, options = {}) {
 
     if (onProgress) onProgress('complete', 100);
     return results;
-  } catch {
+  } catch (err) {
+    console.warn('[file-import] Streaming import failed, falling back to server import:', err?.message || err);
     const result = await cmd('import-binfile', importParams);
     if (onProgress) onProgress('complete', 100);
     return result;
@@ -338,7 +340,7 @@ export async function importFileToProject(projectId, file, options = {}) {
         let fileData = fileEntry.data || fileEntry;
 
         if (typeof fileData === 'string') {
-          try { fileData = JSON.parse(fileData); } catch { continue; }
+          try { fileData = JSON.parse(fileData); } catch (err) { console.warn('[file-import] Skipping malformed file entry:', err?.message || err); continue; }
         }
 
         fileData = normalizeFileData(fileData);
@@ -373,9 +375,7 @@ export async function importFileToProject(projectId, file, options = {}) {
             try {
               const pageData = JSON.parse(content);
               return normalizePage(pageData, pages.length);
-            } catch {
-              return null;
-            }
+            } catch (err) { console.warn('[file-import] Skipping malformed page entry:', err?.message || err); return null; }
           }));
         }
       });

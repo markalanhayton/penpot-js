@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module db/sqlite
  * @description Database access layer — mirrors `app.db` from the Clojure backend.

@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module transit
  * @description Transit+JSON encoding and decoding — mirrors `app.common.transit`

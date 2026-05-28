@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module config/features
  * @description Feature flag constants and computation — mirrors `app.common.features`

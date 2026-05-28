@@ -1,3 +1,4 @@
+'use strict';
 let fileRev = 0;
 let fileVern = 0;
 

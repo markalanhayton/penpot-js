@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc/teams_invitations
  * @description Team invitation RPC commands — mirrors `app.rpc.commands.teams-invitations`

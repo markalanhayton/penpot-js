@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module metrics
  * @description Prometheus metrics endpoint — mirrors `app.metrics` from the Clojure backend.

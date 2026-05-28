@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc/teams
  * @description Team management RPC commands — mirrors `app.rpc.commands.teams`
@@ -356,7 +357,7 @@ export default function registerTeamCommands(register, pool) {
     added: '1.17',
     async handler(params, ctx) {
       const rows = pool.query(
-        'SELECT * FROM team_invitation WHERE team_id = ?',
+        'SELECT * FROM team_invitation WHERE team_id = @teamId',
         { teamId: params.teamId }
       );
       return rowsToCamel(rows);

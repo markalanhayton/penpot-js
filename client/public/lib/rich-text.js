@@ -1,25 +1,10 @@
-/**
- * @module rich-text
- * @description Rich text editing with contentEditable — full font selection,
- * multi-line editing, inline formatting (bold/italic/underline/strikethrough),
- * text alignment, font family/size selection, color, line height, letter spacing,
- * and bullet/numbered lists. Uses document.execCommand with modern fallbacks.
- */
+'use strict';
+import { SYSTEM_FONTS } from '@penpot/shared/constants';
+import { contentTreeToHTML, htmlToContentTree, extractSelectionStyles } from './content-tree.js';
+import * as textTypes from '@penpot/shared/types/text.js';
 
 let activeEditor = null;
 let activeToolbar = null;
-
-const SYSTEM_FONTS = [
-  { family: 'sans-serif', label: 'Sans Serif' },
-  { family: 'serif', label: 'Serif' },
-  { family: 'monospace', label: 'Monospace' },
-  { family: 'Inter', label: 'Inter' },
-  { family: 'Roboto', label: 'Roboto' },
-  { family: 'Open Sans', label: 'Open Sans' },
-  { family: 'Lato', label: 'Lato' },
-  { family: 'Montserrat', label: 'Montserrat' },
-  { family: 'Source Code Pro', label: 'Source Code Pro' },
-];
 
 const FONT_SIZES = [8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 24, 28, 32, 36, 48, 64, 72, 96];
 
@@ -55,7 +40,9 @@ export function createRichTextEditor(container, shape, onCommit) {
     overflow-wrap: break-word;
   `;
 
-  if (shape.html && shape.html !== shape.content) {
+  if (textTypes.isContentTree(shape.content)) {
+    editor.innerHTML = contentTreeToHTML(shape.content);
+  } else if (shape.html && shape.html !== shape.content) {
     editor.innerHTML = shape.html;
   } else {
     editor.textContent = shape.content || shape.text || '';
@@ -76,21 +63,42 @@ export function createRichTextEditor(container, shape, onCommit) {
   const commit = () => {
     if (committed) return;
     committed = true;
-    const content = editor.innerHTML;
+    const innerHTML = editor.innerHTML;
     const plainText = editor.textContent;
+
+    const baseAttrs = {
+      'font-id': shape.fontId || shape['font-id'] || 'sourcesanspro',
+      'font-family': shape.fontFamily || shape['font-family'] || 'sourcesanspro',
+      'font-size': String(shape.fontSize || shape['font-size'] || 14),
+      'font-weight': String(shape.fontWeight ?? shape['font-weight'] ?? '400'),
+      'font-style': shape.fontStyle || shape['font-style'] || 'normal',
+      'line-height': String(shape.lineHeight ?? shape['line-height'] ?? '1.2'),
+      'letter-spacing': String(shape.letterSpacing ?? shape['letter-spacing'] ?? '0'),
+      'text-decoration': shape.textDecoration || shape['text-decoration'] || 'none',
+      'text-transform': shape.textTransform || shape['text-transform'] || 'none',
+      'text-align': shape.textAlign || shape['text-align'] || 'left',
+      'text-direction': shape.textDirection || shape['text-direction'] || 'ltr',
+      'vertical-align': shape.verticalAlign || shape['vertical-align'] || 'top',
+      fills: shape.fills && shape.fills.length > 0
+        ? shape.fills.map(f => f['fill-color'] ? f : { 'fill-color': colorToHex(f.color), 'fill-opacity': f.opacity ?? 1 })
+        : [{ 'fill-color': '#000000', 'fill-opacity': 1 }],
+    };
+
+    const contentTree = htmlToContentTree(innerHTML, baseAttrs);
+
     if (onCommit) {
       onCommit({
-        content: plainText,
-        html: content,
-        fontFamily: editor.style.fontFamily,
-        fontSize: parseFloat(editor.style.fontSize),
-        fontWeight: parseInt(editor.style.fontWeight),
-        fontStyle: editor.style.fontStyle === 'italic' ? 'italic' : 'normal',
-        textDecoration: editor.style.textDecoration,
-        textAlign: editor.style.textAlign,
-        color: editor.style.color,
-        lineHeight: parseFloat(editor.style.lineHeight),
-        letterSpacing: parseFloat(editor.style.letterSpacing) || 0,
+        content: contentTree,
+        html: innerHTML,
+        plainText,
+        fontFamily: shape.fontFamily || shape['font-family'] || 'sourcesanspro',
+        fontSize: shape.fontSize || parseFloat(shape['font-size'] || '14'),
+        fontWeight: String(shape.fontWeight ?? shape['font-weight'] ?? '400'),
+        fontStyle: shape.fontStyle || shape['font-style'] || 'normal',
+        textDecoration: shape.textDecoration || shape['text-decoration'] || 'none',
+        textAlign: shape.textAlign || shape['text-align'] || 'left',
+        lineHeight: parseFloat(shape.lineHeight ?? shape['line-height'] ?? '1.2'),
+        letterSpacing: parseFloat(shape.letterSpacing ?? shape['letter-spacing'] ?? '0'),
       });
     }
     if (editor.parentNode) editor.parentNode.removeChild(editor);
@@ -217,6 +225,8 @@ export function createRichTextEditor(container, shape, onCommit) {
       document.execCommand('unlink', false, null);
     },
     getStyles() {
+      const selectionStyles = extractSelectionStyles();
+      if (selectionStyles) return selectionStyles;
       return {
         fontFamily: editor.style.fontFamily,
         fontSize: parseFloat(editor.style.fontSize),
@@ -488,6 +498,18 @@ function makeSep() {
   const sep = document.createElement('div');
   sep.style.cssText = 'width:1px;height:18px;background:var(--penpot-border,#444);margin:0 2px;';
   return sep;
+}
+
+function colorToHex(color) {
+  if (!color) return '#000000';
+  if (typeof color === 'string') return color;
+  if (color.r !== undefined) {
+    const r = Math.round(color.r * 255);
+    const g = Math.round(color.g * 255);
+    const b = Math.round(color.b * 255);
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  }
+  return '#000000';
 }
 
 function getTextColor(shape) {

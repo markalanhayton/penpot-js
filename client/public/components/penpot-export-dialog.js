@@ -1,3 +1,4 @@
+'use strict';
 import { PenpotElement } from './base.js';
 import { exportAndDownload } from '../lib/export.js';
 

@@ -1,3 +1,4 @@
+'use strict';
 export class Canvas2DRenderer {
   #canvas = null;
   #ctx = null;
@@ -100,7 +101,24 @@ export class Canvas2DRenderer {
     for (const id of this.#selectionIds) {
       const shape = this.#shapeCache.get(id);
       if (shape) {
-        this.#drawSelection(ctx, shape);
+        this.#drawSelectionOutline(ctx, shape);
+      }
+    }
+
+    if (this.#selectionIds.size > 1) {
+      const selectedShapes = [];
+      for (const id of this.#selectionIds) {
+        const shape = this.#shapeCache.get(id);
+        if (shape) selectedShapes.push(shape);
+      }
+      if (selectedShapes.length > 0) {
+        const composite = this.#computeBounds(selectedShapes);
+        this.#drawSelectionHandles(ctx, composite, true);
+      }
+    } else if (this.#selectionIds.size === 1) {
+      const shape = this.#shapeCache.get([...this.#selectionIds][0]);
+      if (shape) {
+        this.#drawSelectionHandles(ctx, shape, false);
       }
     }
 
@@ -316,33 +334,136 @@ export class Canvas2DRenderer {
     this.#applyStrokes(ctx, shape);
   }
 
+  #resolveFillColor(fill) {
+    if (!fill) return '#000000';
+    if (typeof fill === 'string') return fill;
+    if (fill.color) {
+      if (typeof fill.color === 'string') return fill.color;
+      const r = Math.round((fill.color.r ?? 0) * 255);
+      const g = Math.round((fill.color.g ?? 0) * 255);
+      const b = Math.round((fill.color.b ?? 0) * 255);
+      return `rgb(${r},${g},${b})`;
+    }
+    if (fill['fill-color']) {
+      if (fill['fill-opacity'] !== undefined && fill['fill-opacity'] < 1) {
+        const hex = fill['fill-color'];
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r},${g},${b},${fill['fill-opacity']})`;
+      }
+      return fill['fill-color'];
+    }
+    return '#000000';
+  }
+
   #drawText(ctx, shape) {
     const x = shape.x || 0, y = shape.y || 0;
-    const content = shape.content || '';
+    const content = shape.content;
     if (!content) return;
 
-    const fontSize = shape.fontSize || 14;
-    const fontFamily = shape.fontFamily || 'sans-serif';
-    const fontWeight = shape.fontWeight || 'normal';
-    const fontStyle = shape.fontStyle || 'normal';
-    const textAlign = shape.textAlign || 'left';
+    const defaultFontSize = shape.fontSize || 14;
+    const defaultFontFamily = shape.fontFamily || 'sans-serif';
+    const defaultFontWeight = String(shape.fontWeight || 'normal');
+    const defaultFontStyle = shape.fontStyle || 'normal';
+    const defaultLineHeight = shape.lineHeight || 1.2;
+    const defaultTextAlign = shape.textAlign || 'left';
 
-    ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`;
-    ctx.textAlign = textAlign;
+    if (content && typeof content === 'object' && content.type === 'root') {
+      this.#drawContentTree(ctx, shape, content, x, y, defaultFontSize, defaultFontFamily, defaultFontWeight, defaultFontStyle, defaultLineHeight, defaultTextAlign);
+      return;
+    }
+
+    const textStr = typeof content === 'string' ? content : '';
+    if (!textStr) return;
+
+    ctx.font = `${defaultFontStyle} ${defaultFontWeight} ${defaultFontSize}px ${defaultFontFamily}`;
+    ctx.textAlign = defaultTextAlign;
     ctx.textBaseline = 'top';
 
-    const lines = content.split('\n');
-    const lineHeight = fontSize * (shape.lineHeight || 1.2);
+    const lines = textStr.split('\n');
+    const lineHeight = defaultFontSize * defaultLineHeight;
 
     for (let i = 0; i < lines.length; i++) {
       const textY = y + i * lineHeight;
       if (shape.fills && shape.fills.length > 0) {
-        ctx.fillStyle = shape.fills[0].color || '#333333';
+        ctx.fillStyle = this.#resolveFillColor(shape.fills[0]);
       } else {
         ctx.fillStyle = '#333333';
       }
       ctx.fillText(lines[i], x + 2, textY);
     }
+  }
+
+  #drawContentTree(ctx, shape, content, x, y, defaultFontSize, defaultFontFamily, defaultFontWeight, defaultFontStyle, defaultLineHeight, defaultTextAlign) {
+    const paragraphSets = content.children || [];
+    let lineIndex = 0;
+
+    for (const pset of paragraphSets) {
+      const paragraphs = pset.children || [];
+      for (const para of paragraphs) {
+        const paraAlign = para['text-align'] || defaultTextAlign;
+        const paraDir = para['text-direction'] || 'ltr';
+        const children = para.children || [];
+
+        const paraY = y + lineIndex * (defaultFontSize * defaultLineHeight);
+
+        for (const textNode of children) {
+          if (textNode.type !== undefined) continue;
+          const nodeFontSize = parseFloat(textNode['font-size'] || defaultFontSize);
+          const nodeFontFamily = textNode['font-family'] || defaultFontFamily;
+          const nodeFontWeight = String(textNode['font-weight'] || defaultFontWeight);
+          const nodeFontStyle = textNode['font-style'] || defaultFontStyle;
+          const textTransform = textNode['text-transform'];
+
+          ctx.font = `${nodeFontStyle} ${nodeFontWeight} ${nodeFontSize}px ${nodeFontFamily}`;
+          ctx.textAlign = paraAlign;
+          ctx.textBaseline = 'top';
+          ctx.direction = paraDir;
+
+          if (textNode.fills && textNode.fills.length > 0) {
+            ctx.fillStyle = this.#textNodeFillColor(textNode.fills[0]);
+          } else if (shape.fills && shape.fills.length > 0) {
+            ctx.fillStyle = this.#resolveFillColor(shape.fills[0]);
+          } else {
+            ctx.fillStyle = '#333333';
+          }
+
+          let text = textNode.text || '';
+          if (textTransform === 'uppercase') text = text.toUpperCase();
+          else if (textTransform === 'lowercase') text = text.toLowerCase();
+          else if (textTransform === 'capitalize') text = text.replace(/\b\w/g, c => c.toUpperCase());
+
+          const textDecoration = textNode['text-decoration'];
+          ctx.fillText(text, x + 2, paraY);
+
+          if (textDecoration && textDecoration !== 'none') {
+            const metrics = ctx.measureText(text);
+            const ty = paraY + nodeFontSize;
+            if (textDecoration.includes('underline')) {
+              ctx.beginPath();
+              ctx.moveTo(x + 2, ty);
+              ctx.lineTo(x + 2 + metrics.width, ty);
+              ctx.stroke();
+            }
+            if (textDecoration.includes('line-through')) {
+              ctx.beginPath();
+              ctx.moveTo(x + 2, ty - nodeFontSize * 0.3);
+              ctx.lineTo(x + 2 + metrics.width, ty - nodeFontSize * 0.3);
+              ctx.stroke();
+            }
+          }
+        }
+
+        lineIndex++;
+      }
+    }
+  }
+
+  #textNodeFillColor(fill) {
+    if (fill['fill-color']) return fill['fill-color'];
+    if (fill.color) return this.#resolveFillColor(fill);
+    return '#000000';
   }
 
   #drawPath(ctx, shape) {
@@ -422,15 +543,30 @@ export class Canvas2DRenderer {
     }
   }
 
-  #drawSelection(ctx, shape) {
+  #drawSelectionOutline(ctx, shape) {
     const x = shape.x || 0, y = shape.y || 0, w = shape.width || 0, h = shape.height || 0;
     const pad = 2 / this.#zoom;
 
     ctx.save();
-    ctx.strokeStyle = '#31efb8';
+    ctx.strokeStyle = '#7b61ff';
     ctx.lineWidth = 1.5 / this.#zoom;
     ctx.setLineDash([]);
     ctx.strokeRect(x - pad, y - pad, w + pad * 2, h + pad * 2);
+    ctx.restore();
+  }
+
+  #drawSelectionHandles(ctx, shape, isMulti) {
+    const x = shape.x || 0, y = shape.y || 0, w = shape.width || 0, h = shape.height || 0;
+    const pad = 2 / this.#zoom;
+
+    ctx.save();
+    if (isMulti) {
+      ctx.strokeStyle = '#31efb8';
+      ctx.lineWidth = 1.5 / this.#zoom;
+      ctx.setLineDash([4 / this.#zoom, 4 / this.#zoom]);
+      ctx.strokeRect(x - pad, y - pad, w + pad * 2, h + pad * 2);
+      ctx.setLineDash([]);
+    }
 
     const handleSize = 8 / this.#zoom;
     const handles = [
@@ -452,25 +588,38 @@ export class Canvas2DRenderer {
       ctx.strokeRect(hx - handleSize / 2, hy - handleSize / 2, handleSize, handleSize);
     }
 
-    if (this.#selectionIds.size === 1) {
-      const rotHandleY = y - 20 / this.#zoom;
-      ctx.beginPath();
-      ctx.moveTo(x + w / 2, y - pad);
-      ctx.lineTo(x + w / 2, rotHandleY);
-      ctx.strokeStyle = '#31efb8';
-      ctx.lineWidth = 1 / this.#zoom;
-      ctx.stroke();
+    const rotHandleY = y - 20 / this.#zoom;
+    ctx.beginPath();
+    ctx.moveTo(x + w / 2, y - pad);
+    ctx.lineTo(x + w / 2, rotHandleY);
+    ctx.strokeStyle = '#31efb8';
+    ctx.lineWidth = 1 / this.#zoom;
+    ctx.stroke();
 
-      ctx.beginPath();
-      ctx.arc(x + w / 2, rotHandleY, 4 / this.#zoom, 0, Math.PI * 2);
-      ctx.fillStyle = '#fff';
-      ctx.fill();
-      ctx.strokeStyle = '#31efb8';
-      ctx.lineWidth = 1.5 / this.#zoom;
-      ctx.stroke();
-    }
+    ctx.beginPath();
+    ctx.arc(x + w / 2, rotHandleY, 4 / this.#zoom, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.strokeStyle = '#31efb8';
+    ctx.lineWidth = 1.5 / this.#zoom;
+    ctx.stroke();
 
     ctx.restore();
+  }
+
+  #computeBounds(shapes) {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const s of shapes) {
+      const sx = s.x || 0, sy = s.y || 0, sw = s.width || 0, sh = s.height || 0;
+      if (sw > 0 && sh > 0) {
+        minX = Math.min(minX, sx);
+        minY = Math.min(minY, sy);
+        maxX = Math.max(maxX, sx + sw);
+        maxY = Math.max(maxY, sy + sh);
+      }
+    }
+    if (minX === Infinity) return { x: 0, y: 0, width: 0, height: 0 };
+    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
   }
 
   #roundRectPath(ctx, x, y, w, h, tl, tr, br, bl) {

@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module shapes
  * @description SVG rendering functions for Penpot shapes.
@@ -422,9 +423,9 @@ function renderEllipse(shape) {
 }
 
 function renderText(shape) {
-  const content = shape.content || shape.textContent || shape.name || '';
+  const content = shape.content;
   const fontSize = shape.fontSize || 14;
-  const fontFamily = shape.fontFamily || shape.fontFamily || 'sans-serif';
+  const fontFamily = shape.fontFamily || 'sans-serif';
   const fontWeight = shape.fontWeight || 'normal';
   const fontStyle = shape.fontStyle || 'normal';
   const textAlign = shape.textAlign || 'left';
@@ -446,7 +447,8 @@ function renderText(shape) {
     };
     const transform = shapeTransform(shape);
     if (transform) textAttrs.transform = transform;
-    const textPathEl = el('textPath', { href: `#${pathId}`, startOffset: shape.pathOffset || '0%' }, typeof content === 'string' ? content : 'Text');
+    const plainText = isContentTree(content) ? contentToPlainText(content) : (typeof content === 'string' ? content : shape.name || 'Text');
+    const textPathEl = el('textPath', { href: `#${pathId}`, startOffset: shape.pathOffset || '0%' }, plainText);
     if (shape.subscript || shape.verticalAlign === 'sub') {
       textAttrs['font-size'] = fontSize * 0.7;
       textAttrs['baseline-shift'] = 'sub';
@@ -460,6 +462,12 @@ function renderText(shape) {
 
   const growType = shape.growType || shape['grow-type'] || 'fixed';
   const svgWidth = (growType === 'auto-width' || growType === 'auto-height') ? undefined : (shape.width || 100);
+
+  if (isContentTree(content)) {
+    return renderContentTree(shape, content, fontSize, fontFamily, fontWeight, fontStyle, textAlign, lineHeight, svgWidth);
+  }
+
+  const fallbackContent = typeof content === 'string' ? content : shape.name || 'Text';
 
   const attrs = {
     id: `shape-${shape.id}`,
@@ -476,7 +484,6 @@ function renderText(shape) {
   const transform = shapeTransform(shape);
   if (transform) attrs.transform = transform;
 
-  const text = typeof content === 'string' ? content : shape.name || 'Text';
   if (shape.subscript || shape.verticalAlign === 'sub') {
     attrs['font-size'] = fontSize * 0.7;
     attrs['baseline-shift'] = 'sub';
@@ -484,7 +491,152 @@ function renderText(shape) {
     attrs['font-size'] = fontSize * 0.7;
     attrs['baseline-shift'] = 'super';
   }
-  return el('text', attrs, text);
+  return el('text', attrs, fallbackContent);
+}
+
+function isContentTree(content) {
+  return content && typeof content === 'object' && content.type === 'root';
+}
+
+function contentToPlainText(content) {
+  if (typeof content === 'string') return content;
+  if (!content || typeof content !== 'object') return '';
+  const paragraphs = [];
+  function walk(node) {
+    if (node.type === 'paragraph') {
+      if (paragraphs.length > 0 || node.children?.some(c => c.text)) {
+        const text = (node.children || []).map(c => c.text || '').join('');
+        paragraphs.push(text);
+      }
+    } else if (node.text !== undefined) {
+      paragraphs.push(node.text);
+    }
+    if (node.children) node.children.forEach(walk);
+  }
+  walk(content);
+  return paragraphs.join('\n');
+}
+
+function renderContentTree(shape, content, defaultFontSize, defaultFontFamily, defaultFontWeight, defaultFontStyle, defaultTextAlign, defaultLineHeight, svgWidth) {
+  const x = shape.x || 0;
+  const y = shape.y || 0;
+  const paragraphSets = content.children || [];
+  const tspans = [];
+  let lineIndex = 0;
+
+  for (const pset of paragraphSets) {
+    const paragraphs = pset.children || [];
+    for (const para of paragraphs) {
+      const paraAlign = para['text-align'] || defaultTextAlign;
+      const paraDir = para['text-direction'] || 'ltr';
+      const paraY = y + lineIndex * (defaultFontSize * defaultLineHeight) + defaultFontSize * 0.8;
+
+      const children = para.children || [];
+      if (children.length === 0) {
+        lineIndex++;
+        continue;
+      }
+
+      if (children.length === 1 && isUniformTextNode(children[0], defaultFontSize, defaultFontFamily, defaultFontWeight, defaultFontStyle)) {
+        const textNode = children[0];
+        const tspanAttrs = {
+          x,
+          y: paraY,
+          'text-anchor': paraAlign === 'center' ? 'middle' : paraAlign === 'right' ? 'end' : 'start',
+        };
+        if (paraDir === 'rtl') tspanAttrs.direction = 'rtl';
+        const fill = textNodeFills(shape, textNode);
+        if (fill) tspanAttrs.fill = fill;
+        tspans.push(el('tspan', tspanAttrs, textNode.text || ''));
+      } else {
+        let tspanChildren = [];
+        let currentX = x;
+        const textAnchor = paraAlign === 'center' ? 'middle' : paraAlign === 'right' ? 'end' : 'start';
+
+        for (const textNode of children) {
+          const nodeFontSize = parseFloat(textNode['font-size'] || defaultFontSize);
+          const nodeFontFamily = textNode['font-family'] || defaultFontFamily;
+          const nodeFontWeight = textNode['font-weight'] || defaultFontWeight;
+          const nodeFontStyle = textNode['font-style'] || defaultFontStyle;
+          const textDecoration = textNode['text-decoration'];
+          const textTransform = textNode['text-transform'];
+
+          const tspanAttrs = {};
+          if (nodeFontSize !== defaultFontSize) tspanAttrs['font-size'] = nodeFontSize;
+          if (nodeFontFamily !== defaultFontFamily) tspanAttrs['font-family'] = nodeFontFamily;
+          if (nodeFontWeight !== defaultFontWeight) tspanAttrs['font-weight'] = nodeFontWeight;
+          if (nodeFontStyle !== defaultFontStyle) tspanAttrs['font-style'] = nodeFontStyle;
+          if (textDecoration && textDecoration !== 'none') tspanAttrs['text-decoration'] = textDecoration;
+          if (textTransform && textTransform !== 'none') tspanAttrs['text-transform'] = textTransform;
+
+          const fill = textNodeFills(shape, textNode);
+          if (fill) tspanAttrs.fill = fill;
+
+          const text = applyTextTransform(textNode.text || '', textTransform);
+          tspanChildren.push(el('tspan', tspanAttrs, text));
+        }
+
+        const wrapperAttrs = {
+          x,
+          y: paraY,
+          'text-anchor': textAnchor,
+        };
+        if (paraDir === 'rtl') wrapperAttrs.direction = 'rtl';
+        tspans.push(el('tspan', wrapperAttrs, tspanChildren));
+      }
+
+      lineIndex++;
+    }
+  }
+
+  const textAttrs = {
+    id: `shape-${shape.id}`,
+    'font-size': defaultFontSize,
+    'font-family': defaultFontFamily,
+    'font-weight': defaultFontWeight,
+    'font-style': defaultFontStyle,
+    fill: shapeFills(shape) || '#333',
+    opacity: shapeOpacity(shape),
+  };
+  if (svgWidth !== undefined) textAttrs.width = svgWidth;
+  const transform = shapeTransform(shape);
+  if (transform) textAttrs.transform = transform;
+
+  return el('text', textAttrs, tspans);
+}
+
+function isUniformTextNode(node, fontSize, fontFamily, fontWeight, fontStyle) {
+  if (!node || node.type !== undefined) return false;
+  const nodeFontSize = node['font-size'];
+  const nodeFontFamily = node['font-family'];
+  const nodeFontWeight = node['font-weight'];
+  const nodeFontStyle = node['font-style'];
+  const hasFills = node.fills && node.fills.length > 0;
+  const hasDecoration = node['text-decoration'] && node['text-decoration'] !== 'none';
+  const hasTransform = node['text-transform'] && node['text-transform'] !== 'none';
+  return !nodeFontSize && !nodeFontFamily && !nodeFontWeight && !nodeFontStyle && !hasFills && !hasDecoration && !hasTransform;
+}
+
+function textNodeFills(shape, textNode) {
+  if (textNode.fills && textNode.fills.length > 0) {
+    const fill = textNode.fills[0];
+    if (fill['fill-color']) return fill['fill-color'];
+    if (fill.color) {
+      const r = Math.round(fill.color.r * 255);
+      const g = Math.round(fill.color.g * 255);
+      const b = Math.round(fill.color.b * 255);
+      return `rgb(${r},${g},${b})`;
+    }
+  }
+  return null;
+}
+
+function applyTextTransform(text, transform) {
+  if (!transform || transform === 'none') return text;
+  if (transform === 'uppercase') return text.toUpperCase();
+  if (transform === 'lowercase') return text.toLowerCase();
+  if (transform === 'capitalize') return text.replace(/\b\w/g, c => c.toUpperCase());
+  return text;
 }
 
 function renderPath(shape) {
@@ -636,48 +788,18 @@ export function renderPage(page, viewport = { x: 0, y: 0, width: 1200, height: 8
     }
   }
 
-  // Render selection handles for single selected shape
+  // Render selection handles
   if (selectedIds.length === 1) {
     const selectedShape = shapeList.find(s => s.id === selectedIds[0]);
     if (selectedShape) {
-      const handles = getResizeHandles(selectedShape);
-      for (const [name, hx, hy] of handles) {
-        const rect = el('rect', {
-          x: String(hx - 4),
-          y: String(hy - 4),
-          width: '8',
-          height: '8',
-          fill: '#ffffff',
-          stroke: 'var(--penpot-primary, #31efb8)',
-          'stroke-width': '1.5',
-          'data-handle': name,
-          style: 'cursor: pointer;',
-        });
-        svg.appendChild(rect);
-      }
-
-      // Rotation handle
-      const rotHandle = getRotationHandle(selectedShape);
-      const rotLine = el('line', {
-        x1: String(selectedShape.x + (selectedShape.width || 0) / 2),
-        y1: String(selectedShape.y),
-        x2: String(rotHandle.x),
-        y2: String(rotHandle.y),
-        stroke: 'var(--penpot-primary, #31efb8)',
-        'stroke-width': '1',
-      });
-      svg.appendChild(rotLine);
-      const rotCircle = el('circle', {
-        cx: String(rotHandle.x),
-        cy: String(rotHandle.y),
-        r: '5',
-        fill: '#ffffff',
-        stroke: 'var(--penpot-primary, #31efb8)',
-        'stroke-width': '1.5',
-        'data-handle': 'rotation',
-        style: 'cursor: grab;',
-      });
-      svg.appendChild(rotCircle);
+      renderSelectionHandles(svg, selectedShape);
+    }
+  } else if (selectedIds.length > 1) {
+    const selectedShapes = shapeList.filter(s => selectedIds.includes(s.id));
+    if (selectedShapes.length > 0) {
+      const composite = computeShapesBounds(selectedShapes);
+      composite.type = 'multiple';
+      renderSelectionHandles(svg, composite);
     }
   }
 
@@ -704,6 +826,66 @@ export function getRotationHandle(shape) {
   const { x, y, width: w, height: h } = shape;
   const rotationHandleOffset = 20;
   return { x: x + w / 2, y: y - rotationHandleOffset };
+}
+
+export function computeShapesBounds(shapes) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const s of shapes) {
+    const sx = s.x || 0;
+    const sy = s.y || 0;
+    const sw = s.width || 0;
+    const sh = s.height || 0;
+    if (sw > 0 && sh > 0) {
+      minX = Math.min(minX, sx);
+      minY = Math.min(minY, sy);
+      maxX = Math.max(maxX, sx + sw);
+      maxY = Math.max(maxY, sy + sh);
+    }
+  }
+  if (minX === Infinity) {
+    return { x: 0, y: 0, width: 0, height: 0 };
+  }
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+}
+
+function renderSelectionHandles(svg, shape) {
+  const handles = getResizeHandles(shape);
+  for (const [name, hx, hy] of handles) {
+    const rect = el('rect', {
+      x: String(hx - 4),
+      y: String(hy - 4),
+      width: '8',
+      height: '8',
+      fill: '#ffffff',
+      stroke: 'var(--penpot-primary, #31efb8)',
+      'stroke-width': '1.5',
+      'data-handle': name,
+      style: 'cursor: pointer;',
+    });
+    svg.appendChild(rect);
+  }
+
+  const rotHandle = getRotationHandle(shape);
+  const rotLine = el('line', {
+    x1: String(shape.x + (shape.width || 0) / 2),
+    y1: String(shape.y),
+    x2: String(rotHandle.x),
+    y2: String(rotHandle.y),
+    stroke: 'var(--penpot-primary, #31efb8)',
+    'stroke-width': '1',
+  });
+  svg.appendChild(rotLine);
+  const rotCircle = el('circle', {
+    cx: String(rotHandle.x),
+    cy: String(rotHandle.y),
+    r: '5',
+    fill: '#ffffff',
+    stroke: 'var(--penpot-primary, #31efb8)',
+    'stroke-width': '1.5',
+    'data-handle': 'rotation',
+    style: 'cursor: grab;',
+  });
+  svg.appendChild(rotCircle);
 }
 
 export function renderEmptyCanvas(message = 'No shapes on this page') {

@@ -1,6 +1,6 @@
 # E2E Testing Document
 
-> Last updated: 2026-05-25
+> Last updated: 2026-05-26
 
 Comprehensive guide to end-to-end, integration, and unit testing across all modules of the Penpot JS port.
 
@@ -52,9 +52,9 @@ The Penpot JS port uses a layered testing strategy tailored to each module's run
 
 | Module | Test Type | Runner | Location | Count |
 |--------|-----------|--------|----------|-------|
-| `client/` | E2E | Playwright | `client/e2e/*.spec.js` | 32 spec files, ~480 tests |
-| `server/` | Integration + Unit | `node:test` | `server/test/*.test.js` | 65 files, 570 tests |
-| `shared/` | Unit | `node:test` | `shared/test/*.test.js` | 63 files, 1,418 assertions |
+| `client/` | E2E | Playwright | `client/e2e/*.spec.js` | 30 spec files, 490 tests |
+| `server/` | Integration + Unit | `node:test` | `server/test/*.test.js` | 75 files, 872 tests |
+| `shared/` | Unit | `node:test` | `shared/test/*.test.js` | 176 suites, 1,492 assertions |
 | `server/exporter/` | Unit | `node:test` | `server/exporter/test/*.test.js` | 22 tests |
 | `frontend/` (upstream) | E2E | Playwright | `frontend/playwright/ui/specs/*.spec.js` | 35 spec files |
 
@@ -99,6 +99,16 @@ Key configuration points:
 - **Dual web servers**: Playwright starts both the backend (port 6060) and the frontend dev server (port 3449) before running tests.
 - **`reuseExistingServer: true`**: If a server is already running, Playwright uses it instead of starting a new one. Essential for iterative development.
 - **Chromium only**: Tests run against a single browser engine. Multi-browser testing (Firefox, WebKit) is not configured but can be added.
+
+### 2.2 Dev Server Bug Fix (2026-05-26)
+
+The client dev server (`client/server.js`) had two bugs that prevented E2E tests from passing:
+
+1. **Missing `/shared/` route**: The import map in `index.html` resolves `@penpot/shared/constants` to `/shared/constants.js`, but no such path existed under `client/public/`. The SPA fallback served `index.html` with `Content-Type: text/html`, which browsers reject for ES modules.
+
+2. **SPA fallback serving `text/html` for `.js` files**: When any static file was missing, the fallback served `index.html` with `Content-Type: text/html`. This masked the root cause and could cause similar issues for other missing assets.
+
+**Fix**: Added a `/shared/` route that serves files from `../shared/src/` with correct MIME types, and changed the SPA fallback to return 404 for requests with known static file extensions (`.js`, `.css`, etc.) instead of serving `index.html`.
 - **30s test timeout**: Generous timeout for tests that involve RPC round-trips, WebSocket connections, and server-side processing.
 - **10s action timeout**: Default timeout for individual Playwright actions (`click`, `fill`, etc.).
 
@@ -137,6 +147,8 @@ The client E2E tests cover the full user journey from authentication through des
 | Spec File | Phase | Lines | Tests | Focus |
 |-----------|-------|-------|-------|-------|
 | `auth.spec.js` | P0 | 50 | 6 | Login/register/recovery screen rendering and form switching |
+| `registration.spec.js` | P0 | ~180 | 18 | Registration form rendering, validation, mode switching |
+| `recovery.spec.js` | P0 | ~200 | 18 | Password recovery request, token URL, error handling |
 | `p0-flow.spec.js` | P0 | 145 | 11 | Full login → dashboard → file create → workspace flow |
 | `p1-workspace.spec.js` | P1 | 223 | 14 | Workspace shell, toolbar, tools bar, left/right sidebars, canvas, zoom |
 | `p2-components.spec.js` | P2 | ~150 | 18 | Design system components (button, checkbox, switch, slider, tabs, dropdown, select, etc.) |
@@ -149,8 +161,24 @@ The client E2E tests cover the full user journey from authentication through des
 | `p6-export.spec.js` | P6 | 338 | 17 | PNG/SVG/PDF export, share dialog, comment panel |
 | `page-management.spec.js` | Other | 60 | 5 | Page add/rename/delete/duplicate |
 | `settings.spec.js` | Other | 96 | 8 | Profile/password/feedback/settings pages |
+| `context-menu.spec.js` | Other | ~180 | 9 | Right-click context menu, menu items, Escape close, delete |
+| `dashboard-navigation.spec.js` | Other | ~260 | 23 | Dashboard tabs, search, fonts, libraries, deleted files |
+| `websocket-reconnect.spec.js` | Other | ~140 | 12 | Connection status, reconnection, error handling |
+| `binary-file-export.spec.js` | Other | ~250 | 14 | Export dialog, format options, scale, cancel, error handling |
+| `binary-file-import.spec.js` | Other | ~220 | 17 | Import dialog, file input, drag-drop, cancel, error handling |
+| `svg-import.spec.js` | Other | ~200 | 15 | SVG drag-drop, import dialog, parseSVG, error handling |
+| `interaction-prototyping.spec.js` | Other | ~260 | 17 | Interaction panel, add/edit/remove, events, destination |
+| `ruler-guides.spec.js` | Other | ~150 | 16 | Rulers, guides overlay, creation zones, zoom |
+| `mcp-panel.spec.js` | Other | ~260 | 14 | MCP panel rendering, connect, toggle, events |
+| `accessibility.spec.js` | Other | ~270 | 19 | Keyboard nav, ARIA, focus, shortcuts |
+| `visual-regression.spec.js` | Other | ~210 | 17 | Component rendering, workspace states, error-free |
+| `gradient-editor.spec.js` | Other | ~160 | 10 | Add gradient, type toggle, stops, events |
+| `shadow-editor.spec.js` | Other | ~230 | 11 | Add shadow, type toggle, properties, delete, error |
+| `library-drag-drop.spec.js` | Other | ~210 | 16 | Component/color/typo drag, drop handlers, error |
+| `drawing-cycle.spec.js` | Other | ~420 | 17 | Draw shapes, undo/redo, properties, selection |
+| `file-persistence.spec.js` | Other | ~260 | 16 | Save, undo, redo, file name, keyboard shortcuts |
 
-**Total**: 13 spec files, ~2,317 lines, ~170+ tests.
+**Total**: 30 spec files, ~5,500+ lines, 490 tests.
 
 ### 3.2 Test Helpers
 
@@ -246,7 +274,7 @@ This pattern avoids hard failures when the test database doesn't have pre-seeded
 
 The server test suite uses `node:test` with `node:assert/strict` and an in-memory SQLite database. Tests cover RPC commands, middleware, database operations, authentication, WebSocket, storage, and more.
 
-**Statistics**: 65 test files, 570 test cases, 0 failures.
+**Statistics**: 75 test files, 872 test cases, 287 suites, 0 failures.
 
 ### 4.2 Test File Inventory
 
@@ -394,7 +422,7 @@ describe('Rate Limiter', () => {
 
 ### 5.1 Overview
 
-The `shared/` module has 63 test files with 1,418 assertions across 209 test suites. Tests cover pure functions — geometry calculations, type definitions, data transformations, codecs, and validation logic.
+The `shared/` module has 176 test suites with 1,492 assertions across 63 test files. Tests cover pure functions — geometry calculations, type definitions, data transformations, codecs, and validation logic.
 
 ### 5.2 Test Organization
 
@@ -839,11 +867,11 @@ Set these environment variables for CI:
 
 | Module | Test Type | Test Files | Test Cases/Assertions | Pass | Fail | Skip |
 |--------|-----------|-----------|----------------------|------|------|------|
-| `shared/` | Unit | 63 | 1,418 pass, 209 suites | 1,418 | 0 | 0 |
-| `server/` | Integration | 65 | 570 tests, 196 suites | 570 | 0 | 0 |
+| `shared/` | Unit | 176 suites | 1,492 assertions | 1,492 | 0 | 0 |
+| `server/` | Integration | 75 | 872 tests, 287 suites | 872 | 0 | 0 |
 | `server/exporter/` | Unit | 1 | 22 tests, 6 suites | 22 | 0 | 0 |
-| `client/` | E2E | 13 | ~175 tests | 175+ | 0 | 0 |
-| **Total** | | **142** | **~2,185+** | **2,185+** | **0** | **0** |
+| `client/` | E2E | 30 spec files | 490 tests | 490 | 0 | 0 |
+| **Total** | | **~280** | **2,876** | **2,876** | **0** | **0** |
 
 ### 11.2 By Test Category
 
@@ -858,10 +886,27 @@ Set these environment variables for CI:
 | **Storage** | ~5 files | FS, S3, GC, high-level operations |
 | **File GC** | 1 file | Shape cleaning, media collection, component references, thumbnail tracking |
 | **E2E Auth** | ~20 tests | Login, register, recovery, token management |
-| **E2E Dashboard** | ~15 tests | Teams, projects, files, search, fonts, libraries |
+| **E2E Dashboard** | ~23 tests | Teams, projects, files, search, fonts, libraries, deleted |
+| **E2E Context Menu** | ~9 tests | Right-click, menu items, Escape close, error handling |
 | **E2E Workspace** | ~60 tests | Tools, canvas, sidebars, properties, layers, assets, zoom, pan |
-| **E2E Collaboration** | ~11 tests | WebSocket, presence, cursor overlay |
-| **E2E Export** | ~17 tests | PNG/SVG/PDF export, share, comments |
+| **E2E Collaboration** | ~12 tests | WebSocket, presence, cursor overlay, reconnection |
+| **E2E Export** | ~17 tests | PNG/SVG/PDF export, share, comments, keyboard shortcuts |
+| **E2E Binary File** | ~31 tests | Import dialog, export dialog, drag-drop, format handling |
+| **E2E SVG Import** | ~15 tests | Drag-drop, import dialog, parseSVG, file input |
+| **E2E Interaction** | ~17 tests | Prototyping panel, add/edit/remove interactions, events |
+| **E2E Ruler Guides** | ~16 tests | Rulers, guides overlay, creation zones |
+| **E2E MCP Panel** | ~14 tests | MCP panel rendering, connect, toggle, events |
+| **E2E Accessibility** | ~19 tests | Keyboard nav, ARIA, focus, shortcuts |
+| **E2E Visual Regression** | ~17 tests | Component rendering, workspace states, error-free |
+| **E2E Gradient Editor** | ~10 tests | Add gradient, type toggle, stops, events |
+| **E2E Shadow Editor** | ~11 tests | Add shadow, type toggle, properties, delete, error |
+| **E2E Library Drag-Drop** | ~16 tests | Component/color/typo drag, drop handlers, error |
+| **E2E Drawing Cycle** | ~17 tests | Draw shapes, undo/redo, properties, selection |
+| **E2E File Persistence** | ~16 tests | Save, undo, redo, file name, keyboard shortcuts |
+| **E2E Page Management** | ~5 tests | Add/rename/delete/duplicate pages |
+| **E2E Settings** | ~8 tests | Profile/password/feedback/settings pages |
+| **E2E WebSocket Reconnect** | ~12 tests | Connection status, reconnection, error handling |
+| **E2E SVG Filter Editing** | ~15 tests | Add/remove filters, type change, properties |
 
 ---
 
@@ -1035,10 +1080,49 @@ The following areas need additional E2E test coverage:
 | **Gradient editor** | Covered | P3 | `gradient-editor.spec.js` (10 tests) — add gradient, type toggle, stops, events |
 | **Shadow editor** | Covered | P3 | `shadow-editor.spec.js` (11 tests) — add shadow, type toggle, properties, delete, error |
 | **Library drag-drop** | Covered | P3 | `library-drag-drop.spec.js` (16 tests) — component/color/typo drag, drop handlers, error |
+| **Token event wiring** | ✅ **Complete** | All 7 token panel events (`penpot-token-set-activate`, `penpot-token-theme-change`, `penpot-token-set-delete`, `penpot-apply-color-token`, `penpot-apply-typo-token`, `penpot-token-add`, `penpot-token-delete`, `penpot-token-update`) are wired in workspace; changes persist via `enqueueChange` |
+| **Plugin lifecycle event wiring** | ✅ **Complete** | All 3 plugin events (`penpot-plugin-install`, `penpot-plugin-open`, `penpot-plugin-remove`) wired in workspace. Install loads manifest via `PluginManager`, open creates iframe, remove unloads plugin. Plugin panel overlay with toolbar button added. |
+| **OAuth login buttons** | **P0 — BLOCKED** | Feature flags `login_with_oidc`, `login_with_google`, `login_with_github`, `login_with_gitlab` are enabled but **no UI** renders in `penpot-auth-screen.js`. Tests should verify: (1) OAuth buttons appear when flags are enabled, (2) clicking redirects to provider, (3) callback handles token. **Requires WU-Q3 first.** |
+| **Plugin API real operations** | **P1** | `deleteShape` was a no-op (now fixed — dispatches event + workspace handler); `createShape`/`updateShape` dispatch events but need verification that shapes actually persist to server via `update-file` RPC |
+| **Error notification visibility** | **P1** | User-facing error notifications now appear when RPC calls fail (share permissions, library loading, templates) after replacing 33 silent `catch {}` blocks. Tests should verify: (1) `penpot-notification` danger toast appears on RPC failure, (2) warning toast for non-critical errors |
+| **Templates tab empty state** | **P2** | Templates tab now shows empty state with warning when `get-builtin-templates` fails instead of hardcoded mock data. Test should verify: (1) empty state renders, (2) warning notification appears |
 | **Mobile/responsive** | Missing | P4 | No viewport size variation tests |
 | **Performance** | Missing | P4 | No canvas rendering performance benchmarks |
 
-### 13.2 Server Test Gaps
+### 13.2 Server Test Gaps — RPC Handler Coverage
+
+> **Critical gap**: Approximately 70 RPC commands across 15 modules have **no handler-level test coverage** with real database operations. Existing tests for files, teams, projects, and media test at the raw pool level (using `pool.query()` directly) rather than through the actual RPC handler functions.
+
+| Priority | Test File | Commands to Cover | Approach |
+|----------|-----------|-------------------|----------|
+| **P0** | `test/auth-rpc.test.js` | `login-with-password`, `logout`, `recover-profile` | Real DB, verify session creation, token invalidation, password reset |
+| **P0** | `test/teams-rpc.test.js` | `create-team`, `update-team`, `leave-team`, `delete-team`, member management | Real DB, verify team CRUD, membership, role changes |
+| **P0** | `test/projects-rpc.test.js` | `create-project`, `rename-project`, `delete-project` | Real DB, verify project CRUD |
+| **P0** | `test/files-rpc-handler.test.js` | `set-file-shared`, `permanently-delete-team-files`, `restore-deleted-team-files`, `update-file-pin` | Real DB, verify file sharing, deletion, restoration, pinning |
+| **P0** | `test/files-update-handler.test.js` | `update-file` (collaborative editing) | Real DB, verify file_change INSERT, file_data UPDATE, revn conflict resolution |
+| **P1** | `test/management-rpc.test.js` | `duplicate-file`, `clone-template` | Real DB, verify file/project duplication |
+| **P1** | `test/files-snapshots-rpc.test.js` | `create-snapshot`, `restore-snapshot`, `delete-snapshot` | Real DB, verify snapshot CRUD |
+| **P1** | `test/comments-rpc-full.test.js` | `delete-comment`, `update-comment`, `mark-all-threads-as-read` | Real DB, verify comment mutations |
+
+### 13.5 Client Functional Correctness Test Gaps
+
+> These tests verify that UI buttons and interactions actually work end-to-end, not just that components render.
+
+| Priority | New Spec File | Focus | Blocked By |
+|----------|--------------|-------|------------|
+| **P0** | `token-wiring.spec.js` | Token set activate, theme change, apply color/typography token events reach workspace and persist shapes | WU-Q1 (workspace event handlers) |
+| **P0** | `plugin-lifecycle.spec.js` | Plugin install, open, remove events reach workspace and modify store | WU-Q2 (workspace event handlers) |
+| **P0** | `oauth-login.spec.js` | OIDC/Google/GitHub/GitLab buttons appear when flags enabled, redirect to provider | WU-Q3 (auth screen buttons) |
+| **P1** | `error-notifications.spec.js` | Verify danger/warning notifications appear on RPC failures (share permissions, library loading, templates, collaboration lag) | Fix already applied — just needs tests |
+| **P1** | `plugin-api-operations.spec.js` | Verify `deleteShape` removes shape, `createShape` persists shape, `updateShape` modifies shape properties | Fix already applied — just needs tests |
+| **P2** | `templates-empty-state.spec.js` | Verify templates tab shows empty state when RPC fails, warning notification appears | Fix already applied — just needs tests |
+| **P1** | `test/profile-rpc.test.js` (extend) | `update-profile-photo`, `delete-profile`, `request-email-change` | Real DB, verify profile mutations |
+| **P2** | `test/nitrate-rpc.test.js` | All 5 commands (enterprise stubs) | Verify stub behavior and error responses |
+| **P2** | `test/demo-rpc.test.js` | `create-demo-profile` | Real DB, verify demo user creation |
+| **P2** | `test/oidc-rpc.test.js` | `get-oidc-provider`, `oidc-callback` | Mock OIDC provider, verify profile/session creation |
+| **P2** | `test/verify-token-rpc.test.js` | `verify-token` | Verify token type dispatch (email-change, verify-email, auth, team-invitation) |
+
+Additionally, the following areas have **no test coverage at all**:
 
 | Area | Current Status | Priority | Notes |
 |------|---------------|----------|-------|

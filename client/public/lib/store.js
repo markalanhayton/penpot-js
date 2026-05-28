@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module store
  * @description Potok-like state store with event dispatch, selectors, and effects.

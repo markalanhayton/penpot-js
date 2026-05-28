@@ -1,3 +1,4 @@
+'use strict';
 let container = null;
 let notificationId = 0;
 

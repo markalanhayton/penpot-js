@@ -1,0 +1,107 @@
+[
+  {
+    "id": "tokens-starter-kit",
+    "name": "Design tokens starter kit",
+    "file-uri": "https://github.com/penpot/penpot-files/raw/refs/heads/main/Tokens%20starter%20kit.penpot",
+    "icon": "🎨",
+    "color": "#6C5CE7"
+  },
+  {
+    "id": "penpot-design-system",
+    "name": "Penpot Design System | Pencil",
+    "file-uri": "https://github.com/penpot/penpot-files/raw/refs/heads/main/Pencil-Penpot-Design-System.penpot",
+    "icon": "✏️",
+    "color": "#00B894"
+  },
+  {
+    "id": "wireframing-kit",
+    "name": "Wireframe library",
+    "file-uri": "https://github.com/penpot/penpot-files/raw/refs/heads/main/Wireframing%20kit%20v1.1.penpot",
+    "icon": "📐",
+    "color": "#0984E3"
+  },
+  {
+    "id": "prototype-examples",
+    "name": "Prototype template",
+    "file-uri": "https://github.com/penpot/penpot-files/raw/refs/heads/main/Prototype%20examples%20v1.1.penpot",
+    "icon": "🔗",
+    "color": "#E17055"
+  },
+  {
+    "id": "plants-app",
+    "name": "UI mockup example",
+    "file-uri": "https://github.com/penpot/penpot-files/raw/main/Plants-app.penpot",
+    "icon": "🌱",
+    "color": "#00CEC9"
+  },
+  {
+    "id": "tutorial-for-beginners",
+    "name": "Tutorial for beginners",
+    "file-uri": "https://github.com/penpot/penpot-files/raw/main/tutorial-for-beginners.penpot",
+    "icon": "📖",
+    "color": "#FDCB6E"
+  },
+  {
+    "id": "lucide-icons",
+    "name": "Lucide Icons",
+    "file-uri": "https://github.com/penpot/penpot-files/raw/main/Lucide-icons.penpot",
+    "icon": "⚡",
+    "color": "#A29BFE"
+  },
+  {
+    "id": "font-awesome",
+    "name": "Font Awesome",
+    "file-uri": "https://github.com/penpot/penpot-files/raw/main/FontAwesome.penpot",
+    "icon": "🔤",
+    "color": "#55A6F8"
+  },
+  {
+    "id": "black-white-mobile-templates",
+    "name": "Black & White Mobile Templates",
+    "file-uri": "https://github.com/penpot/penpot-files/raw/main/Black-&-White-Mobile-Templates.penpot",
+    "icon": "📱",
+    "color": "#636E72"
+  },
+  {
+    "id": "avataaars",
+    "name": "Avataaars",
+    "file-uri": "https://github.com/penpot/penpot-files/raw/main/Avataaars-by-Pablo-Stanley.penpot",
+    "icon": "😊",
+    "color": "#FAB1A0"
+  },
+  {
+    "id": "ux-notes",
+    "name": "UX Notes",
+    "file-uri": "https://github.com/penpot/penpot-files/raw/main/UX-Notes.penpot",
+    "icon": "📝",
+    "color": "#81ECEC"
+  },
+  {
+    "id": "whiteboarding-kit",
+    "name": "Whiteboarding Kit",
+    "file-uri": "https://github.com/penpot/penpot-files/raw/main/Whiteboarding-mapping-kit.penpot",
+    "icon": "📊",
+    "color": "#74B9FF"
+  },
+  {
+    "id": "open-color-scheme",
+    "name": "Open Color Scheme",
+    "file-uri": "https://github.com/penpot/penpot-files/raw/main/Open%20Color%20Scheme%20(v1.9.1).penpot",
+    "icon": "🌈",
+    "color": "#FD79A8"
+  },
+  {
+    "id": "flex-layout-playground",
+    "name": "Flex Layout Playground",
+    "file-uri": "https://github.com/penpot/penpot-files/raw/refs/heads/main/Flex%20Layout%20Playground%20v2.0.penpot",
+    "icon": "🧩",
+    "color": "#A3CB38"
+  },
+  {
+    "id": "welcome",
+    "name": "Welcome",
+    "file-uri": "https://github.com/penpot/penpot-files/raw/main/welcome.penpot",
+    "icon": "👋",
+    "color": "#FFEAA7"
+  }
+]

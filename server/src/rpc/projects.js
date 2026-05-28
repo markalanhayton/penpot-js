@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc/projects
  * @description Project management RPC commands — mirrors `app.rpc.commands.projects`

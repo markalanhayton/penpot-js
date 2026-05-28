@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module auth/tokens
  * @description JWE token creation and verification — mirrors `app.tokens`

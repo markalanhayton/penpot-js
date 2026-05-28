@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module auth/password
  * @description Password hashing and verification — mirrors `app.auth.password`

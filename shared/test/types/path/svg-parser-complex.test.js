@@ -23,7 +23,14 @@ describe('types/path/svg-parser — complex paths', () => {
       const result = svgParser.parseSvgPath('M 0 0 Q 25 0 50 50');
       assert.equal(result.length, 2);
       assert.equal(result[1].command, 'curve-to');
-      expectCubicApprox(result[1], 0, 0, 25, 0, 50, 50);
+      const seg = result[1].params;
+      const eps = 0.01;
+      assert.ok(Math.abs(seg.x - 50) < eps, `endpoint x: expected 50, got ${seg.x}`);
+      assert.ok(Math.abs(seg.y - 50) < eps, `endpoint y: expected 50, got ${seg.y}`);
+      assert.ok(Math.abs(seg.c1x - (0 + 2 * (25 - 0) / 3)) < eps, `c1x: expected ~16.67, got ${seg.c1x}`);
+      assert.ok(Math.abs(seg.c1y - 0) < eps, `c1y: expected 0, got ${seg.c1y}`);
+      assert.ok(Math.abs(seg.c2x - (50 + 2 * (25 - 50) / 3)) < eps, `c2x: expected ~33.33, got ${seg.c2x}`);
+      assert.ok(Math.abs(seg.c2y - (50 + 2 * (0 - 50) / 3)) < eps, `c2y: expected ~16.67, got ${seg.c2y}`);
     });
   });
 
@@ -121,6 +128,7 @@ describe('types/path/svg-parser — complex paths', () => {
     it('parses malformed path gracefully', () => {
       const result = svgParser.parseSvgPath('M 0 0 XYZ 10 10');
       assert.ok(result.length >= 1);
+      assert.equal(result[0].command, 'move-to');
     });
 
     it('parses path with extra spaces', () => {
@@ -197,9 +205,3 @@ describe('types/path/svg-parser — complex paths', () => {
     });
   });
 });
-
-function expectCubicApprox(cmd, x, y, c1x, c1y, c2x, c2y, ex, ey) {
-  const eps = 0.01;
-  assert.ok(Math.abs(cmd.params.x - ex) < eps, `x: expected ${ex}, got ${cmd.params.x}`);
-  assert.ok(Math.abs(cmd.params.y - ey) < eps, `y: expected ${ey}, got ${cmd.params.y}`);
-}

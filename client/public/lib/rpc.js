@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc
  * @description RPC client for Penpot backend. Handles Transit+JSON encoding,
@@ -129,7 +130,7 @@ export function cmdStream(command, params) {
             const data = line.slice(5).trim();
             if (data) {
               try { controller.enqueue(transitDecode(data)); }
-              catch { controller.enqueue(data); }
+              catch { /* fallback: enqueue raw data if transit decode fails */ controller.enqueue(data); }
             }
           }
         }
@@ -170,7 +171,7 @@ async function handleResponse(response) {
   if (!text) return undefined;
   if (isTransit) return transitDecode(text);
   try { return JSON.parse(text); }
-  catch { return text; }
+  catch { /* not JSON, return raw text */ return text; }
 }
 
 async function parseRpcError(response, contentType, isTransit) {
@@ -183,7 +184,7 @@ async function parseRpcError(response, contentType, isTransit) {
       const code = decoded.code || decoded['~:code'] || `http-${response.status}`;
       const hint = decoded.hint || decoded['~:hint'] || decoded.message || text;
       return new RpcError(type, code, hint, response.status);
-    } catch {}
+    } catch { /* transit decode failed, try JSON next */ }
   }
 
   if (text) {
@@ -195,7 +196,7 @@ async function parseRpcError(response, contentType, isTransit) {
         json.hint || json.message || text,
         response.status
       );
-    } catch {}
+    } catch { /* JSON parse also failed, return raw text error below */ }
   }
 
   return new RpcError('unknown', `http-${response.status}`, text || response.statusText, response.status);

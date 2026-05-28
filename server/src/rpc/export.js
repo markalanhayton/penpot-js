@@ -1,3 +1,4 @@
+'use strict';
 import { RpcError } from './dispatcher.js';
 import { config } from '../config/index.js';
 

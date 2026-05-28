@@ -1,8 +1,9 @@
-import { cmd } from '../lib/rpc.js';
+'use strict';
+import { cmd, cmdUpload } from '../lib/rpc.js';
 import { appStore } from '../lib/store.js';
 import { ToolManager } from '../lib/tool-manager.js';
 import { connectWS, disconnectWS, subscribeFile, unsubscribeFile, onWSMessage, sendPointerUpdate, sendSelectionUpdate, getCursorPositions } from '../lib/ws.js';
-import { initPersistence, enqueueChange, makeCreateChange, makeModifyChange, makeDeleteChange, makeMoveChange, makeAddPageChange, makeModPageChange, makeDeletePageChange, destroyPersistence, flushSave } from '../lib/persistence.js';
+import { initPersistence, enqueueChange, enqueueChanges, makeCreateChange, makeModifyChange, makeDeleteChange, makeMoveChange, makeAddPageChange, makeModPageChange, makeDeletePageChange, makeAddMediaChange, destroyPersistence, flushSave } from '../lib/persistence.js';
 import { wireShortcuts, destroyShortcuts } from '../lib/shortcuts.js';
 import { parseSVG } from '../lib/svg-import.js';
 import { createShape } from '../lib/types.js';
@@ -12,9 +13,17 @@ import { PenpotContextMenu } from './penpot-context-menu.js';
 import { initCollaboration, resolveConflict, handleRemoteFileChange, broadcastChange, getPendingChanges, destroyCollaboration } from '../lib/collaboration.js';
 import { importFileToProject } from '../lib/file-import.js';
 import { createRichTextEditor, destroyActiveEditor, createFloatingToolbar } from '../lib/rich-text.js';
+import { contentTreeToHTML, htmlToContentTree } from '../lib/content-tree.js';
+import * as textTypes from '@penpot/shared/types/text.js';
 import { initWasmRenderer, destroyWasmRenderer, isWasmAvailable, getRenderMode, requestRender } from '../lib/wasm-bridge.js';
 import { loadTeamFontsIntoDocument, uploadFontVariant, groupFontsByFamily, deleteFontVariant, fetchTeamFonts } from '../lib/fonts.js';
+import { fixDeletedFontsForPage, fixDeletedFontsForLibrary, findMissingFonts, buildFontRegistry } from '../lib/fix-deleted-fonts.js';
 import { generateAndUploadThumbnail } from '../lib/thumbnail.js';
+import { propagateFrameResize } from '../lib/constraint-propagation.js';
+import { reflowLayout, reflowLayoutWithResize } from '../lib/layout-reflow.js';
+import { PluginManager } from '../lib/plugin-api.js';
+import { PathEditor } from '../lib/path-editor.js';
+import { convertToPath } from '../../shared/src/types/path.js';
 import './penpot-cursor-overlay.js';
 import './penpot-presence-bar.js';
 import './penpot-export-dialog.js';
@@ -26,6 +35,8 @@ import './penpot-import-dialog.js';
 import './penpot-version-panel.js';
 import './penpot-shortcuts-reference.js';
 import './penpot-mcp-panel.js';
+import './penpot-plugin-manager.js';
+import './penpot-path-toolbar.js';
 
 function imageToDataURL(img, width, height) {
   const canvas = document.createElement('canvas');
@@ -48,6 +59,10 @@ template.innerHTML = `
     .penpot-app__mcp-overlay.penpot-app__open { display:flex; }
     .penpot-app__mcp-backdrop { position:absolute; inset:0; background:rgba(0,0,0,0.4); }
     .penpot-app__mcp-panel-container { position:absolute; right:270px; top:0; bottom:0; width:340px; z-index:1; }
+    .penpot-app__plugin-overlay { position:fixed; inset:0; z-index:300; display:none; }
+    .penpot-app__plugin-overlay.penpot-app__open { display:flex; }
+    .penpot-app__plugin-backdrop { position:absolute; inset:0; background:rgba(0,0,0,0.4); }
+    .penpot-app__plugin-panel-container { position:absolute; right:270px; top:0; bottom:0; width:340px; z-index:1; background:var(--penpot-surface,#2a2a2a); display:flex; flex-direction:column; }
     penpot-workspace.penpot-workspace__drag-over .penpot-app__canvas-area { outline:2px solid var(--penpot-primary,#31efb8); outline-offset:-2px; }
     penpot-workspace.penpot-workspace__drag-over .penpot-app__canvas-area penpot-canvas { opacity:0.85; }
   </style>
@@ -80,6 +95,13 @@ template.innerHTML = `
       <penpot-mcp-panel id="mcp-panel"></penpot-mcp-panel>
     </div>
   </div>
+  <div class="penpot-app__plugin-overlay" id="plugin-overlay">
+    <div class="penpot-app__plugin-backdrop" id="plugin-backdrop"></div>
+    <div class="penpot-app__plugin-panel-container">
+      <penpot-plugin-manager id="plugin-manager-ui"></penpot-plugin-manager>
+    </div>
+  </div>
+  <div id="plugin-container" style="display:none;"></div>
 `;
 
 export class PenpotWorkspace extends PenpotElement {
@@ -98,6 +120,10 @@ export class PenpotWorkspace extends PenpotElement {
   #boundPointerMove = null;
   #commentPanelOpen = false;
   #recentColors = [];
+  #pluginManager = null;
+  #activePluginId = null;
+  #pathEditor = null;
+  #pathToolbarEl = null;
 
   constructor() {
     super();
@@ -149,11 +175,28 @@ export class PenpotWorkspace extends PenpotElement {
     this.querySelector('#mcp-panel').addEventListener('penpot-mcp-error', (e) => {
       this.emit('penpot-notification', { type: 'warning', message: `MCP: ${e.detail.error}` });
     });
+
+    this.#pluginManager = new PluginManager(this.querySelector('#plugin-container'));
+
+    this.querySelector('#plugin-backdrop').addEventListener('click', () => this.#togglePluginPanel(false));
+    this.querySelector('#plugin-manager-ui').addEventListener('penpot-plugin-install', (e) => {
+      this.#handlePluginInstall(e.detail);
+    });
+    this.querySelector('#plugin-manager-ui').addEventListener('penpot-plugin-open', (e) => {
+      this.#handlePluginOpen(e.detail);
+    });
+    this.querySelector('#plugin-manager-ui').addEventListener('penpot-plugin-remove', (e) => {
+      this.#handlePluginRemove(e.detail);
+    });
+
     this.querySelector('#toolbar').addEventListener('penpot-comment-toggle', () => {
       this.#toggleCommentPanel();
     });
     this.querySelector('#toolbar').addEventListener('penpot-mcp-toggle', () => {
       this.#toggleMcpPanel();
+    });
+    this.querySelector('#toolbar').addEventListener('penpot-plugin-toggle', () => {
+      this.#togglePluginPanel();
     });
     this.querySelector('#toolbar').addEventListener('penpot-undo', () => {
       if (this.#toolManager) this.#toolManager.undo();
@@ -182,12 +225,43 @@ export class PenpotWorkspace extends PenpotElement {
       if (!canvas) return;
       if (e.detail.action === 'in') canvas.zoom = canvas.zoom * 1.25;
       else if (e.detail.action === 'out') canvas.zoom = canvas.zoom / 1.25;
-      else if (e.detail.action === 'fit') canvas.zoom = 1;
+      else if (e.detail.action === 'fit') {
+        const page = this.#pages[this.#currentPageIndex];
+        if (page) {
+          const objects = page.objects || page.children || {};
+          const shapes = Array.isArray(objects) ? objects : Object.values(objects);
+          canvas.fitToContent(shapes);
+        } else {
+          canvas.zoom = 1;
+        }
+      }
+      else if (e.detail.action === 'selection') {
+        if (this.#toolManager) {
+          const selectedIds = this.#toolManager.getSelectedIds();
+          const page = this.#pages[this.#currentPageIndex];
+          if (selectedIds.length > 0 && page) {
+            const objects = page.objects || page.children || {};
+            const allShapes = Array.isArray(objects) ? objects : Object.values(objects);
+            const selected = allShapes.filter(s => selectedIds.includes(s.id));
+            canvas.zoomToSelection(selected);
+          }
+        }
+      }
       this.querySelector('#tools').zoom = canvas.zoom;
     });
 
     this.querySelector('#canvas').addEventListener('penpot-zoom-change', (e) => {
       this.querySelector('#tools').zoom = e.detail.zoom;
+      this.#updateScrollbars();
+    });
+
+    this.querySelector('#scrollbars').addEventListener('penpot-scrollbar-pan', (e) => {
+      const canvas = this.querySelector('#canvas');
+      if (canvas) {
+        canvas.panX = e.detail.panX;
+        canvas.panY = e.detail.panY;
+        this.#updateScrollbars();
+      }
     });
 
     this.querySelector('#canvas').addEventListener('penpot-canvas-click', (e) => {
@@ -238,6 +312,18 @@ export class PenpotWorkspace extends PenpotElement {
       const { type, id } = e.detail || {};
       if (type === 'component' && id) {
         this.placeComponentInstance(id);
+      } else if (type === 'media' && id) {
+        const media = this.#fileData?.data?.media?.[id];
+        if (media) {
+          const shape = createShape('image', {
+            x: 100,
+            y: 100,
+            width: media.width || 100,
+            height: media.height || 100,
+            href: id,
+          });
+          this.#handleShapeCreate(shape);
+        }
       } else if (type === 'font' && id) {
         const fonts = appStore.get('currentFileFonts') || [];
         const font = fonts.find(f => f.id === id);
@@ -285,6 +371,56 @@ export class PenpotWorkspace extends PenpotElement {
         if (textToolbar) textToolbar.teamFonts = families;
       } catch (err) {
         console.error('[workspace] font remove error:', err);
+      }
+    });
+    this.querySelector('#left-sidebar').addEventListener('penpot-media-upload', async (e) => {
+      const { file } = e.detail || {};
+      if (!file || !this.#fileData?.id) return;
+      try {
+        const result = await cmdUpload('upload-file-media-object', file, {
+          fileId: this.#fileData.id,
+          name: file.name || 'image',
+          isLocal: 'true',
+        });
+        if (result) {
+          const mediaEntry = {
+            id: result.id,
+            name: result.name || file.name || 'image',
+            mtype: result.mtype || file.type,
+            width: result.width || 0,
+            height: result.height || 0,
+            mediaId: result.mediaId,
+            thumbnailId: result.thumbnailId || null,
+          };
+          if (!this.#fileData.data) this.#fileData.data = {};
+          if (!this.#fileData.data.media) this.#fileData.data.media = {};
+          this.#fileData.data.media[mediaEntry.id] = mediaEntry;
+          enqueueChange(makeAddMediaChange(mediaEntry));
+          const assetPanel = this.querySelector('#asset-panel');
+          if (assetPanel) {
+            assetPanel.media = Object.values(this.#fileData.data.media);
+          }
+          const canvas = this.querySelector('#canvas');
+          if (canvas) {
+            const canvasRect = canvas.getBoundingClientRect();
+            const zoom = canvas.zoom || 1;
+            const panX = canvas.panX || 0;
+            const panY = canvas.panY || 0;
+            const x = (canvasRect.width / 2 - panX * zoom) / zoom;
+            const y = (canvasRect.height / 2 - panY * zoom) / zoom;
+            const shape = createShape('image', {
+              x: Math.round(x - (result.width || 100) / 2),
+              y: Math.round(y - (result.height || 100) / 2),
+              width: result.width || 100,
+              height: result.height || 100,
+              href: mediaEntry.id,
+            });
+            this.#handleShapeCreate(shape);
+          }
+        }
+      } catch (err) {
+        console.error('[workspace] media upload error:', err);
+        alert('Image upload failed: ' + (err.hint || err.message || err));
       }
     });
     this.querySelector('#left-sidebar').addEventListener('penpot-color-add', (e) => {
@@ -479,11 +615,38 @@ export class PenpotWorkspace extends PenpotElement {
     this.addEventListener('penpot-shape-create', (e) => {
       this.#handleShapeCreate(e.detail.shape);
     });
+    this.addEventListener('penpot-shape-delete', (e) => {
+      this.#handleShapeDelete(e.detail.shapeId);
+    });
+    this.addEventListener('penpot-shape-update', (e) => {
+      this.#handleShapeUpdate(e.detail);
+    });
     this.addEventListener('penpot-shape-select', (e) => {
       this.#updateSelectionFromTool(e.detail.shapeId);
     });
     this.addEventListener('penpot-shape-move', (e) => {
       this.#handleShapeMove(e.detail);
+    });
+    this.addEventListener('penpot-edit-path', (e) => {
+      this.#startPathEdit(e.detail.shapeId, e.detail.shape);
+    });
+    this.addEventListener('penpot-path-edit-start', (e) => {
+      this.#onPathEditStart(e.detail);
+    });
+    this.addEventListener('penpot-path-edit-stop', (e) => {
+      this.#onPathEditStop(e.detail);
+    });
+    this.addEventListener('penpot-path-edit-mode', (e) => {
+      this.#onPathEditMode(e.detail);
+    });
+    this.addEventListener('penpot-path-content-change', (e) => {
+      this.#handlePathContentChange(e.detail);
+    });
+    this.addEventListener('penpot-path-preview', (e) => {
+      this.#handlePathPreview(e.detail);
+    });
+    this.addEventListener('penpot-path-action', (e) => {
+      this.#handlePathAction(e.detail.action);
     });
     this.addEventListener('penpot-page-change', () => {
       this.renderCurrentPage();
@@ -493,6 +656,9 @@ export class PenpotWorkspace extends PenpotElement {
     });
     this.querySelector('#toolbar').addEventListener('penpot-create-component', () => {
       this.createComponentFromSelection();
+    });
+    this.querySelector('#main-menu').addEventListener('penpot-menu-action', (e) => {
+      this.#handleMenuAction(e.detail);
     });
 
     this.querySelector('#right-sidebar').addEventListener('penpot-align', (e) => {
@@ -569,6 +735,15 @@ export class PenpotWorkspace extends PenpotElement {
     });
     this.addEventListener('penpot-token-update', (e) => {
       this.#handleTokenUpdate(e.detail);
+    });
+    this.addEventListener('penpot-token-set-activate', (e) => {
+      this.#handleTokenSetActivate(e.detail);
+    });
+    this.addEventListener('penpot-token-set-delete', (e) => {
+      this.#handleTokenSetDelete(e.detail);
+    });
+    this.addEventListener('penpot-token-theme-change', (e) => {
+      this.#handleTokenThemeChange(e.detail);
     });
     this.addEventListener('penpot-shape-resize', (e) => {
       this.#handleShapeResize(e.detail);
@@ -663,6 +838,12 @@ export class PenpotWorkspace extends PenpotElement {
         if ((singleShape.type === 'path') && singleShape.strokes && singleShape.strokes.length > 0) {
           items.push({ label: 'Flatten Stroke to Fill', icon: '⬜', action: () => { this.#toolManager.flattenPath(singleShape.id); this.renderCurrentPage(); const page = this.#pages[this.#currentPageIndex]; if (page) enqueueChange(makeModifyChange(page.id, singleShape.id, { fills: singleShape.fills, strokes: [] })); } });
         }
+        if (singleShape.type === 'path' && (singleShape.content || singleShape.d)) {
+          items.push({ label: 'Edit Path', icon: '✏', shortcut: 'Enter', action: () => { this.#startPathEdit(singleShape.id, singleShape); } });
+        }
+        if (singleShape.type !== 'path' && singleShape.type !== 'bool' && singleShape.type !== 'image' && singleShape.type !== 'text') {
+          items.push({ label: 'Convert to Path', icon: '⬜', action: () => { this.#convertToPath(singleShape.id); } });
+        }
         if (singleShape.type === 'path' && singleShape.d) {
           items.push({ label: 'Put Text on Path', icon: 'T⃣', action: () => {
             const shapes = Array.isArray(page.objects || page.children) ? (page.objects || page.children) : Object.values(page.objects || page.children || {});
@@ -733,6 +914,7 @@ export class PenpotWorkspace extends PenpotElement {
     });
 
     this.#setupDragDrop();
+    this.#setupClipboardEvents();
 
     this.loadFile();
   }
@@ -741,6 +923,9 @@ export class PenpotWorkspace extends PenpotElement {
     destroyPersistence();
     destroyShortcuts();
     destroyCollaboration();
+    document.removeEventListener('copy', this._onCopy);
+    document.removeEventListener('cut', this._onCut);
+    document.removeEventListener('paste', this._onPaste);
     if (this.#toolManager) {
       this.#toolManager.destroy();
       this.#toolManager = null;
@@ -771,6 +956,54 @@ export class PenpotWorkspace extends PenpotElement {
     wireShortcuts(this.#toolManager, this);
   }
 
+  #fixDeletedFonts(file, teamFonts) {
+    if (!file || !file.data) return;
+    const libChanges = fixDeletedFontsForLibrary(file.data, teamFonts);
+    if (libChanges.length > 0) {
+      enqueueChanges(libChanges);
+      for (const change of libChanges) {
+        if (change.type === 'mod-typography' && change.typography) {
+          const typo = change.typography;
+          const typoId = typo.id;
+          if (typoId && this.#fileData.data.typographies) {
+            const existing = this.#fileData.data.typographies[typoId] ||
+              this.#fileData.data.typographies.find(t => t.id === typoId);
+            if (existing && typeof existing === 'object') {
+              Object.assign(existing, typo);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  #fixDeletedFontsForPage(page, teamFonts) {
+    if (!page || !page.objects) return;
+    const { changes, missingFonts } = fixDeletedFontsForPage(this.#fileData, page, teamFonts);
+    if (changes.length > 0) {
+      enqueueChanges(changes);
+      for (const change of changes) {
+        if (change.type === 'mod-obj' && change.pageId === page.id && change.id) {
+          const shape = page.objects[change.id];
+          if (shape && change.operations) {
+            for (const op of change.operations) {
+              if (op.type === 'set' && op.attr === 'content') {
+                shape.content = op.val;
+              } else if (op.type === 'set' && op.attr === 'position-data') {
+                shape['position-data'] = op.val;
+              }
+            }
+          }
+        }
+      }
+      this.renderCurrentPage();
+    }
+    if (missingFonts.length > 0) {
+      const rightSidebar = this.querySelector('#right-sidebar');
+      if (rightSidebar) rightSidebar.missingFonts = missingFonts;
+    }
+  }
+
   #handleShapeCreate(shape) {
     const page = this.#pages[this.#currentPageIndex];
     if (!page) return;
@@ -780,6 +1013,132 @@ export class PenpotWorkspace extends PenpotElement {
     this.#toolManager.addShape(shape);
     this.#updateSelectionFromTool(shape.id);
     enqueueChange(makeCreateChange(page.id, shape, parentId));
+  }
+
+  #handleShapeDelete(shapeId) {
+    if (!shapeId) return;
+    const page = this.#pages[this.#currentPageIndex];
+    if (!page) return;
+    const shapes = this.#toolManager.getCurrentPageShapes();
+    const shape = shapes.find(s => s.id === shapeId);
+    if (!shape) return;
+    this.#toolManager.deleteSelected();
+    enqueueChange(makeDeleteChange(page.id, shapeId));
+  }
+
+  #handleShapeUpdate({ shapeId, updates }) {
+    if (!shapeId || !updates) return;
+    const page = this.#pages[this.#currentPageIndex];
+    if (!page) return;
+    const props = { ...updates };
+    delete props.id;
+    delete props.type;
+    for (const [key, val] of Object.entries(props)) {
+      this.#toolManager.updateShapeProp(shapeId, key, val);
+    }
+    enqueueChange(makeModifyChange(page.id, shapeId, props));
+    this.renderCurrentPage();
+    this.#pushSelectedShapeToRightSidebar();
+  }
+
+  #startPathEdit(shapeId, shape) {
+    const canvasEl = this.querySelector('#canvas');
+    if (!canvasEl) return;
+    const svgEl = canvasEl.querySelector('svg') || canvasEl.querySelector('#container svg');
+    if (!svgEl) return;
+    if (!this.#pathEditor) {
+      this.#pathEditor = new PathEditor(svgEl, this);
+      this.#pathEditor.setGetShapeFn((id) => this.#findShapeById(id));
+      if (this.#toolManager) this.#toolManager.pathEditor = this.#pathEditor;
+    }
+    this.#pathEditor.startEdit(shapeId, shape);
+  }
+
+  #onPathEditStart({ shapeId, editMode }) {
+    if (!this.#pathToolbarEl) {
+      this.#pathToolbarEl = document.createElement('penpot-path-toolbar');
+      const canvasArea = this.querySelector('.penpot-app__canvas-area');
+      if (canvasArea) canvasArea.appendChild(this.#pathToolbarEl);
+    }
+    this.#pathToolbarEl.state = { editMode, selectedCount: 0, snapToggled: false };
+    this.#pathToolbarEl.style.display = '';
+    this.#selectedIds.clear();
+    this.#selectedIds.add(shapeId);
+    this.#pushSelectedShapeToRightSidebar();
+  }
+
+  #onPathEditStop({ shapeId }) {
+    if (this.#pathToolbarEl) {
+      this.#pathToolbarEl.style.display = 'none';
+    }
+    if (this.#pathEditor) {
+      this.#pathEditor.stopEdit();
+    }
+    this.renderCurrentPage();
+  }
+
+  #onPathEditMode({ editMode }) {
+    if (this.#pathToolbarEl && this.#pathEditor) {
+      this.#pathToolbarEl.state = {
+        editMode,
+        selectedCount: this.#pathEditor.selectedPoints.size,
+        snapToggled: this.#pathEditor.snapToggled,
+      };
+    }
+  }
+
+  #handlePathContentChange({ shapeId, content, shape }) {
+    const page = this.#pages[this.#currentPageIndex];
+    if (!page) return;
+    const shapes = this.#toolManager.getCurrentPageShapes();
+    let target = shapes[shapeId] || shapes.find(s => s.id === shapeId);
+    if (!target) return;
+    const newShape = shape || { ...target, content };
+    this.#toolManager.updateShapeProp(shapeId, 'content', content);
+    if (newShape.x !== undefined) this.#toolManager.updateShapeProp(shapeId, 'x', newShape.x);
+    if (newShape.y !== undefined) this.#toolManager.updateShapeProp(shapeId, 'y', newShape.y);
+    if (newShape.width !== undefined) this.#toolManager.updateShapeProp(shapeId, 'width', newShape.width);
+    if (newShape.height !== undefined) this.#toolManager.updateShapeProp(shapeId, 'height', newShape.height);
+    enqueueChange(makeModifyChange(page.id, shapeId, {
+      content,
+      x: newShape.x,
+      y: newShape.y,
+      width: newShape.width,
+      height: newShape.height,
+    }));
+    this.renderCurrentPage();
+    if (this.#pathEditor) this.#pathEditor.render(newShape);
+  }
+
+  #handlePathPreview({ shapeId, shape }) {
+    const shapes = this.#toolManager.getCurrentPageShapes();
+    const target = shapes[shapeId] || shapes.find(s => s.id === shapeId);
+    if (!target) return;
+    Object.assign(target, shape);
+    this.renderCurrentPage();
+  }
+
+  #handlePathAction(action) {
+    if (!this.#pathEditor) return;
+    switch (action) {
+      case 'move': this.#pathEditor.setEditMode('move'); break;
+      case 'draw': this.#pathEditor.setEditMode('draw'); break;
+      case 'add-node': this.#pathEditor.addNode(); break;
+      case 'remove-node': this.#pathEditor.removeNodes(); break;
+      case 'make-corner': this.#pathEditor.makeCorner(); break;
+      case 'make-curve': this.#pathEditor.makeCurve(); break;
+      case 'merge-nodes': this.#pathEditor.mergeNodes(); break;
+      case 'join-nodes': this.#pathEditor.joinNodes(); break;
+      case 'separate-nodes': this.#pathEditor.separateNodes(); break;
+      case 'toggle-snap': this.#pathEditor.toggleSnap(); break;
+    }
+    if (this.#pathToolbarEl) {
+      this.#pathToolbarEl.state = {
+        editMode: this.#pathEditor.editMode,
+        selectedCount: this.#pathEditor.selectedPoints.size,
+        snapToggled: this.#pathEditor.snapToggled,
+      };
+    }
   }
 
   #findParentFrame(shape, objects) {
@@ -795,6 +1154,150 @@ export class PenpotWorkspace extends PenpotElement {
       }
     }
     return null;
+  }
+
+  #setupClipboardEvents() {
+    this._onCopy = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.contentEditable === 'true') return;
+      if (!this.#toolManager || this.#selectedIds.size === 0) return;
+      e.preventDefault();
+      this.#toolManager.copySelected();
+    };
+    this._onCut = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.contentEditable === 'true') return;
+      if (!this.#toolManager || this.#selectedIds.size === 0) return;
+      e.preventDefault();
+      this.#toolManager.cutSelected();
+      this.renderCurrentPage();
+    };
+    this._onPaste = async (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.contentEditable === 'true') return;
+      e.preventDefault();
+      const clipboardData = e.clipboardData || window.clipboardData;
+      if (!clipboardData) return;
+
+      const hasPenpotData = Array.from(clipboardData.types).some(t => t === 'application/json+penpot' || (t === 'text/plain' && clipboardData.getData('text/plain')?.startsWith('{"type":"penpot-shapes"')));
+      const hasImage = Array.from(clipboardData.types).some(t => t.startsWith('image/'));
+      const hasSVG = clipboardData.getData('text/plain')?.trim().startsWith('<svg') || clipboardData.getData('text/html')?.trim().startsWith('<svg');
+
+      if (hasPenpotData) {
+        const text = clipboardData.getData('text/plain');
+        try {
+          const parsed = JSON.parse(text);
+          if (parsed.type === 'penpot-shapes' && Array.isArray(parsed.shapes)) {
+            const { assignNewIds } = await import('../lib/clipboard.js');
+            const shapes = assignNewIds(parsed.shapes);
+            const canvas = this.querySelector('#canvas');
+            const offset = 20;
+            const newIds = [];
+            for (const shape of shapes) {
+              const newShape = { ...shape, x: (shape.x || 0) + offset, y: (shape.y || 0) + offset };
+              this.#handleShapeCreate(newShape);
+              newIds.push(newShape.id);
+            }
+            if (this.#toolManager) {
+              this.#toolManager.clearSelection();
+              for (const id of newIds) this.#toolManager.selectShape(id);
+            }
+            this.renderCurrentPage();
+            return;
+          }
+        } catch {}
+      }
+
+      if (hasSVG) {
+        const svgText = clipboardData.getData('text/plain') || clipboardData.getData('text/html');
+        if (svgText && svgText.trim().startsWith('<svg')) {
+          try {
+            const { parseSVG } = await import('../lib/svg-import.js');
+            const svgShapes = parseSVG(svgText);
+            const offset = 50;
+            for (const rawShape of svgShapes) {
+              const shape = createShape(rawShape.type, {
+                ...rawShape,
+                x: Math.round(rawShape.x) + offset,
+                y: Math.round(rawShape.y) + offset,
+              });
+              if (shape.width > 0 && shape.height > 0) {
+                this.#handleShapeCreate(shape);
+              }
+            }
+            this.renderCurrentPage();
+            return;
+          } catch (err) {
+            console.warn('[workspace] SVG paste error:', err);
+          }
+        }
+      }
+
+      if (hasImage) {
+        const imageFile = Array.from(clipboardData.files).find(f => f.type.startsWith('image/'));
+        if (imageFile && this.#fileData?.id) {
+          try {
+            const { cmdUpload } = await import('../lib/rpc.js');
+            const result = await cmdUpload('upload-file-media-object', imageFile, {
+              fileId: this.#fileData.id,
+              name: imageFile.name || 'pasted-image',
+              isLocal: 'true',
+            });
+            if (result) {
+              const { makeAddMediaChange } = await import('../lib/persistence.js');
+              const mediaEntry = {
+                id: result.id,
+                name: result.name || imageFile.name || 'pasted-image',
+                mtype: result.mtype || imageFile.type,
+                width: result.width || 100,
+                height: result.height || 100,
+                mediaId: result.mediaId,
+                thumbnailId: result.thumbnailId || null,
+              };
+              if (!this.#fileData.data) this.#fileData.data = {};
+              if (!this.#fileData.data.media) this.#fileData.data.media = {};
+              this.#fileData.data.media[mediaEntry.id] = mediaEntry;
+              enqueueChange(makeAddMediaChange(mediaEntry));
+              const shape = createShape('image', {
+                x: 100,
+                y: 100,
+                width: result.width || 100,
+                height: result.height || 100,
+                href: mediaEntry.id,
+              });
+              this.#handleShapeCreate(shape);
+            }
+          } catch (err) {
+            console.warn('[workspace] Image paste error:', err);
+          }
+          return;
+        }
+      }
+
+      const textData = clipboardData.getData('text/plain');
+      if (textData && textData.trim() && !textData.startsWith('{')) {
+        const canvas = this.querySelector('#canvas');
+        if (canvas && this.#toolManager) {
+          const zoom = canvas.zoom || 1;
+          const panX = canvas.panX || 0;
+          const panY = canvas.panY || 0;
+          const rect = canvas.getBoundingClientRect();
+          const cx = (rect.width / 2 - panX * zoom) / zoom;
+          const cy = (rect.height / 2 - panY * zoom) / zoom;
+          const shape = createShape('text', {
+            x: cx - 50,
+            y: cy - 10,
+            width: 200,
+            height: 30,
+            content: textData.trim(),
+            flexGrow: 0,
+          });
+          this.#handleShapeCreate(shape);
+          return;
+        }
+      }
+    };
+
+    document.addEventListener('copy', this._onCopy);
+    document.addEventListener('cut', this._onCut);
+    document.addEventListener('paste', this._onPaste);
   }
 
   #setupDragDrop() {
@@ -887,6 +1390,46 @@ export class PenpotWorkspace extends PenpotElement {
         }
 
         if (file.type.startsWith('image/')) {
+          const fileId = this.#fileData?.id;
+          if (fileId) {
+            try {
+              const result = await cmdUpload('upload-file-media-object', file, {
+                fileId,
+                name: file.name || 'image',
+                isLocal: 'true',
+              });
+              if (result) {
+                const mediaEntry = {
+                  id: result.id,
+                  name: result.name || file.name || 'image',
+                  mtype: result.mtype || file.type,
+                  width: result.width || 100,
+                  height: result.height || 100,
+                  mediaId: result.mediaId,
+                  thumbnailId: result.thumbnailId || null,
+                };
+                if (!this.#fileData.data) this.#fileData.data = {};
+                if (!this.#fileData.data.media) this.#fileData.data.media = {};
+                this.#fileData.data.media[mediaEntry.id] = mediaEntry;
+                enqueueChange(makeAddMediaChange(mediaEntry));
+                const assetPanel = this.querySelector('#asset-panel');
+                if (assetPanel) {
+                  assetPanel.media = Object.values(this.#fileData.data.media);
+                }
+                const shape = createShape('image', {
+                  x: Math.round(canvasX - (result.width || 100) / 2),
+                  y: Math.round(canvasY - (result.height || 100) / 2),
+                  width: result.width || 100,
+                  height: result.height || 100,
+                  href: mediaEntry.id,
+                });
+                this.#handleShapeCreate(shape);
+                return;
+              }
+            } catch (err) {
+              console.error('[workspace] image upload error, falling back to data URL:', err);
+            }
+          }
           const url = URL.createObjectURL(file);
           const img = new Image();
           img.onload = () => {
@@ -989,6 +1532,46 @@ export class PenpotWorkspace extends PenpotElement {
       }
       return;
     }
+
+    const textContentProps = new Set([
+      'fontFamily', 'fontSize', 'fontWeight', 'fontStyle',
+      'lineHeight', 'letterSpacing', 'textDecoration', 'textTransform',
+      'textAlign', 'textDirection',
+    ]);
+
+    if (textContentProps.has(prop)) {
+      this.#toolManager.updateShapeProp(shapeId, prop, value);
+      const page = this.#pages[this.#currentPageIndex];
+      if (page) {
+        const shape = this.#findShape(page, shapeId);
+        if (shape && shape.type === 'text' && textTypes.isContentTree(shape.content)) {
+          const kebabProp = prop.replace(/([A-Z])/g, '-$1').toLowerCase();
+          const contentPropMap = {
+            fontFamily: 'font-family', fontSize: 'font-size', fontWeight: 'font-weight',
+            fontStyle: 'font-style', lineHeight: 'line-height', letterSpacing: 'letter-spacing',
+            textDecoration: 'text-decoration', textTransform: 'text-transform',
+            textAlign: 'text-align', textDirection: 'text-direction',
+          };
+          const contentKey = contentPropMap[prop] || kebabProp;
+          let newContent;
+          if (prop === 'textAlign' || prop === 'textDirection') {
+            newContent = textTypes.updateParagraphAttrs(shape.content, { [contentKey]: String(value) });
+          } else {
+            newContent = textTypes.updateTextAttrs(shape.content, { [contentKey]: String(value) });
+          }
+          this.#toolManager.updateShapeProp(shapeId, 'content', newContent);
+          const numericProps = new Set(['fontSize', 'lineHeight', 'letterSpacing']);
+          const finalValue = numericProps.has(prop) ? (Number(value) || value) : String(value);
+          enqueueChange(makeModifyChange(page.id, shapeId, { [prop]: finalValue, content: newContent }));
+        } else {
+          const numericProps = new Set(['fontSize', 'lineHeight', 'letterSpacing']);
+          const finalValue = numericProps.has(prop) ? (Number(value) || value) : value;
+          enqueueChange(makeModifyChange(page.id, shapeId, { [prop]: finalValue }));
+        }
+      }
+      return;
+    }
+
     this.#toolManager.updateShapeProp(shapeId, prop, value);
     const page = this.#pages[this.#currentPageIndex];
     if (page) {
@@ -1018,12 +1601,34 @@ export class PenpotWorkspace extends PenpotElement {
     this.renderCurrentPage();
   }
 
+  #convertToPath(shapeId) {
+    const page = this.#pages[this.#currentPageIndex];
+    if (!page || !this.#toolManager) return;
+    const shapes = this.#toolManager.getCurrentPageShapes();
+    const shape = shapes[shapeId] || shapes.find(s => s.id === shapeId);
+    if (!shape) return;
+    try {
+      const pathShape = convertToPath(shape, shapes);
+      if (!pathShape || !pathShape.content) return;
+      const newShape = { ...shape, type: 'path', content: pathShape.content };
+      this.#toolManager.updateShapeProp(shapeId, 'type', 'path');
+      this.#toolManager.updateShapeProp(shapeId, 'content', pathShape.content);
+      enqueueChange(makeModifyChange(page.id, shapeId, { type: 'path', content: pathShape.content }));
+      this.renderCurrentPage();
+    } catch (err) {
+      console.warn('[workspace] Convert to path failed:', err?.message || err);
+    }
+  }
+
   #handleLayoutChange({ shapeId, prop, value }) {
     if (!this.#toolManager) return;
     const page = this.#pages[this.#currentPageIndex];
     if (!page) return;
     const shape = this.#findShape(page, shapeId);
     if (!shape) return;
+
+    const isLayoutContainer = shape.layout === 'flex' || shape.layout === 'grid' || value === 'flex' || value === 'grid';
+    const wasLayoutContainer = shape.layout === 'flex' || shape.layout === 'grid';
 
     if (prop === 'layout') {
       if (value === 'none') {
@@ -1080,7 +1685,49 @@ export class PenpotWorkspace extends PenpotElement {
       shape[prop] = value;
     }
 
+    const layoutProps = {};
+    for (const k of Object.keys(shape)) {
+      if (k.startsWith('layout') || k === 'layout') {
+        layoutProps[k] = shape[k];
+      }
+    }
+    if (prop === 'layout' && value === 'none') {
+      for (const k of ['layout', 'layout-flex-dir', 'layout-gap', 'layout-gap-type', 'layout-wrap-type', 'layout-padding', 'layout-padding-type', 'layout-justify-content', 'layout-align-items', 'layout-align-content', 'layout-grid-dir', 'layout-grid-rows', 'layout-grid-columns', 'layout-justify-items']) {
+        if (shape[k] === undefined) layoutProps[k] = null;
+      }
+    }
+
     this.#toolManager.updateShapeProp(shapeId, prop, shape[prop] || value);
+    enqueueChange(makeModifyChange(page.id, shapeId, layoutProps));
+
+    if (isLayoutContainer) {
+      try {
+        const objects = this.#getPageObjects(page);
+        const childUpdates = reflowLayout(objects, shapeId);
+        for (const update of childUpdates) {
+          if (this.#toolManager) {
+            if (update.x !== undefined) this.#toolManager.updateShapeProp(update.id, 'x', update.x);
+            if (update.y !== undefined) this.#toolManager.updateShapeProp(update.id, 'y', update.y);
+            if (update.width !== undefined) this.#toolManager.updateShapeProp(update.id, 'width', update.width);
+            if (update.height !== undefined) this.#toolManager.updateShapeProp(update.id, 'height', update.height);
+          }
+          const pageObj = this.#pages[this.#currentPageIndex];
+          if (pageObj) {
+            const childProps = {};
+            if (update.x !== undefined) childProps.x = update.x;
+            if (update.y !== undefined) childProps.y = update.y;
+            if (update.width !== undefined) childProps.width = update.width;
+            if (update.height !== undefined) childProps.height = update.height;
+            if (Object.keys(childProps).length > 0) {
+              enqueueChange(makeModifyChange(pageObj.id, update.id, childProps));
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[workspace] Layout reflow failed:', err?.message || err);
+      }
+    }
+
     this.renderCurrentPage();
     this.#pushSelectedShapeToRightSidebar();
   }
@@ -1092,9 +1739,17 @@ export class PenpotWorkspace extends PenpotElement {
     const shape = this.#findShape(page, shapeId);
     if (!shape) return;
     const fills = [...(shape.fills || [])];
-    const newFill = { type: 'solid', color: token.color, opacity: 1 };
+    const newFill = {
+      type: 'solid',
+      color: token.color,
+      opacity: 1,
+      'fill-color-ref-id': token.id,
+      'fill-color-ref-file': this.#fileData?.id
+    };
     if (fills.length === 0) { fills.push(newFill); } else { fills[0] = newFill; }
     this.#toolManager.updateShapeProp(shapeId, 'fills', fills);
+    const pageObj = this.#pages[this.#currentPageIndex];
+    if (pageObj) enqueueChange(makeModifyChange(pageObj.id, shapeId, { fills }));
     this.renderCurrentPage();
     this.#pushSelectedShapeToRightSidebar();
   }
@@ -1112,37 +1767,48 @@ export class PenpotWorkspace extends PenpotElement {
     if (token.fontStyle) updates.fontStyle = token.fontStyle;
     if (token.lineHeight) updates.lineHeight = token.lineHeight;
     if (token.letterSpacing) updates.letterSpacing = token.letterSpacing;
+    updates['typography-ref-id'] = token.id;
+    updates['typography-ref-file'] = this.#fileData?.id;
     for (const [key, val] of Object.entries(updates)) {
       this.#toolManager.updateShapeProp(shapeId, key, val);
     }
+    if (page) enqueueChange(makeModifyChange(page.id, shapeId, updates));
     this.renderCurrentPage();
     this.#pushSelectedShapeToRightSidebar();
   }
 
   #handleTokenAdd({ type }) {
-    const page = this.#pages[this.#currentPageIndex];
-    if (!page) return;
     if (!this.#fileData) this.#fileData = { data: {} };
     if (!this.#fileData.data) this.#fileData.data = {};
     switch (type) {
       case 'color': {
         if (!this.#fileData.data.colors) this.#fileData.data.colors = [];
-        this.#fileData.data.colors.push({ name: `Color ${this.#fileData.data.colors.length + 1}`, color: '#000000' });
+        const colorId = crypto.randomUUID ? crypto.randomUUID() : `color-${Date.now()}`;
+        const colorObj = { id: colorId, name: `Color ${this.#fileData.data.colors.length + 1}`, color: '#000000' };
+        this.#fileData.data.colors.push(colorObj);
+        enqueueChange({ type: 'add-color', color: colorObj });
         break;
       }
       case 'typography': {
         if (!this.#fileData.data.typographies) this.#fileData.data.typographies = [];
-        this.#fileData.data.typographies.push({ name: `Typography ${this.#fileData.data.typographies.length + 1}`, fontFamily: 'sans-serif', fontSize: 14, fontWeight: 'normal', fontStyle: 'normal' });
+        const typoId = crypto.randomUUID ? crypto.randomUUID() : `typo-${Date.now()}`;
+        const typo = { id: typoId, name: `Typography ${this.#fileData.data.typographies.length + 1}`, fontFamily: 'sans-serif', fontSize: 14, fontWeight: 'normal', fontStyle: 'normal' };
+        this.#fileData.data.typographies.push(typo);
+        enqueueChange({ type: 'add-typography', typography: typo });
         break;
       }
       case 'token-set': {
         if (!this.#fileData.data.tokenSets) this.#fileData.data.tokenSets = [];
-        this.#fileData.data.tokenSets.push({ name: `Set ${this.#fileData.data.tokenSets.length + 1}`, colors: [], typographies: [] });
+        const setId = crypto.randomUUID ? crypto.randomUUID() : `set-${Date.now()}`;
+        this.#fileData.data.tokenSets.push({ id: setId, name: `Set ${this.#fileData.data.tokenSets.length + 1}`, colors: [], typographies: [] });
+        enqueueChange({ type: 'set-token-set', id: setId, attrs: { name: `Set ${this.#fileData.data.tokenSets.length}` } });
         break;
       }
       case 'theme': {
         if (!this.#fileData.data.themes) this.#fileData.data.themes = [];
-        this.#fileData.data.themes.push({ name: `Theme ${this.#fileData.data.themes.length + 1}`, groups: [] });
+        const themeId = crypto.randomUUID ? crypto.randomUUID() : `theme-${Date.now()}`;
+        this.#fileData.data.themes.push({ id: themeId, name: `Theme ${this.#fileData.data.themes.length + 1}`, groups: [] });
+        enqueueChange({ type: 'set-token-theme', id: themeId, theme: this.#fileData.data.themes[this.#fileData.data.themes.length - 1] });
         break;
       }
     }
@@ -1154,11 +1820,19 @@ export class PenpotWorkspace extends PenpotElement {
     if (!this.#fileData?.data) return;
     switch (type) {
       case 'color': {
-        if (this.#fileData.data.colors) this.#fileData.data.colors.splice(index, 1);
+        if (this.#fileData.data.colors) {
+          const color = this.#fileData.data.colors[index];
+          this.#fileData.data.colors.splice(index, 1);
+          if (color) enqueueChange({ type: 'del-color', id: color.id });
+        }
         break;
       }
       case 'typography': {
-        if (this.#fileData.data.typographies) this.#fileData.data.typographies.splice(index, 1);
+        if (this.#fileData.data.typographies) {
+          const typo = this.#fileData.data.typographies[index];
+          this.#fileData.data.typographies.splice(index, 1);
+          if (typo) enqueueChange({ type: 'del-typography', id: typo.id });
+        }
         break;
       }
     }
@@ -1171,12 +1845,18 @@ export class PenpotWorkspace extends PenpotElement {
     switch (type) {
       case 'color': {
         const colors = this.#fileData.data.colors;
-        if (colors && colors[index]) colors[index][prop] = value;
+        if (colors && colors[index]) {
+          colors[index][prop] = value;
+          enqueueChange({ type: 'mod-color', color: { ...colors[index] } });
+        }
         break;
       }
       case 'typography': {
         const typos = this.#fileData.data.typographies;
-        if (typos && typos[index]) typos[index][prop] = value;
+        if (typos && typos[index]) {
+          typos[index][prop] = value;
+          enqueueChange({ type: 'mod-typography', typography: { ...typos[index] } });
+        }
         break;
       }
     }
@@ -1184,9 +1864,119 @@ export class PenpotWorkspace extends PenpotElement {
     if (tokensPanel) tokensPanel.fileData = this.#fileData;
   }
 
+  #handleTokenSetActivate({ index }) {
+    if (!this.#fileData?.data) return;
+    this.#fileData.data.activeTokenSetIndex = index;
+    enqueueChange({ type: 'set-active-token-themes', themes: this.#fileData.data.activeTokenThemes || [this.#fileData.data.activeTheme || 'default'] });
+    const tokensPanel = this.querySelector('penpot-tokens-panel');
+    if (tokensPanel) tokensPanel.fileData = this.#fileData;
+  }
+
+  #handleTokenSetDelete({ index }) {
+    if (!this.#fileData?.data) return;
+    const sets = this.#fileData.data.tokenSets;
+    if (!sets || index < 0 || index >= sets.length) return;
+    const setId = sets[index].id || `set-${index}`;
+    sets.splice(index, 1);
+    if (this.#fileData.data.activeTokenSetIndex >= sets.length) {
+      this.#fileData.data.activeTokenSetIndex = Math.max(0, sets.length - 1);
+    }
+    enqueueChange({ type: 'set-token-set', id: setId });
+    const tokensPanel = this.querySelector('penpot-tokens-panel');
+    if (tokensPanel) tokensPanel.fileData = this.#fileData;
+  }
+
+  #handleTokenThemeChange({ theme }) {
+    if (!this.#fileData?.data) return;
+    this.#fileData.data.activeTheme = theme;
+    const activeSetIndex = this.#fileData.data.activeTokenSetIndex ?? 0;
+    const sets = this.#fileData.data.tokenSets || [];
+    const setId = sets[activeSetIndex]?.id || `set-${activeSetIndex}`;
+    const themeObj = (this.#fileData.data.themes || []).find(t => t.name === theme);
+    if (themeObj && themeObj.groups && themeObj.groups[activeSetIndex]) {
+      const group = themeObj.groups[activeSetIndex];
+      if (group.colors) this.#fileData.data.colors = [...group.colors];
+      if (group.typographies) this.#fileData.data.typographies = [...group.typographies];
+    }
+    enqueueChange({ type: 'set-active-token-themes', themes: [theme] });
+    const tokensPanel = this.querySelector('penpot-tokens-panel');
+    if (tokensPanel) tokensPanel.fileData = this.#fileData;
+  }
+
+  async #handlePluginInstall({ plugin }) {
+    if (!this.#pluginManager) return;
+    try {
+      const { pluginId, api } = await this.#pluginManager.loadPlugin(plugin.url || plugin.host);
+      this.emit('penpot-notification', { type: 'success', message: `Plugin "${plugin.name}" installed` });
+    } catch (err) {
+      this.emit('penpot-notification', { type: 'danger', message: `Failed to install plugin: ${err.message}` });
+    }
+  }
+
+  async #handlePluginOpen({ plugin }) {
+    if (!this.#pluginManager) return;
+    try {
+      await this.#pluginManager.openPlugin(plugin.id);
+      this.#activePluginId = plugin.id;
+    } catch (err) {
+      this.emit('penpot-notification', { type: 'danger', message: `Failed to open plugin: ${err.message}` });
+    }
+  }
+
+  #handlePluginRemove({ pluginId }) {
+    if (!this.#pluginManager) return;
+    this.#pluginManager.unloadPlugin(pluginId);
+    this.#activePluginId = null;
+    this.emit('penpot-notification', { type: 'info', message: `Plugin removed` });
+  }
+
   #handleShapeResize({ shapeId, x, y, width, height }) {
     if (!this.#toolManager) return;
+    const page = this.#pages[this.#currentPageIndex];
+    const oldShape = page ? this.#findShape(page, shapeId) : null;
     this.#toolManager.resizeShape(shapeId, x, y, width, height);
+
+    if (oldShape && (oldShape.type === 'frame' || oldShape.type === 'group') && oldShape.shapes && oldShape.shapes.length > 0) {
+      try {
+        const objects = this.#getPageObjects(page);
+        const isLayout = oldShape.layout === 'flex' || oldShape.layout === 'grid';
+        if (isLayout) {
+          const childUpdates = reflowLayoutWithResize(objects, shapeId, oldShape, { x, y, width, height });
+          for (const update of childUpdates) {
+            if (this.#toolManager) {
+              if (update.x !== undefined) this.#toolManager.updateShapeProp(update.id, 'x', update.x);
+              if (update.y !== undefined) this.#toolManager.updateShapeProp(update.id, 'y', update.y);
+              if (update.width !== undefined) this.#toolManager.updateShapeProp(update.id, 'width', update.width);
+              if (update.height !== undefined) this.#toolManager.updateShapeProp(update.id, 'height', update.height);
+            }
+            const pageObj = this.#pages[this.#currentPageIndex];
+            if (pageObj) {
+              const childProps = {};
+              if (update.x !== undefined) childProps.x = update.x;
+              if (update.y !== undefined) childProps.y = update.y;
+              if (update.width !== undefined) childProps.width = update.width;
+              if (update.height !== undefined) childProps.height = update.height;
+              if (Object.keys(childProps).length > 0) enqueueChange(makeModifyChange(pageObj.id, update.id, childProps));
+            }
+          }
+        } else {
+          const childUpdates = propagateFrameResize(objects, shapeId, oldShape, { x, y, width, height });
+          for (const update of childUpdates) {
+            if (this.#toolManager) {
+              this.#toolManager.updateShapeProp(update.id, 'x', update.x);
+              this.#toolManager.updateShapeProp(update.id, 'y', update.y);
+              if (update.width !== undefined) this.#toolManager.updateShapeProp(update.id, 'width', update.width);
+              if (update.height !== undefined) this.#toolManager.updateShapeProp(update.id, 'height', update.height);
+            }
+            const pageObj = this.#pages[this.#currentPageIndex];
+            if (pageObj) enqueueChange(makeModifyChange(pageObj.id, update.id, { x: update.x, y: update.y, ...(update.width !== undefined ? { width: update.width } : {}), ...(update.height !== undefined ? { height: update.height } : {}) }));
+          }
+        }
+      } catch (err) {
+        console.warn('[workspace] Constraint/layout propagation failed:', err?.message || err);
+      }
+    }
+
     this.renderCurrentPage();
   }
 
@@ -1477,6 +2267,26 @@ export class PenpotWorkspace extends PenpotElement {
     return objects[shapeId] || null;
   }
 
+  #getPageObjects(page) {
+    if (!page) return {};
+    const objects = page.objects || page.children || {};
+    if (Array.isArray(objects)) {
+      const map = {};
+      const flatten = (items) => {
+        for (const s of items) {
+          map[s.id] = s;
+          if (s.objects || s.children || s.shapes) {
+            const children = Array.isArray(s.objects || s.children || s.shapes) ? (s.objects || s.children || s.shapes) : Object.values(s.objects || s.children || {});
+            flatten(children);
+          }
+        }
+      };
+      flatten(objects);
+      return map;
+    }
+    return objects;
+  }
+
   #findShapeAtPoint(x, y) {
     const shapes = this.#toolManager?.getCurrentPageShapes();
     if (!shapes) return null;
@@ -1609,6 +2419,192 @@ export class PenpotWorkspace extends PenpotElement {
     }
   }
 
+  #handleMenuAction(detail) {
+    const { action, checked } = detail || {};
+    const canvas = this.querySelector('#canvas');
+    const tools = this.querySelector('#tools');
+    switch (action) {
+      case 'new-file': {
+        const name = prompt('New file name:', 'Untitled');
+        if (name) window.__penpot.navigate('dashboard');
+        break;
+      }
+      case 'save':
+        this.saveFile();
+        break;
+      case 'save-as':
+        break;
+      case 'import': {
+        const importDialog = this.querySelector('#import-dialog');
+        if (importDialog) importDialog.open();
+        break;
+      }
+      case 'export': {
+        const exportDialog = this.querySelector('#export-dialog');
+        if (exportDialog) {
+          const page = this.#pages[this.#currentPageIndex];
+          exportDialog.page = page;
+          exportDialog.pages = this.#pages;
+          exportDialog.open();
+        }
+        break;
+      }
+      case 'back-to-dashboard':
+        window.__penpot.navigate('dashboard');
+        break;
+      case 'undo':
+        if (this.#toolManager) this.#toolManager.undo();
+        break;
+      case 'redo':
+        if (this.#toolManager) this.#toolManager.redo();
+        break;
+      case 'copy':
+        if (this.#toolManager) this.#toolManager.copySelected();
+        break;
+      case 'cut':
+        if (this.#toolManager) this.#toolManager.cutSelected();
+        this.renderCurrentPage();
+        break;
+      case 'paste':
+        if (this.#toolManager) this.#toolManager.pasteClipboard();
+        break;
+      case 'duplicate':
+        if (this.#toolManager) this.#toolManager.duplicateSelected();
+        break;
+      case 'delete':
+        if (this.#toolManager) this.#toolManager.deleteSelected();
+        this.renderCurrentPage();
+        break;
+      case 'select-all':
+        if (this.#toolManager) this.#toolManager.selectAll();
+        this.renderCurrentPage();
+        break;
+      case 'deselect':
+        if (this.#toolManager) this.#toolManager.clearSelection();
+        break;
+      case 'group':
+        if (this.#toolManager) this.#toolManager.groupSelected();
+        this.renderCurrentPage();
+        break;
+      case 'ungroup':
+        if (this.#toolManager) this.#toolManager.ungroupSelected();
+        this.renderCurrentPage();
+        break;
+      case 'zoom-in':
+        if (canvas) { canvas.zoom = canvas.zoom * 1.25; }
+        if (tools) tools.zoom = canvas?.zoom || 1;
+        break;
+      case 'zoom-out':
+        if (canvas) { canvas.zoom = canvas.zoom / 1.25; }
+        if (tools) tools.zoom = canvas?.zoom || 1;
+        break;
+      case 'zoom-fit':
+        if (canvas) {
+          const page = this.#pages[this.#currentPageIndex];
+          if (page) {
+            const objects = page.objects || page.children || {};
+            const shapes = Array.isArray(objects) ? objects : Object.values(objects);
+            canvas.fitToContent(shapes);
+          } else {
+            canvas.zoom = 1;
+          }
+        }
+        if (tools) tools.zoom = canvas?.zoom || 1;
+        break;
+      case 'zoom-100':
+        if (canvas) canvas.zoom = 1;
+        if (tools) tools.zoom = 1;
+        break;
+      case 'zoom-200':
+        if (canvas) canvas.zoom = 2;
+        if (tools) tools.zoom = 2;
+        break;
+      case 'zoom-selection':
+        if (canvas && this.#toolManager) {
+          const selectedIds = this.#toolManager.getSelectedIds();
+          const page = this.#pages[this.#currentPageIndex];
+          if (selectedIds.length > 0 && page) {
+            const objects = page.objects || page.children || {};
+            const allShapes = Array.isArray(objects) ? objects : Object.values(objects);
+            const selected = allShapes.filter(s => selectedIds.includes(s.id));
+            canvas.zoomToSelection(selected);
+            if (tools) tools.zoom = canvas.zoom;
+          }
+        }
+        break;
+      case 'toggle-rulers': {
+        const canvasEl = this.querySelector('#canvas');
+        if (canvasEl && typeof canvasEl.toggleRulers === 'function') {
+          canvasEl.toggleRulers(checked);
+        }
+        break;
+      }
+      case 'toggle-grid': {
+        const canvasEl = this.querySelector('#canvas');
+        if (canvasEl && typeof canvasEl.toggleGrid === 'function') {
+          canvasEl.toggleGrid(checked);
+        }
+        break;
+      }
+      case 'toggle-snap': {
+        const canvasEl = this.querySelector('#canvas');
+        if (canvasEl && typeof canvasEl.toggleSnap === 'function') {
+          canvasEl.toggleSnap(checked);
+        }
+        break;
+      }
+      case 'toggle-comments':
+        this.#toggleCommentPanel();
+        break;
+      case 'toggle-version-history': {
+        const versionPanel = this.querySelector('#version-panel');
+        if (versionPanel) {
+          const isVisible = versionPanel.style.display !== 'none';
+          versionPanel.style.display = isVisible ? 'none' : '';
+          if (!isVisible) versionPanel.fileId = this.#fileData?.id;
+        }
+        break;
+      }
+      case 'show-shortcuts': {
+        const ref = this.querySelector('#shortcuts-ref');
+        if (ref) ref.open();
+        break;
+      }
+    }
+  }
+
+  #updateScrollbars() {
+    const canvas = this.querySelector('#canvas');
+    const scrollbars = this.querySelector('#scrollbars');
+    if (!canvas || !scrollbars) return;
+    const page = this.#pages[this.#currentPageIndex];
+    if (!page) { scrollbars.viewport = { zoom: canvas.zoom || 1, panX: -(canvas.panX || 0), panY: -(canvas.panY || 0), width: 0, height: 0 }; return; }
+    const objects = page.objects || page.children || {};
+    const shapes = Array.isArray(objects) ? objects : Object.values(objects);
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const s of shapes) {
+      const sx = s.x || 0, sy = s.y || 0, sw = s.width || 0, sh = s.height || 0;
+      if (sw > 0 && sh > 0) {
+        minX = Math.min(minX, sx);
+        minY = Math.min(minY, sy);
+        maxX = Math.max(maxX, sx + sw);
+        maxY = Math.max(maxY, sy + sh);
+      }
+    }
+    const container = canvas.querySelector('.penpot-canvas__canvas-container') || canvas;
+    scrollbars.viewport = {
+      zoom: canvas.zoom || 1,
+      panX: canvas.panX || 0,
+      panY: canvas.panY || 0,
+      width: container.clientWidth,
+      height: container.clientHeight,
+    };
+    if (minX < Infinity) {
+      const padding = 200;
+      scrollbars.contentBounds = { x: minX - padding, y: minY - padding, width: (maxX - minX) + padding * 2, height: (maxY - minY) + padding * 2 };
+    }
+  }
+
   #toggleCommentPanel() {
     const panel = this.querySelector('#comment-panel');
     if (!panel) return;
@@ -1627,6 +2623,20 @@ export class PenpotWorkspace extends PenpotElement {
       show = !overlay.classList.contains('penpot-app__open');
     }
     overlay.classList.toggle('penpot-app__open', show);
+  }
+
+  #togglePluginPanel(show) {
+    const overlay = this.querySelector('#plugin-overlay');
+    if (!overlay) return;
+    if (show === undefined) {
+      show = !overlay.classList.contains('penpot-app__open');
+    }
+    overlay.classList.toggle('penpot-app__open', show);
+    const pluginUI = this.querySelector('#plugin-manager-ui');
+    if (pluginUI) {
+      const plugins = this.#pluginManager ? this.#pluginManager.getLoadedPlugins() : [];
+      pluginUI.plugins = plugins;
+    }
   }
 
   async loadFile() {
@@ -1681,7 +2691,8 @@ export class PenpotWorkspace extends PenpotElement {
             if (!page.objects) page.objects = {};
             if (!page.shapes && page.objects) page.shapes = Object.keys(page.objects);
           }
-        } catch {
+        } catch (err) {
+          console.warn('[workspace] Failed to load page data:', err?.message || err);
           this.#pages = [];
         }
       }
@@ -1707,6 +2718,20 @@ export class PenpotWorkspace extends PenpotElement {
             type: comp.type || 'frame',
           }));
         }
+        const fileMedia = file.data?.media || {};
+        if (Object.keys(fileMedia).length > 0) {
+          assetPanel.media = Object.values(fileMedia).map(m => ({
+            id: m.id || m.mediaId,
+            name: m.name || 'Image',
+            mtype: m.mtype,
+            width: m.width,
+            height: m.height,
+            mediaId: m.mediaId || m.id,
+            thumbnailId: m.thumbnailId,
+          }));
+        } else {
+          this.#loadMediaAssets(file.id);
+        }
       }
 
       const leftSidebar = this.querySelector('#left-sidebar');
@@ -1726,17 +2751,24 @@ export class PenpotWorkspace extends PenpotElement {
       initPersistence(file.id, file.revn || 0, file.vern || 0);
 
       const teamId = appStore.get('currentTeamId');
+      let teamFonts = [];
       if (teamId) {
         loadTeamFontsIntoDocument(teamId);
         try {
-          const families = await fetchTeamFonts(teamId);
+          teamFonts = await fetchTeamFonts(teamId);
           const rightSidebar = this.querySelector('#right-sidebar');
           const textToolbar = this.querySelector('#text-toolbar');
-          if (rightSidebar) rightSidebar.teamFonts = families;
-          if (textToolbar) textToolbar.teamFonts = families;
+          if (rightSidebar) rightSidebar.teamFonts = teamFonts;
+          if (textToolbar) textToolbar.teamFonts = teamFonts;
         } catch (e) {
           console.warn('[workspace] failed to load team fonts for UI:', e);
         }
+      }
+
+      this.#fixDeletedFonts(file, teamFonts);
+
+      for (let i = 0; i < this.#pages.length; i++) {
+        this.#fixDeletedFontsForPage(this.#pages[i], teamFonts);
       }
     } catch (err) {
       console.error('[workspace] load error:', err);
@@ -1754,6 +2786,7 @@ export class PenpotWorkspace extends PenpotElement {
 
     const selectedIds = this.#toolManager ? [...this.#toolManager.selectedIds] : [];
     canvas.renderPage(page, selectedIds);
+    this.#updateScrollbars();
 
     if (selectedIds.length === 1) {
       const objects = page.objects || page.children || {};
@@ -1852,7 +2885,29 @@ export class PenpotWorkspace extends PenpotElement {
       width: 400,
       height: 250,
     };
-    generateAndUploadThumbnail(this.#fileData.id, page.id, thumbnailData, { width: 400, height: 250 }).catch(() => {});
+    generateAndUploadThumbnail(this.#fileData.id, page.id, thumbnailData, { width: 400, height: 250 }).catch(err => {
+      console.warn('[workspace] Thumbnail upload failed:', err?.message || err);
+    });
+  }
+
+  async #loadMediaAssets(fileId) {
+    try {
+      const mediaList = await cmd('get-file-media-objects', { fileId });
+      const assetPanel = this.querySelector('#asset-panel');
+      if (assetPanel && Array.isArray(mediaList) && mediaList.length > 0) {
+        assetPanel.media = mediaList.map(m => ({
+          id: m.id,
+          name: m.name || 'Image',
+          mtype: m.mtype,
+          width: m.width || 0,
+          height: m.height || 0,
+          mediaId: m.mediaId,
+          thumbnailId: m.thumbnailId || null,
+        }));
+      }
+    } catch (err) {
+      console.error('[workspace] Failed to load media assets:', err);
+    }
   }
 
   async renameFile(name) {
@@ -1953,20 +3008,58 @@ export class PenpotWorkspace extends PenpotElement {
     const editor = document.createElement('div');
     editor.id = 'text-editor';
     editor.contentEditable = 'true';
-    editor.textContent = shape.content || '';
+
+    if (textTypes.isContentTree(shape.content)) {
+      editor.innerHTML = contentTreeToHTML(shape.content);
+    } else {
+      editor.textContent = shape.content || shape.text || '';
+    }
+
     editor.style.cssText = `position:absolute;left:${screenX - canvasRect.left}px;top:${screenY - canvasRect.top}px;width:${screenW}px;min-height:${screenH}px;background:var(--penpot-input-bg,#333);border:2px solid var(--penpot-primary,#31efb8);color:var(--penpot-text,#e6e6e6);font-size:${(shape.fontSize || 14) * zoom}px;font-family:var(--penpot-font-family,sans-serif);padding:2px 4px;outline:none;z-index:100;overflow-wrap:break-word;white-space:pre-wrap;line-height:1.4;`;
 
     const commitEdit = () => {
-      const newText = editor.textContent?.trim() || '';
+      const innerHTML = editor.innerHTML;
+      const plainText = editor.textContent?.trim() || '';
       editor.remove();
-      if (!shapeId || newText === (shape.content || '')) return;
+
+      let newContent;
+      let contentChanged = false;
+
+      if (textTypes.isContentTree(shape.content)) {
+        const baseAttrs = {
+          'font-id': shape.fontId || 'sourcesanspro',
+          'font-family': shape.fontFamily || 'sourcesanspro',
+          'font-size': String(shape.fontSize || 14),
+          'font-weight': String(shape.fontWeight || '400'),
+          'font-style': shape.fontStyle || 'normal',
+          'line-height': String(shape.lineHeight || '1.2'),
+          'letter-spacing': String(shape.letterSpacing || '0'),
+          'text-decoration': shape.textDecoration || 'none',
+          'text-transform': shape.textTransform || 'none',
+          'text-align': shape.textAlign || 'left',
+          'text-direction': shape.textDirection || 'ltr',
+          'vertical-align': shape.verticalAlign || 'top',
+          fills: shape.fills && shape.fills.length > 0
+            ? shape.fills.map(f => f['fill-color'] ? f : { 'fill-color': `#${Math.round((f.color?.r ?? 0)*255).toString(16).padStart(2,'0')}${Math.round((f.color?.g ?? 0)*255).toString(16).padStart(2,'0')}${Math.round((f.color?.b ?? 0)*255).toString(16).padStart(2,'0')}`, 'fill-opacity': f.opacity ?? 1 })
+            : [{ 'fill-color': '#000000', 'fill-opacity': 1 }],
+        };
+        newContent = htmlToContentTree(innerHTML, baseAttrs);
+        contentChanged = JSON.stringify(newContent) !== JSON.stringify(shape.content);
+      } else {
+        const oldPlainText = typeof shape.content === 'string' ? shape.content : (shape.content ? textTypes.contentToPlainText(shape.content) : '');
+        newContent = plainText;
+        contentChanged = plainText !== oldPlainText;
+      }
+
+      if (!shapeId || !contentChanged) return;
+
       if (this.#toolManager) {
-        this.#toolManager.updateShapeProp(shapeId, 'content', newText);
+        this.#toolManager.updateShapeProp(shapeId, 'content', newContent);
         this.renderCurrentPage();
       }
       const page = this.#pages[this.#currentPageIndex];
       if (page) {
-        enqueueChange(makeModifyChange(page.id, shapeId, { content: newText }));
+        enqueueChange(makeModifyChange(page.id, shapeId, { content: newContent }));
       }
     };
 
@@ -2389,17 +3482,41 @@ export class PenpotWorkspace extends PenpotElement {
     if (!selectedId) {
       rightSidebar.selectedShape = null;
       rightSidebar.selectedIds = [];
+      rightSidebar.missingFonts = [];
       return;
     }
     const shapes = Array.isArray(page.objects || page.children) ? (page.objects || page.children) : Object.values(page.objects || page.children || {});
     const shape = shapes.find(s => s.id === selectedId);
     rightSidebar.selectedShape = shape || null;
     rightSidebar.selectedIds = [...this.#selectedIds];
+
+    if (shape && shape.type === 'text' && shape.content) {
+      const teamFonts = rightSidebar.teamFonts || [];
+      const fontRegistry = buildFontRegistry(teamFonts);
+      const missing = findMissingFonts([shape], fontRegistry);
+      rightSidebar.missingFonts = missing;
+    } else {
+      rightSidebar.missingFonts = [];
+    }
+
     const layoutPanel = rightSidebar.querySelector('#layout-panel');
     if (layoutPanel) {
       layoutPanel.selectedShape = shape || null;
       layoutPanel.toolManager = this.#toolManager;
     }
+  }
+
+  #findShapeById(shapeId) {
+    const page = this.#pages[this.#currentPageIndex];
+    if (page) {
+      const shape = this.#findShape(page, shapeId);
+      if (shape) return shape;
+    }
+    for (const p of this.#pages) {
+      const shape = this.#findShape(p, shapeId);
+      if (shape) return shape;
+    }
+    return null;
   }
 }
 

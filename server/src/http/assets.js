@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module http/assets
  * @description Storage asset serving — mirrors `app.http.assets` from the Clojure backend.

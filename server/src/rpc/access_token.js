@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc/access_token
  * @description Access token (personal API token) RPC commands — mirrors

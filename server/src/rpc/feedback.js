@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc/feedback
  * @description User feedback RPC command — mirrors `app.rpc.commands.feedback` from the Clojure backend.

@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc/binfile
  * @description Binary file import/export RPC commands — mirrors `app.rpc.commands.binfile`
@@ -629,212 +630,7 @@ export default function registerBinfileCommands(register, pool) {
       }
 
       const parsed = await parseImportBuffer(rawBuffer);
-      const result = [];
-      const sharedFileIds = {};
-      const sourceToNewIdMap = {};
-
-      for (let i = 0; i < parsed.files.length; i++) {
-        const entry = parsed.files[i];
-        const newFileId = uuidv4();
-        const fileName = (i === 0 ? name : null) || entry.name || `Imported File${parsed.files.length > 1 ? ` ${i + 1}` : ''}`;
-        const now = new Date().toISOString();
-
-        let data = entry.data || { pages: [], pagesIndex: {}, components: {}, media: {}, colors: {}, typographies: {} };
-
-        if (typeof data === 'string') {
-          try { data = JSON.parse(data); } catch { /* keep as is */ }
-        }
-
-        data = remapIds(data, createIdMap(data));
-
-        data = normalizeImportData(data);
-
-        data = cleanImportData(data);
-
-        data = applyFeatureMigrations(data);
-
-        const mediaRefMap = {};
-        if (data.media && typeof data.media === 'object') {
-          const mediaEntries = Array.isArray(data.media) ? data.media : Object.entries(data.media).map(([id, m]) => ({ id, ...m }));
-          for (const mediaObj of mediaEntries) {
-            if (!mediaObj || !mediaObj.mediaId && !mediaObj.id) continue;
-            const oldMediaId = mediaObj.mediaId || mediaObj.id;
-            const newMediaId = uuidv4();
-            mediaRefMap[oldMediaId] = newMediaId;
-
-            const existingMedia = pool.get('SELECT id FROM file_media_object WHERE media_id = ? AND deleted_at IS NULL', [oldMediaId]);
-
-            if (!existingMedia) {
-              let mediaBlob = null;
-              const mediaZipEntry = parsed.media.get(oldMediaId);
-              if (mediaZipEntry) {
-                data.media[oldMediaId] = typeof mediaZipEntry === 'object' && !Buffer.isBuffer(mediaZipEntry)
-                  ? { ...mediaZipEntry, mediaId: newMediaId }
-                  : { ...data.media[oldMediaId], mediaId: newMediaId };
-              }
-
-              const storageEntry = parsed.storageObjects.get(oldMediaId);
-              if (storageEntry) {
-                try {
-                  const storageMeta = storageEntry.meta;
-                  const storageData = storageEntry.data;
-                  const storedObj = putStorageObject(pool, storageData, {
-                    contentType: storageMeta?.content_type || 'application/octet-stream',
-                    bucket: 'file-media-object',
-                    size: storageData.length,
-                    deduplicate: true,
-                  });
-
-                  mediaBlob = {
-                    id: newMediaId,
-                    media_id: storedObj.id,
-                    mtype: storageMeta?.content_type || 'image/png',
-                  };
-
-                  let thumbnailId = null;
-                  if (mediaZipEntry && mediaZipEntry.thumbnail_id) {
-                    const thumbEntry = parsed.storageObjects.get(mediaZipEntry.thumbnail_id);
-                    if (thumbEntry) {
-                      const thumbStoredObj = putStorageObject(pool, thumbEntry.data, {
-                        contentType: 'image/png',
-                        bucket: 'file-media-object',
-                        size: thumbEntry.data.length,
-                        deduplicate: true,
-                      });
-                      thumbnailId = thumbStoredObj.id;
-                    }
-                  }
-
-                  pool.insertOnConflictDoNothing('file_media_object', {
-                    id: uuidv4(),
-                    file_id: newFileId,
-                    media_id: storedObj.id,
-                    name: mediaZipEntry?.name || 'image',
-                    mtype: storageMeta?.content_type || 'image/png',
-                    width: mediaZipEntry?.width || 0,
-                    height: mediaZipEntry?.height || 0,
-                    thumbnail_id: thumbnailId,
-                    created_at: now,
-                  });
-                } catch (mediaErr) {
-                  console.warn(`[binfile] media import warning for ${oldMediaId}: ${mediaErr.message}`);
-                }
-              } else {
-                pool.insertOnConflictDoNothing('file_media_object', {
-                  id: uuidv4(),
-                  file_id: newFileId,
-                  media_id: newMediaId,
-                  mtype: mediaZipEntry?.mtype || mediaZipEntry?.['content-type'] || 'image/png',
-                  width: mediaZipEntry?.width || 0,
-                  height: mediaZipEntry?.height || 0,
-                  created_at: now,
-                });
-              }
-            }
-          }
-
-          const mediaJsonStr = JSON.stringify(data.media);
-          let remappedMediaStr = mediaJsonStr;
-          for (const [oldId, newId] of Object.entries(mediaRefMap)) {
-            remappedMediaStr = remappedMediaStr.replaceAll(oldId, newId);
-          }
-          try { data.media = JSON.parse(remappedMediaStr); } catch { /* keep as is */ }
-        }
-
-        const encoded = await encode(data, { version: 5 });
-
-        if (overwriteFileId && i === 0) {
-          pool.run('UPDATE file_data SET deleted_at = ? WHERE file_id = ?', [now, overwriteFileId]);
-          pool.insertOnConflictDoNothing('file_data', {
-            id: uuidv4(),
-            file_id: overwriteFileId,
-            type: 'main',
-            data: encoded,
-            created_at: now,
-            modified_at: now,
-          });
-          pool.run('UPDATE file SET revn = revn + 1, modified_at = ? WHERE id = ?', [now, overwriteFileId]);
-          result.push(overwriteFileId);
-          sourceToNewIdMap[entry.id || 'file-0'] = overwriteFileId;
-        } else {
-          pool.insertOnConflictDoNothing('file', {
-            id: newFileId,
-            project_id: projectId,
-            name: fileName,
-            revn: 1,
-            is_shared: entry['is-shared'] ? '1' : '0',
-            created_at: now,
-            modified_at: now,
-            features: Array.isArray(data.features) ? data.features.join(',') : '',
-          });
-
-          pool.insertOnConflictDoNothing('file_data', {
-            id: uuidv4(),
-            file_id: newFileId,
-            type: 'main',
-            data: encoded,
-            created_at: now,
-            modified_at: now,
-          });
-
-          const proj = pool.get('SELECT team_id FROM project WHERE id = ?', { id: projectId });
-          if (proj) {
-            pool.insertOnConflictDoNothing('file_profile_rel', {
-              file_id: newFileId,
-              profile_id: ctx.profileId,
-              is_owner: '1',
-              is_admin: '1',
-              can_edit: '1',
-              created_at: now,
-            });
-          }
-
-          if (entry['is-shared']) {
-            sharedFileIds[entry.id || newFileId] = newFileId;
-          }
-
-          sourceToNewIdMap[entry.id || `file-${i}`] = newFileId;
-          result.push(newFileId);
-        }
-      }
-
-      if (Object.keys(sharedFileIds).length > 0 && result.length > 0) {
-        const mainFileId = result[0];
-        for (const [sourceId, libFileId] of Object.entries(sharedFileIds)) {
-          if (libFileId !== mainFileId) {
-            pool.run(
-              'INSERT OR IGNORE INTO file_library_rel (file_id, library_file_id, created_at) VALUES (?, ?, ?)',
-              [mainFileId, libFileId, new Date().toISOString()]
-            );
-          }
-        }
-      }
-
-      for (const [sourceFileId, targetFileId] of Object.entries(sharedFileIds)) {
-        pool.run(
-          'INSERT OR IGNORE INTO file_library_rel (file_id, library_file_id, created_at) VALUES (?, ?, ?)',
-          [result[0], targetFileId, new Date().toISOString()]
-        );
-      }
-
-      if (parsed.relations && parsed.relations.length > 0) {
-        for (const rel of parsed.relations) {
-          if (Array.isArray(rel) && rel.length >= 2) {
-            const [sourceLibId, targetLibId] = rel;
-            const newLibId = sourceToNewIdMap[targetLibId] || sourceToNewIdMap[sourceLibId];
-            if (newLibId && result[0]) {
-              pool.run(
-                'INSERT OR IGNORE INTO file_library_rel (file_id, library_file_id, created_at) VALUES (?, ?, ?)',
-                [result[0], newLibId, new Date().toISOString()]
-              );
-            }
-          }
-        }
-      }
-
-      pool.run('UPDATE project SET modified_at = ? WHERE id = ?', [new Date().toISOString(), projectId]);
-
-      return result;
+      return importParsedFiles(pool, parsed, { projectId, profileId: ctx.profileId, name, overwriteFileId });
     },
   });
 
@@ -872,6 +668,208 @@ function getExtFromMtype(mtype) {
   if (mtype.includes('ttf')) return '.ttf';
   if (mtype.includes('otf')) return '.otf';
   return '.bin';
+}
+
+export { parseImportBuffer, importParsedFiles };
+
+async function importParsedFiles(pool, parsed, opts) {
+  const { projectId, profileId, name, overwriteFileId } = opts;
+  const result = [];
+  const sharedFileIds = {};
+  const sourceToNewIdMap = {};
+
+  for (let i = 0; i < parsed.files.length; i++) {
+    const entry = parsed.files[i];
+    const newFileId = uuidv4();
+    const fileName = (i === 0 ? name : null) || entry.name || `Imported File${parsed.files.length > 1 ? ` ${i + 1}` : ''}`;
+    const now = new Date().toISOString();
+
+    let data = entry.data || { pages: [], pagesIndex: {}, components: {}, media: {}, colors: {}, typographies: {} };
+
+    if (typeof data === 'string') {
+      try { data = JSON.parse(data); } catch { /* keep as is */ }
+    }
+
+    data = remapIds(data, createIdMap(data));
+    data = normalizeImportData(data);
+    data = cleanImportData(data);
+    data = applyFeatureMigrations(data);
+
+    const mediaRefMap = {};
+    if (data.media && typeof data.media === 'object') {
+      const mediaEntries = Array.isArray(data.media) ? data.media : Object.entries(data.media).map(([id, m]) => ({ id, ...m }));
+      for (const mediaObj of mediaEntries) {
+        if (!mediaObj || !mediaObj.mediaId && !mediaObj.id) continue;
+        const oldMediaId = mediaObj.mediaId || mediaObj.id;
+        const newMediaId = uuidv4();
+        mediaRefMap[oldMediaId] = newMediaId;
+
+        const existingMedia = pool.get('SELECT id FROM file_media_object WHERE media_id = ? AND deleted_at IS NULL', [oldMediaId]);
+
+        if (!existingMedia) {
+          const mediaZipEntry = parsed.media.get(oldMediaId);
+          if (mediaZipEntry) {
+            data.media[oldMediaId] = typeof mediaZipEntry === 'object' && !Buffer.isBuffer(mediaZipEntry)
+              ? { ...mediaZipEntry, mediaId: newMediaId }
+              : { ...data.media[oldMediaId], mediaId: newMediaId };
+          }
+
+          const storageEntry = parsed.storageObjects.get(oldMediaId);
+          if (storageEntry) {
+            try {
+              const storageMeta = storageEntry.meta;
+              const storageData = storageEntry.data;
+              const storedObj = putStorageObject(pool, storageData, {
+                contentType: storageMeta?.content_type || 'application/octet-stream',
+                bucket: 'file-media-object',
+                size: storageData.length,
+                deduplicate: true,
+              });
+
+              let thumbnailId = null;
+              if (mediaZipEntry && mediaZipEntry.thumbnail_id) {
+                const thumbEntry = parsed.storageObjects.get(mediaZipEntry.thumbnail_id);
+                if (thumbEntry) {
+                  const thumbStoredObj = putStorageObject(pool, thumbEntry.data, {
+                    contentType: 'image/png',
+                    bucket: 'file-media-object',
+                    size: thumbEntry.data.length,
+                    deduplicate: true,
+                  });
+                  thumbnailId = thumbStoredObj.id;
+                }
+              }
+
+              pool.insertOnConflictDoNothing('file_media_object', {
+                id: uuidv4(),
+                file_id: newFileId,
+                media_id: storedObj.id,
+                name: mediaZipEntry?.name || 'image',
+                mtype: storageMeta?.content_type || 'image/png',
+                width: mediaZipEntry?.width || 0,
+                height: mediaZipEntry?.height || 0,
+                thumbnail_id: thumbnailId,
+                created_at: now,
+              });
+            } catch (mediaErr) {
+              console.warn(`[binfile] media import warning for ${oldMediaId}: ${mediaErr.message}`);
+            }
+          } else {
+            pool.insertOnConflictDoNothing('file_media_object', {
+              id: uuidv4(),
+              file_id: newFileId,
+              media_id: newMediaId,
+              mtype: mediaZipEntry?.mtype || mediaZipEntry?.['content-type'] || 'image/png',
+              width: mediaZipEntry?.width || 0,
+              height: mediaZipEntry?.height || 0,
+              created_at: now,
+            });
+          }
+        }
+      }
+
+      const mediaJsonStr = JSON.stringify(data.media);
+      let remappedMediaStr = mediaJsonStr;
+      for (const [oldId, newId] of Object.entries(mediaRefMap)) {
+        remappedMediaStr = remappedMediaStr.replaceAll(oldId, newId);
+      }
+      try { data.media = JSON.parse(remappedMediaStr); } catch { /* keep as is */ }
+    }
+
+    const encoded = await encode(data, { version: 5 });
+
+    if (overwriteFileId && i === 0) {
+      pool.run('UPDATE file_data SET deleted_at = ? WHERE file_id = ?', [now, overwriteFileId]);
+      pool.insertOnConflictDoNothing('file_data', {
+        id: uuidv4(),
+        file_id: overwriteFileId,
+        type: 'main',
+        data: encoded,
+        created_at: now,
+        modified_at: now,
+      });
+      pool.run('UPDATE file SET revn = revn + 1, modified_at = ? WHERE id = ?', [now, overwriteFileId]);
+      result.push(overwriteFileId);
+      sourceToNewIdMap[entry.id || 'file-0'] = overwriteFileId;
+    } else {
+      pool.insertOnConflictDoNothing('file', {
+        id: newFileId,
+        project_id: projectId,
+        name: fileName,
+        revn: 1,
+        is_shared: entry['is-shared'] ? '1' : '0',
+        created_at: now,
+        modified_at: now,
+        features: Array.isArray(data.features) ? data.features.join(',') : '',
+      });
+
+      pool.insertOnConflictDoNothing('file_data', {
+        id: uuidv4(),
+        file_id: newFileId,
+        type: 'main',
+        data: encoded,
+        created_at: now,
+        modified_at: now,
+      });
+
+      const proj = pool.get('SELECT team_id FROM project WHERE id = ?', { id: projectId });
+      if (proj) {
+        pool.insertOnConflictDoNothing('file_profile_rel', {
+          file_id: newFileId,
+          profile_id: profileId,
+          is_owner: '1',
+          is_admin: '1',
+          can_edit: '1',
+          created_at: now,
+        });
+      }
+
+      if (entry['is-shared']) {
+        sharedFileIds[entry.id || newFileId] = newFileId;
+      }
+
+      sourceToNewIdMap[entry.id || `file-${i}`] = newFileId;
+      result.push(newFileId);
+    }
+  }
+
+  if (Object.keys(sharedFileIds).length > 0 && result.length > 0) {
+    const mainFileId = result[0];
+    for (const [sourceId, libFileId] of Object.entries(sharedFileIds)) {
+      if (libFileId !== mainFileId) {
+        pool.run(
+          'INSERT OR IGNORE INTO file_library_rel (file_id, library_file_id, created_at) VALUES (?, ?, ?)',
+          [mainFileId, libFileId, new Date().toISOString()]
+        );
+      }
+    }
+  }
+
+  for (const [sourceFileId, targetFileId] of Object.entries(sharedFileIds)) {
+    pool.run(
+      'INSERT OR IGNORE INTO file_library_rel (file_id, library_file_id, created_at) VALUES (?, ?, ?)',
+      [result[0], targetFileId, new Date().toISOString()]
+    );
+  }
+
+  if (parsed.relations && parsed.relations.length > 0) {
+    for (const rel of parsed.relations) {
+      if (Array.isArray(rel) && rel.length >= 2) {
+        const [sourceLibId, targetLibId] = rel;
+        const newLibId = sourceToNewIdMap[targetLibId] || sourceToNewIdMap[sourceLibId];
+        if (newLibId && result[0]) {
+          pool.run(
+            'INSERT OR IGNORE INTO file_library_rel (file_id, library_file_id, created_at) VALUES (?, ?, ?)',
+            [result[0], newLibId, new Date().toISOString()]
+          );
+        }
+      }
+    }
+  }
+
+  pool.run('UPDATE project SET modified_at = ? WHERE id = ?', [new Date().toISOString(), projectId]);
+
+  return result;
 }
 
 async function parseImportBuffer(buffer) {

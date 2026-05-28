@@ -1,3 +1,4 @@
+'use strict';
 import { eventTypes, actionTypes, overlayPositioningTypes, easingTypes, directionTypes, wayTypes, animationTypes, defaultInteraction, makeInteraction, makeDissolveAnimation, makeSlideAnimation, makePushAnimation, setEventType, setActionType, setDestination, setOverlayPosType, setAnimation, removeAnimation, removeDestination, hasOverlayPositionQ, hasDestinationQ, hasUrlQ, hasDelayQ, isValidInteractionQ } from '../../lib/types/shape/interactions.js';
 
 const CSS = `

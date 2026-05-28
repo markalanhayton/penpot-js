@@ -1,8 +1,5 @@
-/**
- * @module types
- * @description Shape, page, and file data types for Penpot.
- * Ported from common/src/app/common/types/shape.cljs and related namespaces.
- */
+'use strict';
+import { createDefaultContent } from '@penpot/shared/types/text.js';
 
 export const SHAPE_TYPES = [
   'frame', 'group', 'rect', 'circle', 'ellipse', 'path',
@@ -16,7 +13,7 @@ export const BLEND_MODES = ['normal', 'darken', 'multiply', 'color-burn', 'light
 
 export function createShape(type, overrides = {}) {
   const isContainer = type === 'frame' || type === 'group' || type === 'bool';
-  return {
+  const base = {
     id: crypto.randomUUID(),
     type,
     name: defaultName(type),
@@ -32,8 +29,25 @@ export function createShape(type, overrides = {}) {
     constraintsH: 'scale',
     constraintsV: 'scale',
     ...(isContainer ? { shapes: [] } : {}),
-    ...overrides,
   };
+
+  if (type === 'text') {
+    base.content = overrides.content || createDefaultContent(overrides.text || 'Text');
+    base.fontSize = parseFloat(overrides.fontSize || overrides['font-size'] || '14');
+    base.fontFamily = overrides.fontFamily || overrides['font-family'] || 'sourcesanspro';
+    base.fontWeight = overrides.fontWeight || overrides['font-weight'] || '400';
+    base.fontStyle = overrides.fontStyle || overrides['font-style'] || 'normal';
+    base.lineHeight = parseFloat(overrides.lineHeight || overrides['line-height'] || '1.2');
+    base.letterSpacing = parseFloat(overrides.letterSpacing || overrides['letter-spacing'] || '0');
+    base.textAlign = overrides.textAlign || overrides['text-align'] || 'left';
+    base.textDecoration = overrides.textDecoration || overrides['text-decoration'] || 'none';
+    base.growType = overrides.growType || overrides['grow-type'] || 'auto-height';
+    if (!overrides.fills || overrides.fills.length === 0) {
+      base.fills = [{ color: { r: 0, g: 0, b: 0 }, opacity: 1 }];
+    }
+  }
+
+  return { ...base, ...overrides };
 }
 
 function defaultName(type) {

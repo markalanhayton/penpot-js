@@ -1,3 +1,4 @@
+'use strict';
 import { PenpotElement } from './base.js';
 import { cmd } from '../lib/rpc.js';
 import { appStore } from '../lib/store.js';
@@ -143,7 +144,8 @@ export class PenpotCommentPanel extends PenpotElement {
       const result = await cmd('get-file-comments', { id: this.#fileId });
       this.#comments = Array.isArray(result) ? result : [];
       this.#renderComments();
-    } catch {
+    } catch (err) {
+      console.warn('[comments] Failed to load comments:', err?.message || err);
       this.#comments = [];
       this.#renderComments();
     }

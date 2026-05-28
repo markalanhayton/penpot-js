@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module transit
  * @description Transit+JSON encoding and decoding for Penpot RPC protocol.
@@ -218,9 +219,7 @@ export function decodeRequest(body, contentType = '') {
   if (contentType.includes('application/json') || contentType.includes('text/plain') || !contentType) {
     try {
       return toKebabCase(typeof body === 'string' ? JSON.parse(body) : body);
-    } catch {
-      return {};
-    }
+    } catch { /* not Transit or JSON, return empty object */ }
   }
 
   return {};

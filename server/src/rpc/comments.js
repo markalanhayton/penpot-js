@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc/comments
  * @description Comment thread and comment RPC commands — mirrors

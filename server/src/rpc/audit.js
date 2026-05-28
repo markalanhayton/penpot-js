@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc/audit
  * @description Audit log RPC commands — mirrors `app.rpc.commands.audit` from the Clojure backend.
@@ -5,13 +6,29 @@
  * | Method              | Auth | Since |
  * |---------------------|:----:|-------|
  * | `push-audit-events` | Yes  | 1.17  |
- * | `get-enabled-flags` | Yes  | 1.17  |
+ * | `get-enabled-flags` | No   | 1.17  |
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { flagEnabled } from '../config/index.js';
+import { flagEnabled, mergedFlags } from '../config/index.js';
 
 const AUDIT_FLAGS = new Set(['audit-log', 'telemetry']);
+
+const PUBLIC_FLAGS = new Set([
+  'registration',
+  'login_with_password',
+  'login_with_oidc',
+  'login_with_google',
+  'login_with_github',
+  'login_with_gitlab',
+  'oidc_registration',
+  'onboarding',
+  'access_tokens',
+  'webhooks',
+  'quotes',
+  'telemetry',
+  'audit-log',
+]);
 
 export default function registerAuditCommands(register, pool) {
   register('push-audit-events', {
@@ -86,11 +103,13 @@ export default function registerAuditCommands(register, pool) {
     auth: false,
     added: '1.17',
     handler: async (_params, _ctx) => {
-      const enabled = [];
-      for (const flag of AUDIT_FLAGS) {
-        if (flagEnabled(flag)) enabled.push(flag);
+      const result = {};
+      for (const [flag, enabled] of Object.entries(mergedFlags)) {
+        if (PUBLIC_FLAGS.has(flag)) {
+          result[flag] = enabled;
+        }
       }
-      return enabled.length > 0 ? enabled : null;
+      return result;
     },
   });
 }

@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module storage/s3
  * @description S3-compatible object storage backend — mirrors `app.storage.s3`

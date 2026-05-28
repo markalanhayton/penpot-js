@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module components-lib
  * @description Component instance management — mirrors app.common.logic.libraries

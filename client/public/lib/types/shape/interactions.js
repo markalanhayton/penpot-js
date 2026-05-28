@@ -1,3 +1,4 @@
+'use strict';
 export const eventTypes = new Set([
   'click', 'mouse-press', 'mouse-over', 'mouse-enter', 'mouse-leave', 'after-delay',
 ]);

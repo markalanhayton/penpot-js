@@ -1,8 +1,10 @@
+'use strict';
 import { PenpotElement } from './base.js';
-import { renderPage, renderEmptyCanvas } from '../lib/shapes.js';
+import { renderPage, renderEmptyCanvas, computeShapesBounds } from '../lib/shapes.js';
 import { Canvas2DRenderer } from '../lib/canvas2d-renderer.js';
 import './penpot-rulers.js';
 import './penpot-guide-overlay.js';
+import './penpot-scrollbars.js';
 
 const template = document.createElement('template');
 template.innerHTML = `<style>
@@ -25,6 +27,7 @@ template.innerHTML = `<style>
   </div>
   <div class="penpot-canvas__rulers"><penpot-rulers id="rulers"></penpot-rulers></div>
   <div class="penpot-canvas__guides"><penpot-guide-overlay id="guides"></penpot-guide-overlay></div>
+  <penpot-scrollbars id="scrollbars"></penpot-scrollbars>
   <div class="penpot-canvas__zoom-indicator" id="zoom-indicator">100%</div>`;
 
 export class PenpotCanvas extends PenpotElement {
@@ -92,6 +95,8 @@ export class PenpotCanvas extends PenpotElement {
 
   get panX() { return this.#panX; }
   get panY() { return this.#panY; }
+  set panX(x) { this.#panX = x; this.#applyTransform(); }
+  set panY(y) { this.#panY = y; this.#applyTransform(); }
 
   screenToCanvas(clientX, clientY) {
     const container = this.querySelector('#container');
@@ -187,13 +192,16 @@ export class PenpotCanvas extends PenpotElement {
     }
   }
 
-  showSelection(selectedIds) {
+  showSelection(selectedIds, shapes) {
     if (!this.#svgEl) return;
     this.#svgEl.querySelectorAll('.penpot-canvas__penpot-selection-handle').forEach(el => el.remove());
     this.#svgEl.querySelectorAll('.penpot-canvas__gradient-handle').forEach(el => el.remove());
     if (!selectedIds || selectedIds.size === 0) return;
     const NS = 'http://www.w3.org/2000/svg';
     const ids = Array.isArray(selectedIds) ? selectedIds : [...selectedIds];
+
+    const isMulti = ids.length > 1;
+
     for (const id of ids) {
       const shapeEl = this.#svgEl.querySelector(`#shape-${id}`);
       if (!shapeEl) continue;
@@ -206,11 +214,33 @@ export class PenpotCanvas extends PenpotElement {
         selRect.setAttribute('width', String(bbox.width + 2));
         selRect.setAttribute('height', String(bbox.height + 2));
         selRect.setAttribute('fill', 'none');
-        selRect.setAttribute('stroke', '#31efb8');
+        selRect.setAttribute('stroke', isMulti ? '#7b61ff' : '#31efb8');
         selRect.setAttribute('stroke-width', '2');
         selRect.setAttribute('pointer-events', 'none');
         this.#svgEl.appendChild(selRect);
-      } catch {}
+      } catch (err) {
+        console.warn('[canvas] Failed to render selection highlight:', err?.message || err);
+      }
+    }
+
+    if (isMulti && shapes) {
+      const selectedShapes = shapes.filter(s => ids.includes(s.id));
+      if (selectedShapes.length > 0) {
+        const bounds = computeShapesBounds(selectedShapes);
+        const pad = 2;
+        const groupRect = document.createElementNS(NS, 'rect');
+        groupRect.classList.add('penpot-canvas__penpot-selection-handle');
+        groupRect.setAttribute('x', String(bounds.x - pad));
+        groupRect.setAttribute('y', String(bounds.y - pad));
+        groupRect.setAttribute('width', String(bounds.width + pad * 2));
+        groupRect.setAttribute('height', String(bounds.height + pad * 2));
+        groupRect.setAttribute('fill', 'none');
+        groupRect.setAttribute('stroke', '#31efb8');
+        groupRect.setAttribute('stroke-width', '2');
+        groupRect.setAttribute('stroke-dasharray', '6 3');
+        groupRect.setAttribute('pointer-events', 'none');
+        this.#svgEl.appendChild(groupRect);
+      }
     }
   }
 
@@ -507,6 +537,42 @@ export class PenpotCanvas extends PenpotElement {
     this.#svgEl.style.transform = `scale(${this.#zoom}) translate(${this.#panX}px, ${this.#panY}px)`;
     this.#svgEl.style.transformOrigin = '0 0';
     this.#updateRulers();
+  }
+
+  fitToContent(shapes) {
+    if (!shapes || shapes.length === 0) { this.zoom = 1; this.#panX = 0; this.#panY = 0; return; }
+    const container = this.querySelector('#container');
+    if (!container) return;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const s of shapes) {
+      const sx = s.x || 0, sy = s.y || 0, sw = s.width || 0, sh = s.height || 0;
+      if (sw > 0 && sh > 0) {
+        minX = Math.min(minX, sx);
+        minY = Math.min(minY, sy);
+        maxX = Math.max(maxX, sx + sw);
+        maxY = Math.max(maxY, sy + sh);
+      }
+    }
+    if (minX === Infinity) { this.zoom = 1; this.#panX = 0; this.#panY = 0; return; }
+    const padding = 40;
+    const contentW = maxX - minX;
+    const contentH = maxY - minY;
+    const viewW = container.clientWidth - padding * 2;
+    const viewH = container.clientHeight - padding * 2;
+    if (contentW <= 0 || contentH <= 0) { this.zoom = 1; this.#panX = 0; this.#panY = 0; return; }
+    const scale = Math.min(viewW / contentW, viewH / contentH, 4);
+    this.#zoom = Math.max(0.05, Math.min(64, scale));
+    this.#panX = -(minX * this.#zoom) + (container.clientWidth - contentW * this.#zoom) / 2;
+    this.#panY = -(minY * this.#zoom) + (container.clientHeight - contentH * this.#zoom) / 2;
+    this.#applyTransform();
+    this.emit('penpot-zoom-change', { zoom: this.#zoom });
+    const indicator = this.querySelector('#zoom-indicator');
+    if (indicator) indicator.textContent = Math.round(this.#zoom * 100) + '%';
+  }
+
+  zoomToSelection(selectedShapes) {
+    if (!selectedShapes || selectedShapes.length === 0) return;
+    this.fitToContent(selectedShapes);
   }
 
   #updateRulers() {

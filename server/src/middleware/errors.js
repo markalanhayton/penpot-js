@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module middleware/errors
  * @description HTTP error handling middleware — mirrors `app.http.errors` from

@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc/search
  * @description File search RPC command — mirrors `app.rpc.commands.search` from the Clojure backend.

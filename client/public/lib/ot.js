@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module ot
  * @description Lightweight operational transform for concurrent edits.

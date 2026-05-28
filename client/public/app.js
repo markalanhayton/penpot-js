@@ -1,3 +1,4 @@
+'use strict';
 import './lib/tokens.js';
 import './components/base.js';
 import './components/penpot-icon.js';
@@ -25,9 +26,11 @@ import './components/penpot-team-sidebar.js';
 import './components/penpot-file-grid.js';
 import './components/penpot-project-card.js';
 import './components/penpot-dashboard.js';
+import './components/penpot-main-menu.js';
 import './components/penpot-toolbar.js';
 import './components/penpot-tools-bar.js';
 import './components/penpot-canvas.js';
+import './components/penpot-scrollbars.js';
 import './components/penpot-left-sidebar.js';
 import './components/penpot-right-sidebar.js';
 import './components/penpot-layer-panel.js';
@@ -118,6 +121,18 @@ function render(route) {
 async function bootstrap() {
   init();
 
+  try {
+    const serverFlags = await cmd('get-enabled-flags');
+    if (serverFlags && typeof serverFlags === 'object') {
+      const flags = { ...DEFAULT_FLAGS, ...serverFlags };
+      appStore.set('flags', flags);
+    } else {
+      appStore.set('flags', { ...DEFAULT_FLAGS });
+    }
+  } catch {
+    appStore.set('flags', { ...DEFAULT_FLAGS });
+  }
+
   const token = getCookie('auth-token');
   if (token) {
     setAuthToken(token);
@@ -128,7 +143,8 @@ async function bootstrap() {
       render(current());
       navigate('dashboard');
       return;
-    } catch {
+    } catch (err) {
+      console.error('[app] Auth profile fetch failed, redirecting to login:', err?.message || err);
       clearAuthToken();
       eraseCookie('auth-token');
       disconnectWS();

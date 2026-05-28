@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module collaboration
  * @description Change broadcast and conflict resolution for real-time collaboration.
@@ -296,11 +297,14 @@ export async function fetchLaggedChanges(fileId, sinceRevn) {
   try {
     const result = await cmd('get-file-changes', { id: fileId, since: sinceRevn });
     return result?.changes || [];
-  } catch {
+  } catch (err) {
+    console.warn('[collaboration] get-file-changes failed, falling back to get-file:', err?.message || err);
     try {
       const result = await cmd('get-file', { id: fileId });
       if (result?.data?.changes) return result.data.changes;
-    } catch {}
+    } catch (innerErr) {
+      console.warn('[collaboration] get-file fallback also failed:', innerErr?.message || innerErr);
+    }
     return [];
   }
 }

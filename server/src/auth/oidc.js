@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module auth/oidc
  * @description OpenID Connect (OIDC) authentication — mirrors `app.auth.oidc`

@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module fonts
  * @description Font management — mirrors app.main.data.fonts from ClojureScript.

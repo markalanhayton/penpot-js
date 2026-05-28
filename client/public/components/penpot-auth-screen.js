@@ -1,6 +1,8 @@
+'use strict';
 import { cmd, setAuthToken, clearAuthToken } from '../lib/rpc.js';
 import { appStore } from '../lib/store.js';
 import { t } from '../lib/i18n.js';
+import { flagEnabled } from '../lib/flags.js';
 import { PenpotElement } from './base.js';
 
 const template = document.createElement('template');
@@ -31,11 +33,21 @@ template.innerHTML = `
     .penpot-app__switch-text { text-align: center; margin-top: var(--penpot-spacing-m, 12px); font-size: var(--penpot-font-size-s, 11px); color: var(--penpot-text-dim, #999); }
     .penpot-app__switch-text a { color: var(--penpot-primary, #31efb8); cursor: pointer; text-decoration: none; }
     .penpot-app__switch-text a:hover { text-decoration: underline; }
+    .penpot-app__oauth-divider { display: flex; align-items: center; margin: var(--penpot-spacing-m, 12px) 0; color: var(--penpot-text-dim, #999); font-size: var(--penpot-font-size-s, 11px); }
+    .penpot-app__oauth-divider::before, .penpot-app__oauth-divider::after { content: ''; flex: 1; border-bottom: 1px solid var(--penpot-border, #444); }
+    .penpot-app__oauth-divider span { padding: 0 var(--penpot-spacing-s, 8px); }
+    .penpot-app__oauth-btns { display: flex; flex-direction: column; gap: var(--penpot-spacing-xs, 4px); margin-bottom: var(--penpot-spacing-m, 12px); }
+    .penpot-app__oauth-btn { display: flex; align-items: center; justify-content: center; gap: var(--penpot-spacing-s, 8px); width: 100%; padding: var(--penpot-spacing-s, 8px) var(--penpot-spacing-m, 12px); background: var(--penpot-surface, #2a2a2a); border: 1px solid var(--penpot-border, #444); border-radius: var(--penpot-radius-s, 4px); color: var(--penpot-text, #e6e6e6); font-size: 14px; cursor: pointer; transition: background var(--penpot-transition-fast, 0.1s ease), border-color var(--penpot-transition-fast, 0.1s ease); }
+    .penpot-app__oauth-btn:hover { background: var(--penpot-input-bg, #333); border-color: var(--penpot-primary, #31efb8); }
+    .penpot-app__oauth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .penpot-app__oauth-icon { font-size: 18px; }
   </style>
   <div class="penpot-app__auth-card">
     <h1 class="penpot-app__auth-title" id="title">Sign in to Penpot</h1>
     <div class="penpot-app__auth-error" id="error"></div>
     <div class="penpot-app__auth-success" id="success"></div>
+    <div class="penpot-app__oauth-btns" id="oauth-btns"></div>
+    <div class="penpot-app__oauth-divider" id="oauth-divider" hidden><span>or</span></div>
     <div class="penpot-app__field" id="name-field" hidden>
       <label for="name">Full name</label>
       <input id="name" type="text" autocomplete="name" placeholder="Your full name">
@@ -55,6 +67,13 @@ template.innerHTML = `
     </div>
   </div>
 `;
+
+const OAUTH_PROVIDERS = [
+  { flag: 'login_with_oidc', id: 'oidc', label: 'Sign in with SSO', icon: '\u{1F511}' },
+  { flag: 'login_with_google', id: 'google', label: 'Sign in with Google', icon: 'G' },
+  { flag: 'login_with_github', id: 'github', label: 'Sign in with GitHub', icon: '\u{1F4BB}' },
+  { flag: 'login_with_gitlab', id: 'gitlab', label: 'Sign in with GitLab', icon: '\u{1F98A}' },
+];
 
 export class PenpotAuthScreen extends PenpotElement {
   _template = template;
@@ -77,6 +96,7 @@ export class PenpotAuthScreen extends PenpotElement {
     this.querySelector('#pw').addEventListener('keydown', (e) => { if (e.key === 'Enter') this.handleSubmit(); });
     this.querySelector('#email').addEventListener('keydown', (e) => { if (e.key === 'Enter') this.handleSubmit(); });
     this.querySelector('#name').addEventListener('keydown', (e) => { if (e.key === 'Enter') this.handleSubmit(); });
+    this.renderOAuthButtons();
     this.render();
   }
 
@@ -165,6 +185,52 @@ export class PenpotAuthScreen extends PenpotElement {
     else navigate('login');
   }
 
+  renderOAuthButtons() {
+    if (!this.isConnected) return;
+    const container = this.querySelector('#oauth-btns');
+    const divider = this.querySelector('#oauth-divider');
+    if (!container) return;
+
+    const flags = appStore.get('flags') || {};
+    container.innerHTML = '';
+
+    let hasOAuth = false;
+    for (const provider of OAUTH_PROVIDERS) {
+      if (flagEnabled(flags, provider.flag)) {
+        hasOAuth = true;
+        const btn = document.createElement('button');
+        btn.className = 'penpot-app__oauth-btn';
+        btn.setAttribute('data-provider', provider.id);
+        btn.innerHTML = `<span class="penpot-app__oauth-icon">${provider.icon}</span> ${provider.label}`;
+        btn.addEventListener('click', () => this.handleOAuthLogin(provider.id));
+        container.appendChild(btn);
+      }
+    }
+
+    if (divider) divider.hidden = !hasOAuth;
+  }
+
+  async handleOAuthLogin(providerId) {
+    if (this.#loading) return;
+    this.#loading = true;
+    this.#error = '';
+    if (this.isConnected) this.render();
+
+    try {
+      const result = await cmd('get-oidc-auth-uri', { providerId });
+      if (result?.uri) {
+        window.location.href = result.uri;
+        return;
+      }
+      this.#error = 'SSO login is not available. Please contact your administrator.';
+    } catch (err) {
+      this.#error = err.hint || err.message || 'SSO login failed. Please try again.';
+    } finally {
+      this.#loading = false;
+      if (this.isConnected) this.render();
+    }
+  }
+
   async handleSubmit() {
     if (this.#loading) return;
     this.#loading = true;
@@ -189,13 +255,11 @@ export class PenpotAuthScreen extends PenpotElement {
     try {
       if (this.#route === 'login') {
         const result = await cmd('login-with-password', { email, password });
-        console.log('[auth] login result:', result);
         if (result?.token) {
           setAuthToken(result.token);
           document.cookie = `auth-token=${result.token}; path=/; max-age=604800; SameSite=Lax`;
         }
         const profile = await cmd('get-profile');
-        console.log('[auth] profile:', profile);
         appStore.set('profile', profile);
         window.__penpot.navigate('dashboard');
         return;

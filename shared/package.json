@@ -92,7 +92,8 @@
     "./files/indices": "./src/files/indices.js",
     "./files/page-diff": "./src/files/page_diff.js",
     "./files/tokens": "./src/files/tokens.js",
-    "./colors": "./src/colors.js"
+    "./colors": "./src/colors.js",
+    "./constants": "./src/constants.js"
   },
   "scripts": {
     "test": "node --test test/**/*.test.js",

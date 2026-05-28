@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module ws/msgbus
  * @description Message bus for real-time notifications — mirrors `app.msgbus`

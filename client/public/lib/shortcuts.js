@@ -1,3 +1,4 @@
+'use strict';
 const SHORTCUTS = new Map();
 const ACTIVE_SHORTCUTS = new Map();
 let initialized = false;
@@ -33,6 +34,7 @@ export const DEFAULT_SHORTCUTS = [
   { key: '0', modifiers: { ctrl: true }, description: 'Zoom to fit' },
   { key: '1', modifiers: { ctrl: true }, description: 'Zoom 100%' },
   { key: '2', modifiers: { ctrl: true }, description: 'Zoom 200%' },
+  { key: '2', modifiers: { ctrl: true, shift: true }, description: 'Zoom to selection' },
   { key: 'Escape', modifiers: {}, description: 'Deselect / Cancel' },
   { key: 'u', modifiers: { alt: true }, description: 'Boolean union' },
   { key: 'd', modifiers: { alt: true }, description: 'Boolean difference' },
@@ -142,7 +144,39 @@ export function wireShortcuts(toolManager, workspaceEl) {
       if (!canvas) return;
       if (action === 'in') canvas.zoom = canvas.zoom * 1.25;
       else if (action === 'out') canvas.zoom = canvas.zoom / 1.25;
-      else if (action === 'fit') canvas.zoom = 1;
+      else if (action === 'fit') {
+        const workspace = canvas.closest('penpot-workspace');
+        if (workspace) {
+          const ws = workspace;
+          const pages = ws.pages;
+          const idx = ws.currentPageIndex;
+          if (pages && pages[idx]) {
+            const page = pages[idx];
+            const objects = page.objects || page.children || {};
+            const shapes = Array.isArray(objects) ? objects : Object.values(objects);
+            canvas.fitToContent(shapes);
+          } else {
+            canvas.zoom = 1;
+          }
+        } else {
+          canvas.zoom = 1;
+        }
+      }
+      else if (action === 'selection') {
+        const workspace = canvas.closest('penpot-workspace');
+        if (workspace && workspace.toolManager) {
+          const selectedIds = workspace.toolManager.getSelectedIds();
+          const pages = workspace.pages;
+          const idx = workspace.currentPageIndex;
+          if (selectedIds.length > 0 && pages && pages[idx]) {
+            const page = pages[idx];
+            const objects = page.objects || page.children || {};
+            const allShapes = Array.isArray(objects) ? objects : Object.values(objects);
+            const selected = allShapes.filter(s => selectedIds.includes(s.id));
+            canvas.zoomToSelection(selected);
+          }
+        }
+      }
       else if (action === 'reset') canvas.zoom = 1;
       else if (action === '200') canvas.zoom = 2;
       const toolsBar = workspaceEl.querySelector('#tools');
@@ -186,7 +220,8 @@ export function wireShortcuts(toolManager, workspaceEl) {
             s.key === '-' && s.modifiers.ctrl ? zoomCanvas('out') :
             s.key === '0' && s.modifiers.ctrl ? zoomCanvas('fit') :
             s.key === '1' && s.modifiers.ctrl ? zoomCanvas('reset') :
-            s.key === '2' && s.modifiers.ctrl ? zoomCanvas('200') :
+            s.key === '2' && s.modifiers.ctrl && !s.modifiers.shift ? zoomCanvas('200') :
+            s.key === '2' && s.modifiers.ctrl && s.modifiers.shift ? zoomCanvas('selection') :
             s.key === 'Escape' ? () => { if (toolManager) toolManager.clearSelection(); } :
             s.key === 'u' && s.modifiers.alt ? () => { if (toolManager) toolManager.createBoolOp('union'); } :
             s.key === 'd' && s.modifiers.alt && !s.modifiers.shift ? () => { if (toolManager) toolManager.createBoolOp('difference'); } :

@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module email
  * @description Email sending infrastructure — mirrors `app.email` from the Clojure backend.

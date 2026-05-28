@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module index
  * @description Main entry point — mirrors `app.main` system startup from the Clojure backend.

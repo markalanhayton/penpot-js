@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module tokens
  * @description Design tokens as CSS custom properties.

@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc/files
  * @description File management RPC commands — mirrors `app.rpc.commands.files`
@@ -31,6 +32,8 @@
  * | `get-file-summary`          | Yes           | 2.8    |
  * | `get-file-libraries`        | Yes           | 2.8    |
  * | `get-library-file-references` | Yes          | 2.10   |
+ * | `update-file-library-sync-status` | Yes     | 2.17   |
+ * | `ignore-file-library-sync-status` | Yes    | 2.17   |
  */
 
 import { v4 as uuidv4 } from 'uuid';
@@ -45,7 +48,7 @@ import {
   serializeFeatures,
   FLAG_FEATURE_MAP,
 } from '../config/features.js';
-import { checkProjectEditionPermissions } from '../middleware/permissions.js';
+import { checkProjectEditionPermissions, checkReadPermissions, checkEditionPermissions } from '../middleware/permissions.js';
 import { checkQuota } from '../middleware/quotes.js';
 import { flagEnabled } from '../config/index.js';
 import { decode } from '../files/blob.js';
@@ -707,6 +710,46 @@ export default function registerFileCommands(register, pool) {
       );
 
       return rowsToCamel(references);
+    },
+  });
+
+  register('update-file-library-sync-status', {
+    auth: true,
+    added: '2.17',
+    async handler(params, ctx) {
+      const { fileId, libraryId } = params;
+
+      checkEditionPermissions(pool, ctx.profileId, fileId);
+      checkEditionPermissions(pool, ctx.profileId, libraryId);
+
+      const now = new Date().toISOString();
+      pool.run(
+        `INSERT INTO file_library_sync (file_id, library_file_id, synced_at) VALUES (?, ?, ?)
+         ON CONFLICT (file_id, library_file_id) DO UPDATE SET synced_at = EXCLUDED.synced_at`,
+        [fileId, libraryId, now]
+      );
+
+      return { fileId, libraryId, syncedAt: now };
+    },
+  });
+
+  register('ignore-file-library-sync-status', {
+    auth: true,
+    added: '2.17',
+    async handler(params, ctx) {
+      const { fileId, date } = params;
+
+      checkEditionPermissions(pool, ctx.profileId, fileId);
+
+      const file = pool.get(
+        `UPDATE file SET ignore_sync_until = ?, modified_at = ? WHERE id = ? AND deleted_at IS NULL
+         RETURNING id, name, is_shared, revn, vern, modified_at, created_at, ignore_sync_until`,
+        [date, new Date().toISOString(), fileId]
+      );
+
+      if (!file) throw new RpcError('not-found', 'object-not-found', 'File not found');
+
+      return rowToCamel(file);
     },
   });
 }

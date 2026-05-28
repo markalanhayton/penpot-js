@@ -1,3 +1,4 @@
+'use strict';
 import { PenpotElement } from './base.js';
 import { analyzeFile, uploadAndImport } from '../lib/file-import.js';
 import { cmd } from '../lib/rpc.js';
@@ -145,7 +146,8 @@ export class PenpotImportDialog extends PenpotElement {
         const projects = await cmd('get-projects', { teamId });
         this.#projects = Array.isArray(projects) ? projects : [];
       }
-    } catch {
+    } catch (err) {
+      console.warn('[import] Failed to load projects:', err?.message || err);
       this.#projects = [];
     }
 

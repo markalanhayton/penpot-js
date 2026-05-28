@@ -1,5 +1,7 @@
+'use strict';
 import { PenpotElement } from './base.js';
 import { processFontBlobs, uploadFontVariant, groupFontsByFamily } from '../lib/fonts.js';
+import { SYSTEM_FONTS } from '@penpot/shared/constants';
 import './penpot-tokens-panel.js';
 
 const template = document.createElement('template');
@@ -76,13 +78,6 @@ template.innerHTML = `<style>
   </div>
   <div class="penpot-assets__asset-content" id="content"></div>`;
 
-const SYSTEM_FONTS = [
-  { id: 'font-sans', name: 'Inter', family: 'Inter, sans-serif' },
-  { id: 'font-serif', name: 'Merriweather', family: 'Merriweather, serif' },
-  { id: 'font-mono', name: 'JetBrains Mono', family: 'JetBrains Mono, monospace' },
-  { id: 'font-display', name: 'Poppins', family: 'Poppins, sans-serif' },
-  { id: 'font-system', name: 'System UI', family: '-apple-system, BlinkMacSystemFont, sans-serif' },
-];
 
 const FONT_WEIGHT_NAMES = {
   100: 'Thin', 200: 'Extra Light', 300: 'Light', 400: 'Regular',
@@ -170,7 +165,7 @@ export class PenpotAssetPanel extends PenpotElement {
     const fonts = this.#fonts.length > 0 ? this.#fonts : SYSTEM_FONTS;
     if (!this.#searchQuery) return fonts;
     const q = this.#searchQuery.toLowerCase();
-    return fonts.filter(f => f.name.toLowerCase().includes(q));
+    return fonts.filter(f => (f.label || f.name).toLowerCase().includes(q));
   }
 
   getAvailableColors() {
@@ -335,7 +330,7 @@ export class PenpotAssetPanel extends PenpotElement {
     for (const font of fonts) {
       html += `<div class="penpot-assets__font-item" data-font-id="${this.escAttr(font.id)}">
         <span class="penpot-assets__font-preview" style="font-family: ${font.family}">Aa</span>
-        <span class="penpot-assets__font-name">${this.escHtml(font.name)}</span>
+        <span class="penpot-assets__font-name">${this.escHtml(font.label || font.name)}</span>
         <button class="penpot-assets__font-remove" data-remove-font="${this.escAttr(font.id)}" title="Remove font">\u00D7</button>
       </div>`;
     }
@@ -350,8 +345,10 @@ export class PenpotAssetPanel extends PenpotElement {
     }
     let html = '<div class="penpot-assets__media-grid">';
     for (const item of this.#media) {
+      const thumbUrl = item.thumbnailId ? `/assets/by-id/${item.thumbnailId}` : item.mediaId ? `/assets/by-id/${item.mediaId}` : null;
+      const thumbHtml = thumbUrl ? `<img src="${thumbUrl}" alt="${this.escAttr(item.name)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;">` : (item.icon || '\u{1F5BC}');
       html += `<div class="penpot-assets__media-card" data-media-id="${this.escAttr(item.id)}" title="${this.escHtml(item.name)}">
-        <div class="penpot-assets__media-thumb">${item.icon || '\u{1F5BC}'}</div>
+        <div class="penpot-assets__media-thumb">${thumbHtml}</div>
         <div class="penpot-assets__media-label">${this.escHtml(item.name)}</div>
       </div>`;
     }

@@ -1,3 +1,4 @@
+'use strict';
 import { PenpotTool } from './base.js';
 import { createShape } from '../../lib/types.js';
 

@@ -1,3 +1,4 @@
+'use strict';
 import { cmd } from '../lib/rpc.js';
 import { appStore } from '../lib/store.js';
 import { PenpotElement } from './base.js';

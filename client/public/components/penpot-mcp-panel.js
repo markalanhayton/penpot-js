@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module components/penpot-mcp-panel
  * @description MCP (Model Context Protocol) integration panel for Penpot workspace.
@@ -197,17 +198,17 @@ export class PenpotMcpPanel extends PenpotElement {
     try {
       const toolsResult = await this.#sendRequest('tools/list', {});
       this.#tools = toolsResult?.tools || [];
-    } catch { this.#tools = []; }
+    } catch (err) { console.warn('[mcp] Failed to load tools:', err?.message || err); this.#tools = []; }
 
     try {
       const resourcesResult = await this.#sendRequest('resources/list', {});
       this.#resources = resourcesResult?.resources || [];
-    } catch { this.#resources = []; }
+    } catch (err) { console.warn('[mcp] Failed to load resources:', err?.message || err); this.#resources = []; }
 
     try {
       const promptsResult = await this.#sendRequest('prompts/list', {});
       this.#prompts = promptsResult?.prompts || [];
-    } catch { this.#prompts = []; }
+    } catch (err) { console.warn('[mcp] Failed to load prompts:', err?.message || err); this.#prompts = []; }
   }
 
   async #sendRequest(method, params) {

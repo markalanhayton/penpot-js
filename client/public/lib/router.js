@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module router
  * @description Client-side router with path-based routing and auth guards.

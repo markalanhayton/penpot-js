@@ -1,3 +1,4 @@
+'use strict';
 import '../components/base.js';
 import '../components/penpot-icon.js';
 import '../components/penpot-loader.js';

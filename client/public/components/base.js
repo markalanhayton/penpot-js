@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module components/base
  * @description Base class for all Penpot Web Components.

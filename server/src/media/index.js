@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module media
  * @description Media & font postprocessing — mirrors `app.media` from the Clojure backend.

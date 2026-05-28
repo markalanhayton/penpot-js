@@ -1,3 +1,4 @@
+'use strict';
 import { PenpotElement } from './base.js';
 import { ICON_PATHS } from './penpot-icon.js';
 
@@ -29,6 +30,7 @@ template.innerHTML = `<style>
   <div class="penpot-tools__spacer"></div>
   <div class="penpot-tools__zoom-controls">
     <button id="zoom-fit" class="penpot-tools__zoom-fit" title="Fit to screen">Fit</button>
+    <button id="zoom-selection" class="penpot-tools__zoom-fit" title="Zoom to selection (Ctrl+Shift+2)">Sel</button>
     <button id="zoom-out" title="Zoom out"><penpot-icon name="minus" size="14"></penpot-icon></button>
     <span id="zoom-level">100%</span>
     <button id="zoom-in" title="Zoom in"><penpot-icon name="plus" size="14"></penpot-icon></button>
@@ -55,6 +57,7 @@ export class PenpotToolsBar extends PenpotElement {
     this.querySelector('#zoom-in').addEventListener('click', () => this.emit('penpot-zoom', { action: 'in' }));
     this.querySelector('#zoom-out').addEventListener('click', () => this.emit('penpot-zoom', { action: 'out' }));
     this.querySelector('#zoom-fit').addEventListener('click', () => this.emit('penpot-zoom', { action: 'fit' }));
+    this.querySelector('#zoom-selection').addEventListener('click', () => this.emit('penpot-zoom', { action: 'selection' }));
 
     document.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.contentEditable === 'true') return;

@@ -1,5 +1,7 @@
+'use strict';
 import { PenpotElement } from './base.js';
 import './penpot-presence-bar.js';
+import './penpot-main-menu.js';
 
 const template = document.createElement('template');
 template.innerHTML = `<style>
@@ -22,6 +24,8 @@ template.innerHTML = `<style>
     .penpot-toolbar__toolbar-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   
   </style>
+  <penpot-main-menu id="main-menu"></penpot-main-menu>
+  <div class="penpot-toolbar__separator"></div>
   <button class="penpot-toolbar__back-btn" id="back">&larr; Dashboard</button>
   <div class="penpot-toolbar__separator"></div>
   <span class="penpot-toolbar__file-name" id="file-name">Untitled file</span>
@@ -41,6 +45,7 @@ template.innerHTML = `<style>
     <button class="penpot-toolbar__toolbar-btn" id="export-btn" title="Export (Ctrl+E)">Export</button>
     <button class="penpot-toolbar__toolbar-btn" id="version-btn" title="Version History">&#128337;</button>
     <button class="penpot-toolbar__toolbar-btn" id="mcp-btn" title="MCP Panel (Ctrl+Shift+M)">&#x1F916;</button>
+    <button class="penpot-toolbar__toolbar-btn" id="plugin-btn" title="Plugins (Ctrl+Shift+P)">&#x1F50C;</button>
     <button class="penpot-toolbar__toolbar-btn" id="share-btn" title="Share">Share</button>
     <button class="penpot-toolbar__toolbar-btn penpot-toolbar__primary" id="save-btn">Save</button>
   </div>`;
@@ -73,6 +78,12 @@ export class PenpotToolbar extends PenpotElement {
     this.querySelector('#mcp-btn').addEventListener('click', () => {
       this.emit('penpot-mcp-toggle', {});
     });
+    const pluginBtn = this.querySelector('#plugin-btn');
+    if (pluginBtn) {
+      pluginBtn.addEventListener('click', () => {
+        this.emit('penpot-plugin-toggle', {});
+      });
+    }
     this.querySelector('#comment-btn').addEventListener('click', () => {
       this.emit('penpot-comment-toggle', {});
     });

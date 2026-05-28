@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc/files_share
  * @description Share link RPC commands — mirrors `app.rpc.commands.files-share`

@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module middleware/permissions
  * @description Permission checking utilities — mirrors `app.rpc.permissions`

@@ -234,3 +234,82 @@ describe('types/text/change-text', () => {
     assert.equal(result.children[0].children[1].children[0].text, 'New line2');
   });
 });
+
+describe('types/text/content-tree', () => {
+  it('createDefaultContent creates valid tree', () => {
+    const content = txt.createDefaultContent('Hello');
+    assert.equal(content.type, 'root');
+    assert.ok(content.children);
+    assert.equal(content.children[0].type, 'paragraph-set');
+    const para = content.children[0].children[0];
+    assert.equal(para.type, 'paragraph');
+    assert.equal(para.children[0].text, 'Hello');
+    assert.equal(para.children[0]['font-family'], 'sourcesanspro');
+    assert.ok(para.children[0].fills);
+  });
+
+  it('isContentTree recognizes tree objects', () => {
+    assert.ok(txt.isContentTree({ type: 'root', children: [] }));
+    assert.ok(!txt.isContentTree('Hello'));
+    assert.ok(!txt.isContentTree(null));
+    assert.ok(!txt.isContentTree({ type: 'paragraph' }));
+  });
+
+  it('contentToPlainText extracts text', () => {
+    const content = txt.createDefaultContent('Line1\nLine2');
+    const plain = txt.contentToPlainText(content);
+    assert.equal(plain, 'Line1\nLine2');
+  });
+
+  it('contentToPlainText handles string input', () => {
+    assert.equal(txt.contentToPlainText('Hello'), 'Hello');
+    assert.equal(txt.contentToPlainText(null), '');
+  });
+
+  it('updateTextAttrs modifies all text nodes', () => {
+    const content = txt.createDefaultContent('Hello World');
+    const updated = txt.updateTextAttrs(content, { 'font-weight': '700' });
+    const textNodes = txt.nodeSeq(updated, txt.isTextNodeQ);
+    assert.ok(textNodes.every(n => n['font-weight'] === '700'));
+  });
+
+  it('updateParagraphAttrs modifies paragraph alignment', () => {
+    const content = txt.createDefaultContent('Hello');
+    const updated = txt.updateParagraphAttrs(content, { 'text-align': 'center' });
+    const paragraphs = txt.nodeSeq(updated, txt.isParagraphNodeQ);
+    assert.ok(paragraphs.some(p => p['text-align'] === 'center'));
+  });
+
+  it('updateTextRange modifies a range', () => {
+    const content = txt.createDefaultContent('Hello World');
+    const updated = txt.updateTextRange(content, 0, 5, { 'font-weight': '700' });
+    const textNodes = txt.nodeSeq(updated, txt.isTextNodeQ);
+    const boldNodes = textNodes.filter(n => n['font-weight'] === '700');
+    const normalNodes = textNodes.filter(n => n['font-weight'] !== '700');
+    assert.ok(boldNodes.length > 0);
+    assert.ok(normalNodes.length > 0 || boldNodes.some(n => n.text !== 'Hello World'));
+  });
+
+  it('currentTextNodeAttrs returns first node attrs', () => {
+    const content = txt.createDefaultContent('Hello');
+    const attrs = txt.currentTextNodeAttrs(content);
+    assert.equal(attrs['font-family'], 'sourcesanspro');
+    assert.ok(attrs.fills);
+  });
+
+  it('currentParagraphAttrs returns paragraph attrs', () => {
+    const content = txt.createDefaultContent('Hello');
+    const attrs = txt.currentParagraphAttrs(content);
+    assert.equal(attrs['text-align'], 'left');
+  });
+
+  it('decorateRangeInfo adds start/end offsets', () => {
+    const content = txt.createDefaultContent('Hello');
+    const decorated = txt.decorateRangeInfo(content);
+    const textNodes = txt.nodeSeq(decorated, txt.isTextNodeQ);
+    assert.ok(textNodes[0].start !== undefined);
+    assert.ok(textNodes[0].end !== undefined);
+    assert.equal(textNodes[0].start, 0);
+    assert.equal(textNodes[0].end, 5);
+  });
+});

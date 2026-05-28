@@ -1,16 +1,7 @@
+'use strict';
 import { PenpotElement } from './base.js';
 
-const SYSTEM_FONTS = [
-  { label: 'Sans Serif', value: 'sans-serif' },
-  { label: 'Serif', value: 'serif' },
-  { label: 'Monospace', value: 'monospace' },
-  { label: 'Arial', value: 'Arial, sans-serif' },
-  { label: 'Helvetica', value: 'Helvetica, sans-serif' },
-  { label: 'Times New Roman', value: 'Times New Roman, serif' },
-  { label: 'Courier New', value: 'Courier New, monospace' },
-  { label: 'Georgia', value: 'Georgia, serif' },
-  { label: 'Verdana', value: 'Verdana, sans-serif' },
-];
+import { SYSTEM_FONTS } from '@penpot/shared/constants';
 
 const FONT_SIZES = [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 64, 72];
 
@@ -75,7 +66,7 @@ export class PenpotTextToolbar extends PenpotElement {
       label: `★ ${f.fontFamily}`,
       isTeam: true,
     }));
-    return [...SYSTEM_FONTS.map(f => ({ ...f, isTeam: false })), ...teamFontEntries];
+    return [...SYSTEM_FONTS.map(f => ({ ...f, value: f.family, isTeam: false })), ...teamFontEntries];
   }
 
   #rebuildFontDropdown() {

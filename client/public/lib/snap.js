@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module snap
  * @description Snap/alignment guides that show when shapes align with each other
@@ -91,14 +92,21 @@ export class SnapGuides {
     return { guides: deduplicateGuides(guides), adjustments: { x: bestDx || 0, y: bestDy || 0 } };
   }
 
-  render(guides) {
+  render(guides, shape) {
     this.clear();
     const svg = this.#canvas?.querySelector('svg') || this.#canvas?.querySelector('#container svg');
     if (!svg) return;
     const NS = 'http://www.w3.org/2000/svg';
 
+    const shapeLeft = shape ? shape.x : 0;
+    const shapeRight = shape ? shape.x + shape.width : 0;
+    const shapeTop = shape ? shape.y : 0;
+    const shapeBottom = shape ? shape.y + shape.height : 0;
+    const shapeCenterX = shape ? shape.x + shape.width / 2 : 0;
+    const shapeCenterY = shape ? shape.y + shape.height / 2 : 0;
+
     for (const guide of guides) {
-      const el = document.createElementNS(NS, guide.type === 'vertical' ? 'line' : 'line');
+      const el = document.createElementNS(NS, 'line');
       if (guide.type === 'vertical') {
         el.setAttribute('x1', String(guide.pos));
         el.setAttribute('y1', '-10000');
@@ -117,6 +125,40 @@ export class SnapGuides {
       el.classList.add('snap-guide');
       svg.appendChild(el);
       this.#guideEls.push(el);
+
+      if (shape) {
+        let distance = null;
+        let labelX = guide.pos;
+        let labelY = 0;
+
+        if (guide.type === 'vertical') {
+          const closestEdge = [shapeLeft, shapeRight, shapeCenterX]
+            .reduce((a, b) => Math.abs(a - guide.pos) < Math.abs(b - guide.pos) ? a : b);
+          distance = Math.abs(Math.round(guide.pos - closestEdge));
+          labelY = shapeCenterY - 8;
+        } else {
+          const closestEdge = [shapeTop, shapeBottom, shapeCenterY]
+            .reduce((a, b) => Math.abs(a - guide.pos) < Math.abs(b - guide.pos) ? a : b);
+          distance = Math.abs(Math.round(guide.pos - closestEdge));
+          labelX = shapeCenterX + 4;
+          labelY = guide.pos;
+        }
+
+        if (distance !== null && distance > 0) {
+          const text = document.createElementNS(NS, 'text');
+          text.setAttribute('x', String(labelX));
+          text.setAttribute('y', String(labelY));
+          text.setAttribute('fill', '#31efb8');
+          text.setAttribute('font-size', '10');
+          text.setAttribute('font-family', 'sans-serif');
+          text.setAttribute('text-anchor', guide.type === 'vertical' ? 'middle' : 'start');
+          text.setAttribute('pointer-events', 'none');
+          text.classList.add('snap-guide');
+          text.textContent = `${distance}`;
+          svg.appendChild(text);
+          this.#guideEls.push(text);
+        }
+      }
     }
   }
 

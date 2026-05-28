@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module middleware/retry
  * @description RPC retry middleware — mirrors `app.rpc.retry` from the Clojure backend.

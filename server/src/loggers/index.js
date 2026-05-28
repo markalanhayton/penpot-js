@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module loggers
  * @description Structured JSON logging — mirrors `app.common.logging` from the

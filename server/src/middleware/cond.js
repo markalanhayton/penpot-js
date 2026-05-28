@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module middleware/cond
  * @description Conditional execution / ETag middleware — mirrors `app.rpc.cond`

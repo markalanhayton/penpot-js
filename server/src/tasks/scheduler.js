@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module tasks/scheduler
  * @description Background task scheduler — mirrors `app.tasks` from the Clojure backend.
@@ -107,6 +108,17 @@ async function objectsGc(pool) {
     }
   }
 
+  // Touch storage objects referenced by soft-deleted team photo
+  const teams = pool.query(
+    "SELECT id, photo_id FROM team WHERE deleted_at IS NOT NULL AND deleted_at < ? LIMIT ?",
+    [now, CHUNK_SIZE]
+  );
+  for (const t of teams) {
+    if (t.photo_id) {
+      pool.run('UPDATE storage_object SET touched_at = ? WHERE id = ?', [now, t.photo_id]);
+    }
+  }
+
   // Hard-deletes below require deletion protection to be disabled
   disableDeletionProtection(pool);
   try {
@@ -143,12 +155,60 @@ async function objectsGc(pool) {
     }
     pool.run("DELETE FROM file_media_object WHERE deleted_at IS NOT NULL AND deleted_at < ?", [now]);
 
+    // Delete soft-deleted file_data rows (RESTRICT FK on file, must be deleted before file)
+    pool.run("DELETE FROM file_data WHERE deleted_at IS NOT NULL AND deleted_at < ?", [now]);
+
+    // Delete soft-deleted file_change rows (RESTRICT FK on file, must be deleted before file)
+    pool.run("DELETE FROM file_change WHERE deleted_at IS NOT NULL AND deleted_at < ?", [now]);
+
     // Hard-delete soft-deleted files and their dependents (in dependency order)
+    // Tables with RESTRICT FKs to file: file_change, file_data, file_object_thumbnail
+    // These must be deleted before their parent file to avoid FK constraint errors
+    // Touch media storage objects before deleting file_object_thumbnail rows
+    const fotByFile = pool.query(
+      "SELECT media_id FROM file_object_thumbnail WHERE file_id IN (SELECT id FROM file WHERE deleted_at IS NOT NULL AND deleted_at < ?) AND media_id IS NOT NULL",
+      [now]
+    );
+    for (const fot of fotByFile) {
+      pool.run('UPDATE storage_object SET touched_at = ? WHERE id = ?', [now, fot.media_id]);
+    }
+    pool.run("DELETE FROM file_object_thumbnail WHERE file_id IN (SELECT id FROM file WHERE deleted_at IS NOT NULL AND deleted_at < ?)", [now]);
     pool.run("DELETE FROM file_change WHERE file_id IN (SELECT id FROM file WHERE deleted_at IS NOT NULL AND deleted_at < ?)", [now]);
+    pool.run("DELETE FROM file_data WHERE file_id IN (SELECT id FROM file WHERE deleted_at IS NOT NULL AND deleted_at < ?)", [now]);
     pool.run("DELETE FROM file_media_object WHERE file_id IN (SELECT id FROM file WHERE deleted_at IS NOT NULL AND deleted_at < ?)", [now]);
     pool.run("DELETE FROM page WHERE file_id IN (SELECT id FROM file WHERE deleted_at IS NOT NULL AND deleted_at < ?)", [now]);
     pool.run("DELETE FROM file WHERE deleted_at IS NOT NULL AND deleted_at < ?", [now]);
+
+    // Before hard-deleting projects, clean up RESTRICT-blocked dependents
+    // for ALL files under those projects (including non-soft-deleted files,
+    // since CASCADE will delete them along with the project)
+    // Touch media storage objects before deleting file_object_thumbnail rows
+    const fotByProject = pool.query(
+      "SELECT fot.media_id FROM file_object_thumbnail fot JOIN file f ON fot.file_id = f.id JOIN project p ON f.project_id = p.id WHERE p.deleted_at IS NOT NULL AND p.deleted_at < ? AND fot.media_id IS NOT NULL LIMIT ?",
+      [now, CHUNK_SIZE]
+    );
+    for (const fot of fotByProject) {
+      pool.run('UPDATE storage_object SET touched_at = ? WHERE id = ?', [now, fot.media_id]);
+    }
+    pool.run("DELETE FROM file_object_thumbnail WHERE file_id IN (SELECT f.id FROM file f JOIN project p ON f.project_id = p.id WHERE p.deleted_at IS NOT NULL AND p.deleted_at < ?)", [now]);
+    pool.run("DELETE FROM file_change WHERE file_id IN (SELECT f.id FROM file f JOIN project p ON f.project_id = p.id WHERE p.deleted_at IS NOT NULL AND p.deleted_at < ?)", [now]);
+    pool.run("DELETE FROM file_data WHERE file_id IN (SELECT f.id FROM file f JOIN project p ON f.project_id = p.id WHERE p.deleted_at IS NOT NULL AND p.deleted_at < ?)", [now]);
     pool.run("DELETE FROM project WHERE deleted_at IS NOT NULL AND deleted_at < ?", [now]);
+
+    // Before hard-deleting teams, clean up RESTRICT-blocked dependents
+    // for ALL files under those teams (cascade will delete projects -> files)
+    // Touch media storage objects before deleting file_object_thumbnail rows
+    const fotByTeam = pool.query(
+      "SELECT fot.media_id FROM file_object_thumbnail fot JOIN file f ON fot.file_id = f.id JOIN project p ON f.project_id = p.id JOIN team t ON p.team_id = t.id WHERE t.deleted_at IS NOT NULL AND t.deleted_at < ? AND fot.media_id IS NOT NULL LIMIT ?",
+      [now, CHUNK_SIZE]
+    );
+    for (const fot of fotByTeam) {
+      pool.run('UPDATE storage_object SET touched_at = ? WHERE id = ?', [now, fot.media_id]);
+    }
+    pool.run("DELETE FROM file_object_thumbnail WHERE file_id IN (SELECT f.id FROM file f JOIN project p ON f.project_id = p.id JOIN team t ON p.team_id = t.id WHERE t.deleted_at IS NOT NULL AND t.deleted_at < ?)", [now]);
+    pool.run("DELETE FROM file_change WHERE file_id IN (SELECT f.id FROM file f JOIN project p ON f.project_id = p.id JOIN team t ON p.team_id = t.id WHERE t.deleted_at IS NOT NULL AND t.deleted_at < ?)", [now]);
+    pool.run("DELETE FROM file_data WHERE file_id IN (SELECT f.id FROM file f JOIN project p ON f.project_id = p.id JOIN team t ON p.team_id = t.id WHERE t.deleted_at IS NOT NULL AND t.deleted_at < ?)", [now]);
+
     pool.run("DELETE FROM profile WHERE deleted_at IS NOT NULL AND deleted_at < ?", [now]);
     pool.run("DELETE FROM team WHERE deleted_at IS NOT NULL AND deleted_at < ?", [now]);
   } finally {
@@ -248,19 +308,21 @@ async function uploadSessionGc(pool) {
   // 1. Delete expired upload sessions
   pool.run("DELETE FROM upload_session WHERE created_at < datetime('now', '-1 hour')");
 
-  // 2. Clean up orphaned chunk storage objects from abandoned uploads
-  // Chunks are stored with bucket='tempfile' and their session is now gone.
-  // Find tempfile storage objects older than 1 hour that have no upload_session
-  // and mark them for deletion via the normal orphan GC path.
+  // 2. Clean up orphaned chunk storage objects from abandoned uploads.
+  // Chunks store their session ID in the metadata JSON column as upload_id.
+  // Find tempfile storage objects older than 1 hour whose upload_id references
+  // a deleted (or nonexistent) upload_session, and mark them for deletion.
   const orphanedChunks = pool.query(
-    `SELECT so.id FROM storage_object so
-     LEFT JOIN upload_session us ON us.file_path LIKE '%' || so.id || '%'
-     WHERE so.bucket = 'tempfile'
-       AND so.touched_at IS NULL
-       AND so.created_at < datetime('now', '-1 hour')
-       AND so.deleted_at IS NULL
-       AND us.id IS NULL
-     LIMIT 1000`
+      `SELECT so.id FROM storage_object so
+      WHERE so.bucket = 'tempfile'
+        AND so.touched_at IS NULL
+        AND so.created_at < datetime('now', '-1 hour')
+        AND so.deleted_at IS NULL
+        AND json_extract(so.metadata, '$.upload_id') IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM upload_session us WHERE us.id = json_extract(so.metadata, '$.upload_id')
+        )
+      LIMIT 1000`
   );
 
   if (orphanedChunks.length > 0) {

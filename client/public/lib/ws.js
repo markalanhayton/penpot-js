@@ -1,3 +1,4 @@
+'use strict';
 import { transitEncode, transitDecode } from './transit.js';
 import { appStore } from './store.js';
 

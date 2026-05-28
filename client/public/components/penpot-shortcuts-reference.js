@@ -1,3 +1,4 @@
+'use strict';
 import { PenpotElement } from './base.js';
 import { getShortcuts } from '../lib/shortcuts.js';
 

@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module history
  * @description Undo/redo history stack for workspace editing operations.

@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc/dispatcher
  * @description RPC method registry and HTTP request dispatcher — mirrors

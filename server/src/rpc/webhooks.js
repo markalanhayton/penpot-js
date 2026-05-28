@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc/webhooks
  * @description Webhook RPC commands — mirrors `app.rpc.commands.webhooks` from the Clojure backend.

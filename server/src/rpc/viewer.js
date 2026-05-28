@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc/viewer
  * @description View-only bundle RPC command — mirrors `app.rpc.commands.viewer` from the Clojure backend.

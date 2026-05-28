@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module middleware/rate-limit
  * @description Rate limiting and concurrency limiting middleware — mirrors

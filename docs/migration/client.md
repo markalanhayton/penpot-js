@@ -18,7 +18,7 @@ The canvas is rendered by WASM/Skia to a single `<canvas>` element. React's virt
 
 | Component | Files | Lines | Status |
 |-----------|-------|-------|--------|
-| `client/public/` | 93 | ~24,200 | Working auth + dashboard + workspace with drawing tools, snap guides, rulers, SVG import, Inspect panel, OT collaboration, flex/grid layout, design tokens, bool ops. **6 P0 items completed, all P1 items done** — see `tracking.md` Phase 2b for details. |
+| `client/public/` | 103 | ~24,600 | Working auth + dashboard + workspace with drawing tools, snap guides, rulers, SVG import, Inspect panel, OT collaboration, flex/grid layout, design tokens, bool ops. **6 P0 items completed, all P1 items done, most P2 items done** — see `tracking.md` Phase 2b for details. |
 | `frontend/src/app/main/` (ClojureScript) | 544 | ~129K | Production frontend, fully functional |
 
 ### Target
@@ -225,7 +225,7 @@ These 14 files are **already in JavaScript** and can be copied/adapted directly:
 
 ## 3. Existing ES JS Front-End
 
-The `client/` directory contains a fully functional front-end with 93 source files and ~24,000 lines of JS:
+The `client/` directory contains a fully functional front-end with 102 source files and ~25,500 lines of JS:
 
 ```
 client/
@@ -1097,7 +1097,7 @@ ES JS:
 - [x] Rectangle tool (draw rectangles)
 - [x] Circle/Ellipse tool
 - [x] Move (integrated into select tool)
-- [x] Multi-select (marquee, shift+click)
+- [x] Multi-select (marquee, shift+click, group bounding box, resize handles, rotation handle)
 - [x] Resize handles (bounding box)
 - [x] Text tool (basic click-to-place)
 - [ ] Path tool (pen/bezier freehand drawing — currently click-only stub, no Bezier curve editing)

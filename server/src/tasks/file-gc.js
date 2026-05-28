@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module tasks/file-gc
  * @description File garbage collection — mirrors `app.tasks.file-gc` from the Clojure backend.

@@ -27,7 +27,10 @@ class Parser {
       const ch = this._string[this._currentIndex];
       return this._currentIndex < this._endIndex && (ch === 'M' || ch === 'm');
     }
-    return this._currentIndex < this._endIndex;
+    if (this._currentIndex >= this._endIndex) return false;
+    const ch = this._string[this._currentIndex];
+    if (VALID_COMMANDS.has(ch) || ch === '+' || ch === '-' || ch === '.' || (ch >= '0' && ch <= '9')) return true;
+    return false;
   }
 
   parseSegment() {

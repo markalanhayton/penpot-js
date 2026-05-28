@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module middleware/security
  * @description HTTP security headers middleware — mirrors the security headers

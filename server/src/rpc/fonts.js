@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc/fonts
  * @description Font management RPC commands — mirrors `app.rpc.commands.fonts`

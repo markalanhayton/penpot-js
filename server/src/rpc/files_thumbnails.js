@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc/files_thumbnails
  * @description File and object thumbnail RPC commands — mirrors
@@ -18,6 +19,10 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import os from 'node:os';
+import crypto from 'node:crypto';
 import { rowToCamel, rowsToCamel } from '../db/sqlite.js';
 import {
   validateMediaType,
@@ -29,6 +34,7 @@ import {
   sanitizeImage,
   calculateHash,
   withTempFiles,
+  createTempFile,
   MEDIA_THUMBNAIL_OPTIONS,
 } from '../media/index.js';
 import {
@@ -166,7 +172,7 @@ export default function registerFilesThumbnailsCommands(register, pool) {
       // Return minimal file data needed for thumbnail rendering
       const pages = pool.query(
         'SELECT * FROM page WHERE file_id = ? AND deleted_at IS NULL ORDER BY ordering',
-        { file_id: fileId }
+        [fileId]
       );
 
       return {
@@ -177,14 +183,70 @@ export default function registerFilesThumbnailsCommands(register, pool) {
     }
   });
 
-  // --- MUTATION: create-file-object-thumbnail ---
+  /**
+ * Resolve a media parameter to a canonical form with `path` and `mtype`.
+ *
+ * Handles two formats:
+ * - Multipart upload: `{ path, mtype, size, filename }`
+ * - Transit+JSON base64: `{ content, contentType, width, height }`
+ *
+ * For base64 payloads, decodes the content to a temp file and returns
+ * an object with `path`, `mtype`, and `size` so downstream code can
+ * treat both cases uniformly.
+ */
+async function resolveMedia(media) {
+  if (!media) throw new RpcError('validation', 'validation-error', 'Missing media parameter');
+
+  const MAX_MEDIA_SIZE = 10 * 1024 * 1024; // 10 MB
+
+  // Handle multipart file uploads: { path, mtype, size, filename }
+  if (media.path && media.mtype) {
+    if (media.size && media.size > MAX_MEDIA_SIZE) {
+      throw new RpcError('validation', 'validation-error', `Media file too large (${media.size} bytes, max ${MAX_MEDIA_SIZE} bytes)`);
+    }
+    return { path: media.path, mtype: media.mtype, size: media.size || 0, filename: media.filename };
+  }
+
+  // Handle Transit+JSON base64 payloads: { content, contentType, width, height }
+  // After toCamelCase, "content-type" becomes "contentType".
+  // Also support data URI format: content = "data:image/png;base64,XXXX"
+  let mtype = media.mtype || media.contentType || media['content-type'] || media['mime-type'] || media.mimeType;
+  let base64;
+
+  if (typeof media.content === 'string' && media.content.startsWith('data:')) {
+    const match = media.content.match(/^data:([^;]+);base64,(.+)$/s);
+    if (match) {
+      base64 = match[2];
+      if (!mtype) mtype = match[1];
+    }
+  }
+
+  if (!base64) {
+    base64 = media.content || media.base64;
+  }
+
+  if (base64 && mtype) {
+    const estimatedSize = Math.ceil(base64.length * 0.75);
+    if (estimatedSize > MAX_MEDIA_SIZE) {
+      throw new RpcError('validation', 'validation-error', `Media payload too large (${estimatedSize} bytes, max ${MAX_MEDIA_SIZE} bytes)`);
+    }
+    const buffer = Buffer.from(base64, 'base64');
+    const tmpPath = createTempFile({ prefix: 'penpot.thumb.', suffix: '.png' });
+    await fs.writeFile(tmpPath, buffer);
+    return { path: tmpPath, mtype, size: buffer.length, filename: 'thumbnail.png' };
+  }
+
+  throw new RpcError('validation', 'validation-error', 'Media must provide either a file upload (path/mtype) or base64 content (content/contentType)');
+}
+
+// --- MUTATION: create-file-object-thumbnail ---
 
   register('create-file-object-thumbnail', {
     auth: true,
     added: '1.19',
     async handler(params, ctx) {
       const { fileId, objectId, media, tag } = params;
-      const content = media;
+      const content = await resolveMedia(media);
 
       checkEditionPermissions(pool, ctx.profileId, fileId);
 
@@ -203,7 +265,6 @@ export default function registerFilesThumbnailsCommands(register, pool) {
         await sanitizeImage(content.path, info.mtype);
 
         // Store the thumbnail as a storage object
-        const fs = await import('node:fs/promises');
         const thumbData = await fs.readFile(info.path);
         const thumbObj = putStorageObject(pool, thumbData, {
           contentType: info.mtype,
@@ -290,7 +351,7 @@ export default function registerFilesThumbnailsCommands(register, pool) {
     added: '1.19',
     async handler(params, ctx) {
       const { fileId, revn, media, props } = params;
-      const content = media;
+      const content = await resolveMedia(media);
 
       checkEditionPermissions(pool, ctx.profileId, fileId);
 
@@ -309,7 +370,6 @@ export default function registerFilesThumbnailsCommands(register, pool) {
         await sanitizeImage(content.path, info.mtype);
 
         // Store as storage object
-        const fs = await import('node:fs/promises');
         const data = await fs.readFile(info.path);
         const hash = calculateHash(data);
         const mediaObj = putStorageObject(pool, data, {

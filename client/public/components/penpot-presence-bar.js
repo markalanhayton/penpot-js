@@ -1,3 +1,4 @@
+'use strict';
 import { PenpotElement } from './base.js';
 import { appStore } from '../lib/store.js';
 

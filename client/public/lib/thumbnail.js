@@ -1,11 +1,21 @@
-/**
- * @module thumbnail
- * @description Client-side thumbnail generation for Penpot pages.
- * Renders page shapes to a canvas at thumbnail dimensions and uploads
- * via the `create-file-object-thumbnail` RPC command.
- */
-
+'use strict';
 import { cmd } from './rpc.js';
+
+function plainTextFromTree(content) {
+  if (!content || typeof content !== 'object' || content.type !== 'root') return '';
+  const paragraphs = [];
+  function walk(node) {
+    if (node.type === 'paragraph') {
+      const text = (node.children || []).map(c => c.text || '').join('');
+      paragraphs.push(text);
+    } else if (node.text !== undefined) {
+      paragraphs.push(node.text);
+    }
+    if (node.children) node.children.forEach(walk);
+  }
+  walk(content);
+  return paragraphs.join('\n');
+}
 
 const THUMBNAIL_WIDTH = 400;
 const THUMBNAIL_HEIGHT = 250;
@@ -145,11 +155,16 @@ function drawShapeToCanvas(ctx, shape, objectsMap) {
       if (stroke !== 'transparent' && ctx.lineWidth > 0) ctx.stroke();
       break;
 
-    case 'text':
+    case 'text': {
       ctx.font = `${shape.fontWeight || 'normal'} ${shape.fontSize || 14}px ${shape.fontFamily || 'sans-serif'}`;
       ctx.textBaseline = 'top';
-      ctx.fillText(shape.content || shape.name || 'Text', x, y);
+      const textContent = shape.content;
+      const text = (textContent && typeof textContent === 'object' && textContent.type === 'root')
+        ? plainTextFromTree(textContent)
+        : (typeof textContent === 'string' ? textContent : shape.name || 'Text');
+      ctx.fillText(text, x, y);
       break;
+    }
 
     case 'path':
       if (shape.d || shape.pathData) {

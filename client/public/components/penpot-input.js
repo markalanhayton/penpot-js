@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module components/penpot-input
  * @description Reusable input Web Component.

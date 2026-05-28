@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module tasks/storage_gc
  * @description Storage garbage collection tasks — mirrors `app.storage.gc-touched`

@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module db/migrate
  * @description Standalone migration runner — an alternative entry point to

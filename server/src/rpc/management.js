@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc/management
  * @description Management RPC commands — mirrors `app.rpc.commands.management` from the Clojure backend.
@@ -13,8 +14,109 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
+import { readFile } from 'node:fs/promises';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { RpcError } from './dispatcher.js';
 import { encode, decode } from '../files/blob.js';
+import { parseImportBuffer, importParsedFiles } from './binfile.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Module-level cache for templates; reload requires server restart.
+let templatesCache = null;
+
+async function loadTemplates() {
+  if (templatesCache) return templatesCache;
+
+  const templatesPath = process.env.PENPOT_TEMPLATES_PATH;
+  if (templatesPath) {
+    try {
+      const content = await readFile(templatesPath, 'utf-8');
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed)) {
+        templatesCache = parsed;
+        return templatesCache;
+      }
+    } catch (err) {
+      console.warn(`[management] Failed to load templates from PENPOT_TEMPLATES_PATH=${templatesPath}: ${err.message}`);
+    }
+  }
+
+  try {
+    const defaultPath = join(__dirname, '..', '..', 'resources', 'onboarding.json');
+    const content = await readFile(defaultPath, 'utf-8');
+    const parsed = JSON.parse(content);
+    if (Array.isArray(parsed)) {
+      templatesCache = parsed;
+      return templatesCache;
+    }
+  } catch (err) {
+    console.warn(`[management] Failed to load default templates: ${err.message}`);
+  }
+
+  return [];
+}
+
+function getTemplateById(templates, templateId) {
+  return templates.find(t => t.id === templateId) || null;
+}
+
+const ALLOWED_TEMPLATE_URL_SCHEMES = ['https:', 'http:'];
+const MAX_TEMPLATE_DOWNLOAD_SIZE = 50 * 1024 * 1024; // 50 MB
+
+async function downloadTemplateFile(fileUri) {
+  let parsedUrl;
+  try {
+    parsedUrl = new URL(fileUri);
+  } catch {
+    throw new RpcError('validation', 'validation-error', 'Invalid template URL');
+  }
+
+  if (!ALLOWED_TEMPLATE_URL_SCHEMES.includes(parsedUrl.protocol)) {
+    throw new RpcError('validation', 'validation-error', 'Template URL must use https: or http: scheme');
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+  try {
+    const response = await fetch(fileUri, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'penpot-js/server' },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const contentLength = parseInt(response.headers.get('content-length') || '0', 10);
+    if (contentLength > MAX_TEMPLATE_DOWNLOAD_SIZE) {
+      throw new RpcError('validation', 'validation-error', `Template file too large (${contentLength} bytes, max ${MAX_TEMPLATE_DOWNLOAD_SIZE} bytes)`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    if (arrayBuffer.byteLength > MAX_TEMPLATE_DOWNLOAD_SIZE) {
+      throw new RpcError('validation', 'validation-error', `Template file too large (${arrayBuffer.byteLength} bytes, max ${MAX_TEMPLATE_DOWNLOAD_SIZE} bytes)`);
+    }
+
+    return Buffer.from(arrayBuffer);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function readLocalTemplateFile(filePath) {
+  if (filePath.includes('..')) {
+    return null;
+  }
+  try {
+    const content = await readFile(filePath);
+    return Buffer.from(content);
+  } catch {
+    return null;
+  }
+}
 
 function checkEditionPermissions(pool, profileId, teamId) {
   const rel = pool.get(
@@ -308,43 +410,35 @@ export default function registerManagementCommands(register, pool) {
 
       checkEditionPermissions(pool, ctx.profileId, project.team_id);
 
-      const template = await getTemplateData(templateId);
+      const templates = await loadTemplates();
+      const template = getTemplateById(templates, templateId);
       if (!template) {
         throw new RpcError('not-found', 'template-not-found', 'Template not found');
       }
 
-      const now = new Date().toISOString();
-      const newFileId = uuidv4();
-      let data = template;
-      if (typeof data === 'string') {
-        try { data = JSON.parse(data); } catch { /* keep */ }
+      let rawBuffer = null;
+
+      if (template.path) {
+        rawBuffer = await readLocalTemplateFile(template.path);
       }
 
-      const encoded = await encode(data, { version: 5 });
+      if (!rawBuffer && template['file-uri']) {
+        console.info(`[management] Downloading template "${templateId}" from ${template['file-uri']}`);
+        rawBuffer = await downloadTemplateFile(template['file-uri']);
+      }
 
-      pool.insertOnConflictDoNothing('file', {
-        id: newFileId,
-        project_id: projectId,
-        name: template.name || 'Template',
-        revn: 1,
-        is_shared: '0',
-        has_media_trimmed: '0',
-        created_at: now,
-        modified_at: now,
+      if (!rawBuffer) {
+        throw new RpcError('not-found', 'template-not-found', 'Template file not available');
+      }
+
+      const parsed = await parseImportBuffer(rawBuffer);
+      const result = await importParsedFiles(pool, parsed, {
+        projectId,
+        profileId: ctx.profileId,
+        name: template.name,
       });
 
-      pool.insertOnConflictDoNothing('file_data', {
-        id: uuidv4(),
-        file_id: newFileId,
-        type: 'main',
-        data: encoded,
-        created_at: now,
-        modified_at: now,
-      });
-
-      pool.run('UPDATE project SET modified_at = ? WHERE id = ?', [now, projectId]);
-
-      return [newFileId];
+      return result;
     },
   });
 
@@ -352,29 +446,8 @@ export default function registerManagementCommands(register, pool) {
     auth: true,
     added: '1.19',
     handler: async (_params, _ctx) => {
-      const templates = [
-        { id: 'wireframe-kit', name: 'Wireframe Kit' },
-        { id: 'design-system', name: 'Design System' },
-        { id: 'landing-page', name: 'Landing Page' },
-        { id: 'mobile-app', name: 'Mobile App' },
-        { id: 'dashboard', name: 'Dashboard' },
-      ];
-      return templates;
+      const templates = await loadTemplates();
+      return templates.map(t => ({ id: t.id, name: t.name, icon: t.icon || '', color: t.color || '' }));
     },
   });
-}
-
-async function getTemplateData(templateId) {
-  const templatesPath = process.env.PENPOT_TEMPLATES_PATH;
-  if (!templatesPath) return null;
-
-  try {
-    const fs = await import('fs/promises');
-    const path = await import('path');
-    const templateFile = path.join(templatesPath, `${templateId}.json`);
-    const content = await fs.readFile(templateFile, 'utf-8');
-    return JSON.parse(content);
-  } catch {
-    return null;
-  }
 }

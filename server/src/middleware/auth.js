@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module middleware/auth
  * @description Authentication middleware pipeline — mirrors `app.http.middleware`

@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module persistence
  * @description Batches local shape changes and persists them to the server
@@ -171,6 +172,14 @@ export function makeModColorChange(color) {
 
 export function makeDelColorChange(colorId) {
   return { type: 'del-color', id: colorId };
+}
+
+export function makeAddMediaChange(object) {
+  return { type: 'add-media', object };
+}
+
+export function makeDelMediaChange(mediaId) {
+  return { type: 'del-media', id: mediaId };
 }
 
 export function makeAddTypographyChange(typography) {
@@ -380,7 +389,9 @@ export async function flushSave() {
               return;
             }
           }
-        } catch {}
+        } catch (err) {
+          console.warn('[persistence] Save conflict resolution failed, will retry:', err?.message || err);
+        }
 
         if (_resolveConflict) await _resolveConflict(fileId, gapRevn);
 

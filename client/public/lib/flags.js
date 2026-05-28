@@ -1,3 +1,4 @@
+'use strict';
 export function parseFlags(flagString) {
   const flags = {};
   if (!flagString) return flags;

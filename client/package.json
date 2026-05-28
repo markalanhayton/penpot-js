@@ -11,6 +11,7 @@
     "playwright": "^1.60.0"
   },
   "dependencies": {
+    "@penpot/shared": "workspace:*",
     "nodemon": "^3.1.14",
     "ws": "^8.21.0"
   }

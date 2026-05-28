@@ -1,10 +1,12 @@
+'use strict';
 import { PenpotTool, DrawingTool, SelectTool, HandTool, TextTool, PathTool, ImageTool } from '../components/tools/base.js';
 import { PenBezierTool } from '../components/tools/pen-bezier.js';
 import { EllipseTool } from '../components/tools/ellipse-tool.js';
 import { History } from './history.js';
 import { createShape, createBoolShape } from './types.js';
-import { computeBoolOperation } from './bool-ops.js';
 import { enqueueChange, makeCreateChange, makeModifyChange, makeDeleteChange, makeMoveChange } from './persistence.js';
+import { copyShapesToClipboard, readShapesFromClipboard, readSystemClipboard, deepCloneShape, assignNewIds } from './clipboard.js';
+import { PathEditor } from './path-editor.js';
 
 export class ToolManager {
   #tools = new Map();
@@ -27,6 +29,7 @@ export class ToolManager {
   #boundContextMenu = null;
   #keydownHandler = null;
   #keyupHandler = null;
+  #pathEditor = null;
 
   constructor(canvas, workspace) {
     this.#canvas = canvas;
@@ -84,6 +87,9 @@ export class ToolManager {
   set smallNudge(v) { this.#smallNudge = v; }
   get bigNudge() { return this.#bigNudge; }
   set bigNudge(v) { this.#bigNudge = v; }
+
+  get pathEditor() { return this.#pathEditor; }
+  set pathEditor(editor) { this.#pathEditor = editor; }
 
   setPages(pages) { this.#pages = pages; }
   setPageIndex(index) { this.#currentPageIndex = index; }
@@ -234,32 +240,88 @@ export class ToolManager {
     this.#clipboard = [];
     for (const id of this.#selectedIds) {
       const shape = this.#findShape(page, id);
-      if (shape) this.#clipboard.push({ ...shape });
+      if (shape) this.#clipboard.push(deepCloneShape(shape));
     }
+    copyShapesToClipboard(this.#clipboard).catch(() => {});
+  }
+
+  cutSelected() {
+    const page = this.getCurrentPage();
+    if (!page) return;
+    this.#clipboard = [];
+    for (const id of this.#selectedIds) {
+      const shape = this.#findShape(page, id);
+      if (shape) this.#clipboard.push(deepCloneShape(shape));
+    }
+    copyShapesToClipboard(this.#clipboard).catch(() => {});
+    this.deleteSelected();
+  }
+
+  async pasteFromSystemClipboard(x, y) {
+    const clipData = await readShapesFromClipboard();
+    if (clipData && clipData.source === 'penpot' && Array.isArray(clipData.shapes)) {
+      const shapes = assignNewIds(clipData.shapes);
+      const offset = (x !== undefined && y !== undefined) ? { dx: x, dy: y } : { dx: 0, dy: 0 };
+      if (offset.dx === 0 && offset.dy === 0) {
+        offset.dx = 20;
+        offset.dy = 20;
+      } else {
+        const minX = Math.min(...shapes.map(s => s.x ?? 0));
+        const minY = Math.min(...shapes.map(s => s.y ?? 0));
+        for (const s of shapes) {
+          s.x = (s.x ?? 0) - minX + offset.dx;
+          s.y = (s.y ?? 0) - minY + offset.dy;
+        }
+      }
+      const newIds = [];
+      for (const shape of shapes) {
+        const newShape = { ...shape };
+        if (offset.dx !== 0 || offset.dy !== 0) {
+          if (offset.dx !== 20 && offset.dy !== 20) {
+          } else {
+            newShape.x = (newShape.x ?? 0) + offset.dx;
+            newShape.y = (newShape.y ?? 0) + offset.dy;
+          }
+        }
+        this.addShape(newShape);
+        newIds.push(newShape.id);
+      }
+      this.#selectedIds.clear();
+      for (const id of newIds) this.#selectedIds.add(id);
+      this.#workspace.emit('penpot-shape-select', { shapeId: newIds.length === 1 ? newIds[0] : null, selectedIds: [...this.#selectedIds] });
+      return true;
+    }
+    if (clipData && clipData.source === 'svg') {
+      return false;
+    }
+    return false;
   }
 
   pasteClipboard() {
-    if (this.#clipboard.length === 0) return;
-    const newIds = [];
-    for (const shape of this.#clipboard) {
-      const newShape = { ...shape, id: crypto.randomUUID(), x: shape.x + 20, y: shape.y + 20 };
-      this.addShape(newShape);
-      newIds.push(newShape.id);
+    if (this.#clipboard.length > 0) {
+      const newIds = [];
+      for (const shape of this.#clipboard) {
+        const newShape = { ...deepCloneShape(shape), id: crypto.randomUUID(), x: (shape.x || 0) + 20, y: (shape.y || 0) + 20 };
+        this.addShape(newShape);
+        newIds.push(newShape.id);
+      }
+      this.#selectedIds.clear();
+      for (const id of newIds) this.#selectedIds.add(id);
+      this.#workspace.emit('penpot-shape-select', { shapeId: newIds.length === 1 ? newIds[0] : null, selectedIds: [...this.#selectedIds] });
+      return;
     }
-    this.#selectedIds.clear();
-    for (const id of newIds) this.#selectedIds.add(id);
-    this.#workspace.emit('penpot-shape-select', { shapeId: newIds.length === 1 ? newIds[0] : null, selectedIds: [...this.#selectedIds] });
+    this.pasteFromSystemClipboard();
   }
 
   pasteAt(x, y) {
     if (this.#clipboard.length === 0) return;
-    const minX = Math.min(...this.#clipboard.map(s => s.x));
-    const minY = Math.min(...this.#clipboard.map(s => s.y));
+    const minX = Math.min(...this.#clipboard.map(s => s.x || 0));
+    const minY = Math.min(...this.#clipboard.map(s => s.y || 0));
     const newIds = [];
     for (const shape of this.#clipboard) {
-      const offsetX = shape.x - minX;
-      const offsetY = shape.y - minY;
-      const newShape = { ...shape, id: crypto.randomUUID(), x: x + offsetX, y: y + offsetY };
+      const offsetX = (shape.x || 0) - minX;
+      const offsetY = (shape.y || 0) - minY;
+      const newShape = { ...deepCloneShape(shape), id: crypto.randomUUID(), x: x + offsetX, y: y + offsetY };
       this.addShape(newShape);
       newIds.push(newShape.id);
     }
@@ -578,6 +640,11 @@ export class ToolManager {
     this.#keydownHandler = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.contentEditable === 'true') return;
 
+      if (this.#pathEditor && this.#pathEditor.isActive) {
+        const handled = this.#pathEditor.handleKeyDown(e);
+        if (handled) return;
+      }
+
       if (this.#activeTool) this.#activeTool.onKeyDown(e, this.#canvas);
 
       const nudge = e.shiftKey ? this.#bigNudge : this.#smallNudge;
@@ -600,15 +667,27 @@ export class ToolManager {
 
   #handlePointerDown(e) {
     if (e.button === 1 || (e.button === 0 && e.shiftKey)) return;
+    if (this.#pathEditor && this.#pathEditor.isActive) {
+      const handled = this.#pathEditor.handleMouseDown(e, this.#screenToCanvas.bind(this));
+      if (handled) return;
+    }
     if (this.#activeTool) this.#activeTool.onMouseDown(e, this.#canvas);
   }
 
   #handlePointerMove(e) {
+    if (this.#pathEditor && this.#pathEditor.isActive) {
+      const handled = this.#pathEditor.handleMouseMove(e, this.#screenToCanvas.bind(this));
+      if (handled) return;
+    }
     if (this.#activeTool) this.#activeTool.onMouseMove(e, this.#canvas);
     this.#updateCursor();
   }
 
   #handlePointerUp(e) {
+    if (this.#pathEditor && this.#pathEditor.isActive) {
+      const handled = this.#pathEditor.handleMouseUp(e, this.#screenToCanvas.bind(this));
+      if (handled) return;
+    }
     if (this.#activeTool) this.#activeTool.onMouseUp(e, this.#canvas);
   }
 
@@ -616,6 +695,15 @@ export class ToolManager {
     if (this.#activeTool && typeof this.#activeTool.onDblClick === 'function') {
       this.#activeTool.onDblClick(e, this.#canvas);
     }
+  }
+
+  #screenToCanvas(clientX, clientY) {
+    const canvasEl = this.#canvas;
+    if (canvasEl && typeof canvasEl.screenToCanvas === 'function') {
+      return canvasEl.screenToCanvas(clientX, clientY);
+    }
+    const rect = canvasEl.getBoundingClientRect();
+    return { x: clientX - rect.left, y: clientY - rect.top };
   }
 
   #handleContextMenu(e) {

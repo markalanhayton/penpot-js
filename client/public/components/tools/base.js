@@ -1,6 +1,8 @@
+'use strict';
 import { createShape } from '../../lib/types.js';
 import { SnapGuides } from '../../lib/snap.js';
 import { parseSVG } from '../../lib/svg-import.js';
+import { computeShapesBounds } from '../../lib/shapes.js';
 
 function imageToDataURL(img, width, height) {
   const canvas = document.createElement('canvas');
@@ -209,33 +211,47 @@ export class SelectTool extends PenpotTool {
     const pos = this.screenToCanvas(event.clientX, event.clientY);
 
     // Check for rotation handle first
-    if (this.#selectedIds.size === 1) {
+    if (this.#selectedIds.size >= 1) {
       const isRotation = this.#hitTestRotationHandle(pos.x, pos.y, canvas);
       if (isRotation) {
         this.#isRotating = true;
-        const shapeId = [...this.#selectedIds][0];
         const shapes = this._getShapes(canvas);
-        const shape = shapes.find(s => s.id === shapeId);
-        if (shape) {
-          const centerX = shape.x + shape.width / 2;
-          const centerY = shape.y + shape.height / 2;
-          this.#rotationStart = { centerX, centerY, startAngle: Math.atan2(pos.y - centerY, pos.x - centerX), originalRotation: shape.rotation || 0 };
+        if (this.#selectedIds.size === 1) {
+          const shapeId = [...this.#selectedIds][0];
+          const shape = shapes.find(s => s.id === shapeId);
+          if (shape) {
+            const centerX = shape.x + shape.width / 2;
+            const centerY = shape.y + shape.height / 2;
+            this.#rotationStart = { centerX, centerY, startAngle: Math.atan2(pos.y - centerY, pos.x - centerX), originalRotation: shape.rotation || 0, multi: false };
+          }
+        } else {
+          const selectedShapes = shapes.filter(s => this.#selectedIds.has(s.id));
+          const bounds = computeShapesBounds(selectedShapes);
+          const centerX = bounds.x + bounds.width / 2;
+          const centerY = bounds.y + bounds.height / 2;
+          this.#rotationStart = { centerX, centerY, startAngle: Math.atan2(pos.y - centerY, pos.x - centerX), originalRotation: 0, multi: true, shapes: selectedShapes.map(s => ({ id: s.id, x: s.x, y: s.y, rotation: s.rotation || 0, centerX: s.x + (s.width || 0) / 2, centerY: s.y + (s.height || 0) / 2 })) };
         }
         return;
       }
     }
 
     // Check for resize handle
-    if (this.#selectedIds.size === 1) {
+    if (this.#selectedIds.size >= 1) {
       const handle = this.#hitTestHandles(pos.x, pos.y, canvas);
       if (handle) {
         this.#isResizing = true;
         this.#resizeHandle = handle;
-        const shapeId = [...this.#selectedIds][0];
         const shapes = this._getShapes(canvas);
-        const shape = shapes.find(s => s.id === shapeId);
-        if (shape) {
-          this.#resizeStart = { x: shape.x, y: shape.y, w: shape.width, h: shape.height, mx: pos.x, my: pos.y };
+        if (this.#selectedIds.size === 1) {
+          const shapeId = [...this.#selectedIds][0];
+          const shape = shapes.find(s => s.id === shapeId);
+          if (shape) {
+            this.#resizeStart = { x: shape.x, y: shape.y, w: shape.width, h: shape.height, mx: pos.x, my: pos.y, multi: false };
+          }
+        } else {
+          const selectedShapes = shapes.filter(s => this.#selectedIds.has(s.id));
+          const bounds = computeShapesBounds(selectedShapes);
+          this.#resizeStart = { x: bounds.x, y: bounds.y, w: bounds.width, h: bounds.height, mx: pos.x, my: pos.y, multi: true, shapes: selectedShapes.map(s => ({ id: s.id, x: s.x, y: s.y, width: s.width, height: s.height })) };
         }
         return;
       }
@@ -303,7 +319,9 @@ export class SelectTool extends PenpotTool {
       if (snapResult) {
         adjustedDx += snapResult.adjustments.x;
         adjustedDy += snapResult.adjustments.y;
-        this.#snapGuides.render(snapResult.guides);
+        const dragShapes = this._getShapes(canvas);
+        const moveShape = this.#selectedIds.size === 1 ? dragShapes.find(s => s.id === [...this.#selectedIds][0]) : null;
+        this.#snapGuides.render(snapResult.guides, moveShape);
       } else {
         this.#snapGuides.clear();
       }
@@ -320,7 +338,7 @@ export class SelectTool extends PenpotTool {
     }
 
     // Update cursor based on handle hover
-    if (this.#selectedIds.size === 1) {
+    if (this.#selectedIds.size >= 1) {
       const rotHandle = this.#hitTestRotationHandle(pos.x, pos.y, canvas);
       if (rotHandle) {
         this._cursorOverride = 'grab';
@@ -377,8 +395,12 @@ export class SelectTool extends PenpotTool {
     if (!shapeId) return;
     const shapes = this._getShapes(canvas);
     const shape = shapes.find(s => s.id === shapeId);
-    if (shape && shape.type === 'text') {
+    if (!shape) return;
+    if (shape.type === 'text') {
       this.workspace.emit('penpot-edit-text', { shapeId, shape });
+    }
+    if (shape.type === 'path' && shape.content) {
+      this.workspace.emit('penpot-edit-path', { shapeId, shape });
     }
   }
 
@@ -401,22 +423,34 @@ export class SelectTool extends PenpotTool {
   }
 
   #hitTestRotationHandle(x, y, canvas) {
-    if (this.#selectedIds.size !== 1) return false;
-    const shapeId = [...this.#selectedIds][0];
-    const shapes = this._getShapes(canvas);
-    const shape = shapes.find(s => s.id === shapeId);
+    if (this.#selectedIds.size === 0) return false;
+    let shape;
+    if (this.#selectedIds.size === 1) {
+      const shapes = this._getShapes(canvas);
+      shape = shapes.find(s => s.id === [...this.#selectedIds][0]);
+    } else {
+      const shapes = this._getShapes(canvas);
+      const selectedShapes = shapes.filter(s => this.#selectedIds.has(s.id));
+      shape = computeShapesBounds(selectedShapes);
+    }
     if (!shape) return false;
     const rotationHandleOffset = 20;
-    const rhx = shape.x + shape.width / 2;
-    const rhy = shape.y - rotationHandleOffset;
+    const rhx = (shape.x || 0) + (shape.width || 0) / 2;
+    const rhy = (shape.y || 0) - rotationHandleOffset;
     return Math.abs(x - rhx) <= 7 && Math.abs(y - rhy) <= 7;
   }
 
   #hitTestHandles(x, y, canvas) {
-    if (this.#selectedIds.size !== 1) return null;
-    const shapeId = [...this.#selectedIds][0];
-    const shapes = this._getShapes(canvas);
-    const shape = shapes.find(s => s.id === shapeId);
+    if (this.#selectedIds.size === 0) return null;
+    let shape;
+    if (this.#selectedIds.size === 1) {
+      const shapes = this._getShapes(canvas);
+      shape = shapes.find(s => s.id === [...this.#selectedIds][0]);
+    } else {
+      const shapes = this._getShapes(canvas);
+      const selectedShapes = shapes.filter(s => this.#selectedIds.has(s.id));
+      shape = computeShapesBounds(selectedShapes);
+    }
     if (!shape) return null;
 
     const handles = this.#getHandles(shape);
@@ -448,22 +482,36 @@ export class SelectTool extends PenpotTool {
   }
 
   #handleRotation(mx, my) {
-    if (!this.#rotationStart || this.#selectedIds.size !== 1) return;
-    const shapeId = [...this.#selectedIds][0];
-    const { centerX, centerY, startAngle, originalRotation } = this.#rotationStart;
+    if (!this.#rotationStart) return;
+    const { centerX, centerY, startAngle, originalRotation, multi, shapes } = this.#rotationStart;
     const currentAngle = Math.atan2(my - centerY, mx - centerX);
-    let deltaAngle = currentAngle - startAngle;
+    const deltaAngle = currentAngle - startAngle;
+
+    if (multi && shapes) {
+      const cos = Math.cos(deltaAngle);
+      const sin = Math.sin(deltaAngle);
+      for (const orig of shapes) {
+        const dx = orig.centerX - centerX;
+        const dy = orig.centerY - centerY;
+        const newCenterX = centerX + dx * cos - dy * sin;
+        const newCenterY = centerY + dx * sin + dy * cos;
+        const posX = newCenterX - (orig.width || 0) / 2;
+        const posY = newCenterY - (orig.height || 0) / 2;
+        this.workspace.emit('penpot-shape-move', { shapeId: orig.id, dx: posX - orig.x, dy: posY - orig.y });
+        this.workspace.emit('penpot-shape-rotate', { shapeId: orig.id, rotation: (orig.rotation || 0) + deltaAngle });
+      }
+      return;
+    }
+
+    if (this.#selectedIds.size !== 1) return;
+    const shapeId = [...this.#selectedIds][0];
     const newRotation = originalRotation + deltaAngle;
     this.workspace.emit('penpot-shape-rotate', { shapeId, rotation: newRotation });
   }
 
   #handleResize(mx, my, canvas) {
-    const shapeId = [...this.#selectedIds][0];
-    const shapes = this._getShapes(canvas);
-    const shape = shapes?.find(s => s.id === shapeId);
-    if (!shape || !this.#resizeStart) return;
-
     const s = this.#resizeStart;
+    if (!s) return;
     const dx = mx - s.mx;
     const dy = my - s.my;
     const handle = this.#resizeHandle;
@@ -484,6 +532,30 @@ export class SelectTool extends PenpotTool {
     if (newW < MIN_SHAPE_SIZE) { newW = MIN_SHAPE_SIZE; if (handle.includes('w') || handle === 'nw' || handle === 'sw') newX = s.x + s.w - MIN_SHAPE_SIZE; }
     if (newH < MIN_SHAPE_SIZE) { newH = MIN_SHAPE_SIZE; if (handle.includes('n') || handle === 'nw' || handle === 'ne') newY = s.y + s.h - MIN_SHAPE_SIZE; }
 
+    if (s.multi && s.shapes) {
+      const scaleX = s.w > 0 ? newW / s.w : 1;
+      const scaleY = s.h > 0 ? newH / s.h : 1;
+      for (const orig of s.shapes) {
+        const resizedX = newX + (orig.x - s.x) * scaleX;
+        const resizedY = newY + (orig.y - s.y) * scaleY;
+        const resizedW = (orig.width || 0) * scaleX;
+        const resizedH = (orig.height || 0) * scaleY;
+        this.workspace.emit('penpot-shape-resize', {
+          shapeId: orig.id,
+          x: Math.round(resizedX),
+          y: Math.round(resizedY),
+          width: Math.round(resizedW),
+          height: Math.round(resizedH),
+        });
+      }
+      return;
+    }
+
+    const shapeId = [...this.#selectedIds][0];
+    const shapes = this._getShapes(canvas);
+    const shape = shapes?.find(s => s.id === shapeId);
+    if (!shape) return;
+
     const resizedShape = { ...shape, x: Math.round(newX), y: Math.round(newY), width: Math.round(newW), height: Math.round(newH) };
     const snapResult = this.#computeSnapForShape(resizedShape, canvas);
     if (snapResult) {
@@ -503,7 +575,7 @@ export class SelectTool extends PenpotTool {
           newH += snapResult.adjustments.y;
         }
       }
-      this.#snapGuides.render(snapResult.guides);
+      this.#snapGuides.render(snapResult.guides, shapes.find(s => s.id === shapeId));
     } else {
       this.#snapGuides.clear();
     }

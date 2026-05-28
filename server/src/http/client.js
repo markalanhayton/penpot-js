@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module http/client
  * @description Outbound HTTP client for webhook delivery — mirrors `app.http.client`

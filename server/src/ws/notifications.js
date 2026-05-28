@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module ws/notifications
  * @description WebSocket real-time notification handler — mirrors

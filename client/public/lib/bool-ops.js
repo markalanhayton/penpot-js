@@ -1,296 +1,109 @@
-import { createShape } from './types.js';
+'use strict';
 
-function ensureArray(shapes) {
-  if (Array.isArray(shapes)) return shapes;
-  if (typeof shapes === 'object' && shapes !== null) return Object.values(shapes);
-  return [];
-}
+import { BOOL_TYPES } from './types.js';
 
-function parsePathCommands(d) {
-  if (!d) return [];
-  const commands = [];
-  const re = /([MmLlHhVvCcSsQqTtAaZz])\s*([\d.e+\-,\s]*)/gi;
-  let match;
-  while ((match = re.exec(d)) !== null) {
-    const cmd = match[1];
-    const args = match[2].trim().split(/[\s,]+/).filter(s => s !== '').map(Number);
-    commands.push({ cmd, args });
+const EPS = 1e-10;
+
+function signedArea(ring) {
+  let s = 0;
+  for (let i = 0, len = ring.length; i < len; i++) {
+    const j = (i + 1) % len;
+    s += ring[i].x * ring[j].y - ring[j].x * ring[i].y;
   }
-  return commands;
+  return s / 2;
 }
 
-function pathToAbsoluteSegments(d) {
-  const cmds = parsePathCommands(d);
-  const segments = [];
-  let cx = 0, cy = 0;
-  let startX = 0, startY = 0;
+function isCcw(ring) {
+  return signedArea(ring) > 0;
+}
 
-  for (const { cmd, args } of cmds) {
-    switch (cmd) {
-      case 'M':
-        for (let i = 0; i < args.length; i += 2) {
-          cx = args[i]; cy = args[i + 1];
-          startX = cx; startY = cy;
-        }
-        break;
-      case 'm':
-        for (let i = 0; i < args.length; i += 2) {
-          cx += args[i]; cy += args[i + 1];
-          startX = cx; startY = cy;
-        }
-        break;
-      case 'L':
-        for (let i = 0; i < args.length; i += 2) {
-          segments.push({ type: 'line', x1: cx, y1: cy, x2: args[i], y2: args[i + 1] });
-          cx = args[i]; cy = args[i + 1];
-        }
-        break;
-      case 'l':
-        for (let i = 0; i < args.length; i += 2) {
-          segments.push({ type: 'line', x1: cx, y1: cy, x2: cx + args[i], y2: cy + args[i + 1] });
-          cx += args[i]; cy += args[i + 1];
-        }
-        break;
-      case 'H':
-        segments.push({ type: 'line', x1: cx, y1: cy, x2: args[0], y2: cy });
-        cx = args[0];
-        break;
-      case 'h':
-        segments.push({ type: 'line', x1: cx, y1: cy, x2: cx + args[0], y2: cy });
-        cx += args[0];
-        break;
-      case 'V':
-        segments.push({ type: 'line', x1: cx, y1: cy, x2: cx, y2: args[0] });
-        cy = args[0];
-        break;
-      case 'v':
-        segments.push({ type: 'line', x1: cx, y1: cy, x2: cx, y2: cy + args[0] });
-        cy += args[0];
-        break;
-      case 'C':
-        for (let i = 0; i < args.length; i += 6) {
-          segments.push({ type: 'cubic', x1: cx, y1: cy, cx1: args[i], cy1: args[i+1], cx2: args[i+2], cy2: args[i+3], x2: args[i+4], y2: args[i+5] });
-          cx = args[i+4]; cy = args[i+5];
-        }
-        break;
-      case 'c':
-        for (let i = 0; i < args.length; i += 6) {
-          segments.push({ type: 'cubic', x1: cx, y1: cy, cx1: cx+args[i], cy1: cy+args[i+1], cx2: cx+args[i+2], cy2: cy+args[i+3], x2: cx+args[i+4], y2: cy+args[i+5] });
-          cx += args[i+4]; cy += args[i+5];
-        }
-        break;
-      case 'Q':
-        for (let i = 0; i < args.length; i += 4) {
-          segments.push({ type: 'quad', x1: cx, y1: cy, cpx: args[i], cpy: args[i+1], x2: args[i+2], y2: args[i+3] });
-          cx = args[i+2]; cy = args[i+3];
-        }
-        break;
-      case 'q':
-        for (let i = 0; i < args.length; i += 4) {
-          segments.push({ type: 'quad', x1: cx, y1: cy, cpx: cx+args[i], cpy: cy+args[i+1], x2: cx+args[i+2], y2: cy+args[i+3] });
-          cx += args[i+2]; cy += args[i+3];
-        }
-        break;
-      case 'Z':
-      case 'z':
-        segments.push({ type: 'line', x1: cx, y1: cy, x2: startX, y2: startY });
-        cx = startX; cy = startY;
-        break;
-    }
+function ensureCcw(ring) {
+  return isCcw(ring) ? [...ring] : [...ring].reverse();
+}
+
+function ensureCw(ring) {
+  return isCcw(ring) ? [...ring].reverse() : [...ring];
+}
+
+function pointInPolygon(px, py, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i].x, yi = ring[i].y, xj = ring[j].x, yj = ring[j].y;
+    if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) inside = !inside;
   }
-  return segments;
+  return inside;
 }
 
-function segmentsToPath(segments) {
-  if (segments.length === 0) return 'M 0 0';
-  let d = '';
-  for (const seg of segments) {
-    if (!d) d = `M ${seg.x1} ${seg.y1}`;
-    switch (seg.type) {
-      case 'line':
-        d += ` L ${seg.x2} ${seg.y2}`;
-        break;
-      case 'cubic':
-        d += ` C ${seg.cx1} ${seg.cy1} ${seg.cx2} ${seg.cy2} ${seg.x2} ${seg.y2}`;
-        break;
-      case 'quad':
-        d += ` Q ${seg.cpx} ${seg.cpy} ${seg.x2} ${seg.y2}`;
-        break;
-    }
-  }
-  return d;
+function ringsContain(outer, inner) {
+  return inner.every(p => pointInPolygon(p.x, p.y, outer));
 }
 
-function flattenSegmentToLines(seg, tolerance = 1) {
-  switch (seg.type) {
-    case 'line':
-      return [{ x: seg.x2, y: seg.y2 }];
-    case 'cubic': {
-      const points = [];
-      const steps = Math.max(4, Math.ceil(Math.max(
-        Math.abs(seg.cx1 - seg.x1) + Math.abs(seg.cx2 - seg.x1),
-        Math.abs(seg.cy1 - seg.y1) + Math.abs(seg.cy2 - seg.y1)
-      ) / tolerance));
-      for (let i = 1; i <= steps; i++) {
-        const t = i / steps;
-        const t2 = t * t;
-        const t3 = t2 * t;
-        const mt = 1 - t;
-        const mt2 = mt * mt;
-        const mt3 = mt2 * mt;
-        const x = mt3 * seg.x1 + 3 * mt2 * t * seg.cx1 + 3 * mt * t2 * seg.cx2 + t3 * seg.x2;
-        const y = mt3 * seg.y1 + 3 * mt2 * t * seg.cy1 + 3 * mt * t2 * seg.cy2 + t3 * seg.y2;
-        points.push({ x, y });
-      }
-      return points;
-    }
-    case 'quad': {
-      const points = [];
-      const steps = Math.max(4, Math.ceil(Math.sqrt(Math.pow(seg.cpx - (seg.x1 + seg.x2) / 2, 2) + Math.pow(seg.cpy - (seg.y1 + seg.y2) / 2, 2)) / tolerance));
-      for (let i = 1; i <= steps; i++) {
-        const t = i / steps;
-        const mt = 1 - t;
-        const x = mt * mt * seg.x1 + 2 * mt * t * seg.cpx + t * t * seg.x2;
-        const y = mt * mt * seg.y1 + 2 * mt * t * seg.cpy + t * t * seg.y2;
-        points.push({ x, y });
-      }
-      return points;
-    }
-    default:
-      return [{ x: seg.x2, y: seg.y2 }];
-  }
-}
-
-function pathToPoints(d, tolerance = 1) {
-  const segments = pathToAbsoluteSegments(d);
-  if (segments.length === 0) return [];
-  const points = [{ x: segments[0].x1, y: segments[0].y1 }];
-  for (const seg of segments) {
-    const segPoints = flattenSegmentToLines(seg, tolerance);
-    points.push(...segPoints);
-  }
-  return points;
-}
-
-function polygonArea(points) {
+function polygonArea(pts) {
+  if (!pts || pts.length < 3) return 0;
   let area = 0;
-  const n = points.length;
-  for (let i = 0; i < n; i++) {
-    const j = (i + 1) % n;
-    area += points[i].x * points[j].y;
-    area -= points[j].x * points[i].y;
+  for (let i = 0; i < pts.length; i++) {
+    const j = (i + 1) % pts.length;
+    area += pts[i].x * pts[j].y - pts[j].x * pts[i].y;
   }
-  return area / 2;
+  return Math.abs(area) / 2;
 }
 
-function isClockwise(points) {
-  return polygonArea(points) > 0;
+function removeDuplicatePoints(points) {
+  if (points.length <= 1) return points;
+  const result = [points[0]];
+  for (let i = 1; i < points.length; i++) {
+    const prev = result[result.length - 1];
+    if (Math.abs(points[i].x - prev.x) > EPS || Math.abs(points[i].y - prev.y) > EPS) {
+      result.push(points[i]);
+    }
+  }
+  while (result.length > 1 &&
+    Math.abs(result[0].x - result[result.length - 1].x) < EPS &&
+    Math.abs(result[0].y - result[result.length - 1].y) < EPS) {
+    result.pop();
+  }
+  return result;
 }
 
-function ensureClockwise(points) {
-  if (!isClockwise(points)) return points.reverse();
-  return points;
+function shIsInside(point, cp1, cp2) {
+  return (cp2.x - cp1.x) * (point.y - cp1.y) - (cp2.y - cp1.y) * (point.x - cp1.x) >= 0;
 }
 
-function ensureCounterClockwise(points) {
-  if (isClockwise(points)) return points.reverse();
-  return points;
+function shIntersect(p1, p2, p3, p4) {
+  const d = (p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x);
+  if (Math.abs(d) < EPS) return null;
+  const t = ((p1.x - p3.x) * (p3.y - p4.y) - (p1.y - p3.y) * (p3.x - p4.x)) / d;
+  if (t < -EPS || t > 1 + EPS) return null;
+  return { x: p1.x + t * (p2.x - p1.x), y: p1.y + t * (p2.y - p1.y) };
 }
 
-function sutherlandHodgman(subject, clip) {
-  if (subject.length === 0 || clip.length === 0) return [];
+function shClip(subject, clip) {
+  const clipCcw = ensureCcw(clip);
   let output = [...subject];
-  for (let i = 0; i < clip.length; i++) {
-    if (output.length === 0) return [];
-    const input = [...output];
+  for (let i = 0; i < clipCcw.length; i++) {
+    if (output.length < 3) return [];
+    const cp1 = clipCcw[i];
+    const cp2 = clipCcw[(i + 1) % clipCcw.length];
+    const input = output;
     output = [];
-    const edgeStart = clip[i];
-    const edgeEnd = clip[(i + 1) % clip.length];
     for (let j = 0; j < input.length; j++) {
-      const current = input[j];
-      const previous = input[(j + input.length - 1) % input.length];
-      const currentInside = isInside(current, edgeStart, edgeEnd);
-      const previousInside = isInside(previous, edgeStart, edgeEnd);
-      if (currentInside) {
-        if (!previousInside) {
-          const inter = lineIntersection(previous, current, edgeStart, edgeEnd);
+      const curr = input[j];
+      const prev = input[(j + input.length - 1) % input.length];
+      const currInside = shIsInside(curr, cp1, cp2);
+      const prevInside = shIsInside(prev, cp1, cp2);
+      if (currInside) {
+        if (!prevInside) {
+          const inter = shIntersect(prev, curr, cp1, cp2);
           if (inter) output.push(inter);
         }
-        output.push(current);
-      } else if (previousInside) {
-        const inter = lineIntersection(previous, current, edgeStart, edgeEnd);
+        output.push(curr);
+      } else if (prevInside) {
+        const inter = shIntersect(prev, curr, cp1, cp2);
         if (inter) output.push(inter);
       }
     }
   }
   return output;
-}
-
-function isInside(point, edgeStart, edgeEnd) {
-  return (edgeEnd.x - edgeStart.x) * (point.y - edgeStart.y) - (edgeEnd.y - edgeStart.y) * (point.x - edgeStart.x) >= 0;
-}
-
-function lineIntersection(p1, p2, p3, p4) {
-  const x1 = p1.x, y1 = p1.y, x2 = p2.x, y2 = p2.y;
-  const x3 = p3.x, y3 = p3.y, x4 = p4.x, y4 = p4.y;
-  const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
-  if (Math.abs(denom) < 1e-10) return null;
-  const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom;
-  return { x: x1 + t * (x2 - x1), y: y1 + t * (y2 - y1) };
-}
-
-function unionPoints(shapesArray) {
-  if (shapesArray.length < 2) return shapesArray[0] ? pathToPoints(shapesArray[0].d || `M ${shapesArray[0].x} ${shapesArray[0].y} L ${shapesArray[0].x + shapesArray[0].width} ${shapesArray[0].y} L ${shapesArray[0].x + shapesArray[0].width} ${shapesArray[0].y + shapesArray[0].height} L ${shapesArray[0].x} ${shapesArray[0].y + shapesArray[0].height} Z`) : [];
-  let result = shapeToPoints(shapesArray[0]);
-  for (let i = 1; i < shapesArray.length; i++) {
-    const next = shapeToPoints(shapesArray[i]);
-    result = unionTwoPolygons(result, next);
-  }
-  return result;
-}
-
-function shapeToPoints(shape) {
-  if (shape.d) return pathToPoints(shape.d, 0.5);
-  const x = shape.x || 0;
-  const y = shape.y || 0;
-  const w = shape.width || 0;
-  const h = shape.height || 0;
-  return [
-    { x, y },
-    { x: x + w, y },
-    { x: x + w, y: y + h },
-    { x, y: y + h }
-  ];
-}
-
-function unionTwoPolygons(a, b) {
-  if (a.length === 0) return b;
-  if (b.length === 0) return a;
-  const merged = [...a, ...b];
-  return convexHull(merged);
-}
-
-function differencePoints(shapesArray) {
-  if (shapesArray.length < 2) return [];
-  const a = shapeToPoints(shapesArray[0]);
-  const b = shapeToPoints(shapesArray[1]);
-  return sutherlandHodgman(ensureCounterClockwise(a), ensureClockwise(b));
-}
-
-function intersectionPoints(shapesArray) {
-  if (shapesArray.length < 2) return [];
-  const a = shapeToPoints(shapesArray[0]);
-  const b = shapeToPoints(shapesArray[1]);
-  return sutherlandHodgman(a, b);
-}
-
-function exclusionPoints(shapesArray) {
-  if (shapesArray.length < 2) return [];
-  const a = shapeToPoints(shapesArray[0]);
-  const b = shapeToPoints(shapesArray[1]);
-  const aMinusB = sutherlandHodgman(ensureCounterClockwise(a), ensureClockwise(b));
-  const bMinusA = sutherlandHodgman(ensureCounterClockwise(b), ensureClockwise(a));
-  return [...aMinusB, ...bMinusA];
 }
 
 function convexHull(points) {
@@ -313,50 +126,276 @@ function convexHull(points) {
   return [...lower, ...upper];
 }
 
-export function computeBoolOperation(boolType, shapes) {
-  const shapeArray = ensureArray(shapes);
-  if (shapeArray.length < 2) return null;
+function decomposeToConvex(ring) {
+  if (ring.length <= 3) return [ring];
+  if (isConvex(ring)) return [ring];
 
-  let points;
-  switch (boolType) {
-    case 'union':
-      points = unionPoints(shapeArray);
-      break;
-    case 'difference':
-      points = differencePoints(shapeArray);
-      break;
-    case 'intersection':
-      points = intersectionPoints(shapeArray);
-      break;
-    case 'exclude':
-      points = exclusionPoints(shapeArray);
-      break;
-    default:
-      points = unionPoints(shapeArray);
+  const ccw = ensureCcw(ring);
+  const convexParts = [];
+  const remaining = [...ccw];
+
+  while (remaining.length > 3) {
+    let found = false;
+    for (let i = 0; i < remaining.length; i++) {
+      const prev = remaining[(i - 1 + remaining.length) % remaining.length];
+      const curr = remaining[i];
+      const next = remaining[(i + 1) % remaining.length];
+
+      const cross = (curr.x - prev.x) * (next.y - curr.y) - (curr.y - prev.y) * (next.x - curr.x);
+      if (cross > 0) {
+        const triangle = [prev, curr, next];
+        let triangleContainsOtherVertices = false;
+        for (let j = 0; j < remaining.length; j++) {
+          const p = remaining[j];
+          if (p === prev || p === curr || p === next) continue;
+          if (pointInPolygon(p.x, p.y, triangle)) {
+            triangleContainsOtherVertices = true;
+            break;
+          }
+        }
+        if (!triangleContainsOtherVertices) {
+          convexParts.push(triangle);
+          remaining.splice(i, 1);
+          found = true;
+          break;
+        }
+      }
+    }
+    if (!found) break;
   }
 
-  if (points.length < 3) return null;
+  if (remaining.length >= 3) {
+    convexParts.push(remaining);
+  }
 
-  const d = `M ${points[0].x} ${points[0].y} ` +
-    points.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ') + ' Z';
-
-  const minX = Math.min(...points.map(p => p.x));
-  const minY = Math.min(...points.map(p => p.y));
-  const maxX = Math.max(...points.map(p => p.x));
-  const maxY = Math.max(...points.map(p => p.y));
-
-  const headShape = shapeArray[0];
-  return createShape('bool', {
-    x: Math.round(minX),
-    y: Math.round(minY),
-    width: Math.round(maxX - minX) || 1,
-    height: Math.round(maxY - minY) || 1,
-    boolType,
-    fills: headShape.fills ? [...headShape.fills] : [],
-    strokes: headShape.strokes ? [...headShape.strokes] : [],
-    shapes: shapeArray.map(s => s.id),
-    d,
-  });
+  return convexParts;
 }
 
-export { pathToPoints, segmentsToPath, pathToAbsoluteSegments, convexHull };
+function isConvex(ring) {
+  const ccw = ensureCcw(ring);
+  let sign = 0;
+  for (let i = 0; i < ccw.length; i++) {
+    const a = ccw[i];
+    const b = ccw[(i + 1) % ccw.length];
+    const c = ccw[(i + 2) % ccw.length];
+    const cross = (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x);
+    if (Math.abs(cross) > EPS) {
+      if (sign === 0) sign = cross > 0 ? 1 : -1;
+      else if ((cross > 0 ? 1 : -1) !== sign) return false;
+    }
+  }
+  return true;
+}
+
+function concaveIntersection(subject, clip) {
+  if (isConvex(clip)) return shClip(subject, clip);
+  if (isConvex(subject)) return shClip(clip, subject);
+
+  const subjectParts = decomposeToConvex(subject);
+  const clipParts = decomposeToConvex(clip);
+  const resultParts = [];
+
+  for (const sp of subjectParts) {
+    for (const cp of clipParts) {
+      const clipped = shClip(sp, cp);
+      if (clipped.length >= 3) {
+        resultParts.push(clipped);
+      }
+    }
+  }
+
+  if (resultParts.length === 0) return [];
+  if (resultParts.length === 1) return removeDuplicatePoints(resultParts[0]);
+
+  let merged = removeDuplicatePoints(resultParts[0]);
+  for (let i = 1; i < resultParts.length; i++) {
+    const hull = convexHull([...merged, ...removeDuplicatePoints(resultParts[i])]);
+    merged = hull.length >= 3 ? hull : merged;
+  }
+  return merged;
+}
+
+export function shapeToPathContent(shape) {
+  const { x, y, width, height } = shape;
+  if (shape.type === 'circle' || shape.type === 'ellipse') {
+    const mx = x + width / 2;
+    const my = y + height / 2;
+    const ex = x + width;
+    const ey = y + height;
+    const c = 0.551915024494;
+    const c1x = x + (width / 2) * (1 - c);
+    const c2x = x + (width / 2) * (1 + c);
+    const c1y = y + (height / 2) * (1 - c);
+    const c2y = y + (height / 2) * (1 + c);
+    return [
+      { command: 'move-to', params: { x: mx, y } },
+      { command: 'curve-to', params: { x: ex, y: my, c1x: c2x, c1y: y, c2x: ex, c2y: c1y } },
+      { command: 'curve-to', params: { x: mx, y: ey, c1x: ex, c1y: c2y, c2x: c2x, c2y: ey } },
+      { command: 'curve-to', params: { x, y: my, c1x: c1x, c1y: ey, c2x: x, c2y: c2y } },
+      { command: 'curve-to', params: { x: mx, y, c1x: x, c1y: c1y, c2x: c1x, c2y: y } },
+    ];
+  }
+  if (shape.type === 'path' && shape.content) {
+    return Array.isArray(shape.content) ? shape.content : Array.from(shape.content);
+  }
+  if (width <= 0 || height <= 0) return [];
+  return [
+    { command: 'move-to', params: { x, y } },
+    { command: 'line-to', params: { x: x + width, y } },
+    { command: 'line-to', params: { x: x + width, y: y + height } },
+    { command: 'line-to', params: { x, y: y + height } },
+  ];
+}
+
+export function pathContentToPoints(content) {
+  if (!content || content.length === 0) return [];
+  const points = [];
+  let currentPos = null;
+  for (const cmd of content) {
+    if (cmd.command === 'move-to') {
+      currentPos = { x: cmd.params.x, y: cmd.params.y };
+      points.push(currentPos);
+    } else if (cmd.command === 'line-to') {
+      currentPos = { x: cmd.params.x, y: cmd.params.y };
+      points.push(currentPos);
+    } else if (cmd.command === 'curve-to') {
+      currentPos = { x: cmd.params.x, y: cmd.params.y };
+      points.push(currentPos);
+    } else if (cmd.command === 'close-path') {
+      if (points.length > 0 && currentPos) {
+        if (Math.abs(currentPos.x - points[0].x) > 0.01 ||
+            Math.abs(currentPos.y - points[0].y) > 0.01) {
+          points.push({ x: points[0].x, y: points[0].y });
+        }
+      }
+    }
+  }
+  return removeDuplicatePoints(points);
+}
+
+function shapeToRing(shape) {
+  if (shape.type === 'path' && shape.content) {
+    return pathContentToPoints(shape.content);
+  }
+  const { x, y, width, height } = shape;
+  if (shape.type === 'circle' || shape.type === 'ellipse') {
+    const cx = x + width / 2;
+    const cy = y + height / 2;
+    const rx = width / 2;
+    const ry = height / 2;
+    const n = 24;
+    const pts = [];
+    for (let i = 0; i < n; i++) {
+      const angle = (2 * Math.PI * i) / n;
+      pts.push({ x: cx + rx * Math.cos(angle), y: cy + ry * Math.sin(angle) });
+    }
+    return pts;
+  }
+  if (width <= 0 || height <= 0) return null;
+  return [
+    { x, y },
+    { x: x + width, y },
+    { x: x + width, y: y + height },
+    { x, y: y + height },
+  ];
+}
+
+export function computeBoolOperation(boolType, shapeA, shapeB) {
+  if (!BOOL_TYPES.includes(boolType)) {
+    throw new Error(`Invalid boolean operation type: ${boolType}`);
+  }
+
+  const ringA = shapeToRing(shapeA);
+  const ringB = shapeToRing(shapeB);
+  if (!ringA || ringA.length < 3 || !ringB || ringB.length < 3) {
+    return [];
+  }
+
+  const aCcw = ensureCcw(ringA);
+  const bCcw = ensureCcw(ringB);
+
+  switch (boolType) {
+    case 'intersection': return intersectionResult(aCcw, bCcw);
+    case 'union': return unionResult(aCcw, bCcw);
+    case 'difference': return differenceResult(aCcw, bCcw);
+    case 'exclude': return exclusionResult(aCcw, bCcw);
+    default: return [];
+  }
+}
+
+function intersectionResult(a, b) {
+  const aInB = ringsContain(b, a);
+  if (aInB) return pathFromRings([a]);
+  const bInA = ringsContain(a, b);
+  if (bInA) return pathFromRings([b]);
+
+  const result = concaveIntersection(a, b);
+  if (result.length < 3) return [];
+  return pathFromRings([result]);
+}
+
+function unionResult(a, b) {
+  const aInB = ringsContain(b, a);
+  const bInA = ringsContain(a, b);
+  if (aInB) return pathFromRings([b]);
+  if (bInA) return pathFromRings([a]);
+
+  const intersection = concaveIntersection(a, b);
+  if (intersection.length < 3) return pathFromRings([a, b]);
+
+  const hull = convexHull(removeDuplicatePoints([...a, ...b]));
+  if (hull.length >= 3) return pathFromRings([hull]);
+  return pathFromRings([a, b]);
+}
+
+function differenceResult(a, b) {
+  const aInB = ringsContain(b, a);
+  if (aInB) return [];
+  const bInA = ringsContain(a, b);
+  if (bInA) return pathFromRings([a, ensureCw(b)]);
+
+  const intersection = concaveIntersection(a, b);
+  if (intersection.length < 3) return pathFromRings([a]);
+
+  return pathFromRings([a, ensureCw(b)]);
+}
+
+function exclusionResult(a, b) {
+  const diffAB = differenceResult(a, b);
+  const diffBA = differenceResult(b, a);
+  const aRings = extractRings(diffAB);
+  const bRings = extractRings(diffBA);
+  return pathFromRings([...aRings, ...bRings]);
+}
+
+function extractRings(content) {
+  if (!content || content.length === 0) return [];
+  const rings = [];
+  let currentRing = [];
+  for (const cmd of content) {
+    if (cmd.command === 'move-to' && currentRing.length > 0) {
+      rings.push(currentRing);
+      currentRing = [];
+    }
+    if (cmd.command === 'move-to' || cmd.command === 'line-to') {
+      currentRing.push({ x: cmd.params.x, y: cmd.params.y });
+    }
+  }
+  if (currentRing.length > 0) rings.push(currentRing);
+  return rings;
+}
+
+function pathFromRings(rings) {
+  if (rings.length === 0) return [];
+  const result = [];
+  for (const ring of rings) {
+    const clean = removeDuplicatePoints(ring);
+    if (clean.length < 3) continue;
+    result.push({ command: 'move-to', params: { x: clean[0].x, y: clean[0].y } });
+    for (let i = 1; i < clean.length; i++) {
+      result.push({ command: 'line-to', params: { x: clean[i].x, y: clean[i].y } });
+    }
+    result.push({ command: 'line-to', params: { x: clean[0].x, y: clean[0].y } });
+  }
+  return result;
+}

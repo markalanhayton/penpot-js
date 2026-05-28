@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module storage/fs
  * @description Filesystem-based object storage — mirrors `app.storage` (fs backend)

@@ -1,4 +1,24 @@
+'use strict';
 import { cmd } from './rpc.js';
+
+function extractTextContent(shape) {
+  const content = shape.content;
+  if (content && typeof content === 'object' && content.type === 'root') {
+    const paragraphs = [];
+    function walk(node) {
+      if (node.type === 'paragraph') {
+        const text = (node.children || []).map(c => c.text || '').join('');
+        paragraphs.push(text);
+      } else if (node.text !== undefined) {
+        paragraphs.push(node.text);
+      }
+      if (node.children) node.children.forEach(walk);
+    }
+    walk(content);
+    return paragraphs.join('\n') || shape.name || 'Text';
+  }
+  return content || shape.name || 'Text';
+}
 
 export async function exportToPNG(page, options = {}) {
   const scale = options.scale || 1;
@@ -293,7 +313,7 @@ function renderShapeToSVG(shape) {
         'font-family': shape.fontFamily || 'sans-serif',
         'font-weight': shape.fontWeight || 'normal',
       });
-      text.textContent = shape.content || shape.name || 'Text';
+      text.textContent = extractTextContent(shape);
       return text;
     }
     case 'path':

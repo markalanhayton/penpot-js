@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module files/blob
  * @description Binary encoding/decoding for Penpot file data.

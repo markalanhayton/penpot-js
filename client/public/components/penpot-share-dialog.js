@@ -1,3 +1,4 @@
+'use strict';
 import { PenpotElement } from './base.js';
 import { cmd, setAuthToken } from '../lib/rpc.js';
 import { appStore } from '../lib/store.js';
@@ -146,7 +147,12 @@ export class PenpotShareDialog extends PenpotElement {
         comment: commentPerm !== 'none' ? commentPerm : null,
         edit: editPerm !== 'none' ? editPerm : null,
       },
-    }).catch(() => {});
+    }).catch(err => {
+      console.error('[share] Failed to update permissions:', err);
+      import('../components/penpot-notification.js').then(({ danger }) => {
+        danger('Failed to update sharing permissions. Please try again.');
+      });
+    });
   }
 
   #copyLink() {

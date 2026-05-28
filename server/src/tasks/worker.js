@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module tasks/worker
  * @description Task queue and worker system — mirrors `app.worker` from the Clojure backend.

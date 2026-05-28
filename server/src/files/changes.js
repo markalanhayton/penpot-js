@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module files/changes
  * @description File change processing engine — mirrors `app.common.files.changes`

@@ -1,3 +1,4 @@
+'use strict';
 import { PenpotElement } from './base.js';
 import { getCursorPositions } from '../lib/ws.js';
 

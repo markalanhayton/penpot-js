@@ -1,3 +1,4 @@
+'use strict';
 /**
  * @module rpc/media
  * @description Media object upload, clone, chunked upload, and URL download RPC
@@ -17,6 +18,7 @@
  * |-------------------------------------|:-------------:|-------|
  * | `upload-file-media-object`         | Yes           | v1.17 |
  * | `create-file-media-object-from-url`| Yes           | v1.17 |
+ * | `get-file-media-objects`           | Yes           | v1.17 |
  * | `create-upload-session`            | Yes           | v2.17 |
  * | `upload-chunk`                     | Yes           | v2.17 |
  * | `assemble-file-media-object`       | Yes           | v2.17 |
@@ -390,6 +392,18 @@ export default function registerMediaCommands(register, pool) {
    *
    * Mirrors `app.rpc.commands.media/clone-file-media-object`.
    */
+  register('get-file-media-objects', {
+    auth: true,
+    added: '1.17',
+    handler(params) {
+      const rows = pool.query(
+        'SELECT * FROM file_media_object WHERE file_id = @file_id AND deleted_at IS NULL',
+        { file_id: params.fileId }
+      );
+      return rows.map(rowToCamel);
+    }
+  });
+
   register('clone-file-media-object', {
     auth: true,
     added: '1.17',
