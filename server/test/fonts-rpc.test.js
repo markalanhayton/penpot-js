@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createTestPool, destroyTestPool, seedFullHierarchy } from './helpers.js';
 import { RpcError } from '../src/rpc/dispatcher.js';
 import registerFontCommands from '../src/rpc/fonts.js';
+import { putStorageObject } from '../src/storage/fs.js';
 
 function captureHandlers(pool) {
   const handlers = {};
@@ -218,5 +219,219 @@ describe('rpc/fonts — update-font', () => {
 
     const variant = pool.get('SELECT font_family FROM team_font_variant WHERE font_id = ?', ['font-upd']);
     assert.equal(variant.font_family, 'NewName');
+  });
+});
+
+describe('rpc/fonts — create-font-variant', () => {
+  let pool;
+  let ids;
+  let handlers;
+
+  beforeEach(() => {
+    pool = createTestPool();
+    ids = seedFullHierarchy(pool);
+    handlers = captureHandlers(pool);
+  });
+  afterEach(() => { destroyTestPool(pool); });
+
+  it('throws validation for invalid font weight', async () => {
+    await assert.rejects(
+      () => handlers['create-font-variant'](
+        { teamId: ids.teamId, fontFamily: 'Test', fontWeight: 999, fontStyle: 'normal', data: { 'font/woff2': Buffer.alloc(0) } },
+        { profileId: ids.profileId }
+      ),
+      { type: 'validation' }
+    );
+  });
+
+  it('throws validation for invalid font style', async () => {
+    await assert.rejects(
+      () => handlers['create-font-variant'](
+        { teamId: ids.teamId, fontFamily: 'Test', fontWeight: 400, fontStyle: 'oblique', data: { 'font/woff2': Buffer.alloc(0) } },
+        { profileId: ids.profileId }
+      ),
+      { type: 'validation' }
+    );
+  });
+
+  it('throws authorization for non-editor', async () => {
+    const now = new Date().toISOString();
+    const viewerId = 'viewer-font-create';
+    pool.insertReturning('profile', {
+      id: viewerId, fullname: 'Viewer', email: 'viewer-font@example.com',
+      password: '!', is_active: '1', is_demo: '0', is_blocked: '0',
+      auth_source: 'password', created_at: now, modified_at: now,
+    });
+    pool.insertReturning('team_profile_rel', {
+      team_id: ids.teamId, profile_id: viewerId,
+      is_owner: '0', is_admin: '0', can_edit: '0', is_member: '1',
+      created_at: now, modified_at: now,
+    });
+
+    await assert.rejects(
+      () => handlers['create-font-variant'](
+        { teamId: ids.teamId, fontFamily: 'Test', fontWeight: 400, fontStyle: 'normal', data: { 'font/woff2': Buffer.alloc(0) } },
+        { profileId: viewerId }
+      ),
+      { type: 'authorization' }
+    );
+  });
+
+  it('throws validation when no font data or uploads provided', async () => {
+    await assert.rejects(
+      () => handlers['create-font-variant'](
+        { teamId: ids.teamId, fontFamily: 'Test', fontWeight: 400, fontStyle: 'normal' },
+        { profileId: ids.profileId }
+      ),
+      { type: 'validation' }
+    );
+  });
+});
+
+describe('rpc/fonts — download-font', () => {
+  let pool;
+  let ids;
+  let handlers;
+
+  beforeEach(() => {
+    pool = createTestPool();
+    ids = seedFullHierarchy(pool);
+    handlers = captureHandlers(pool);
+  });
+  afterEach(() => { destroyTestPool(pool); });
+
+  it('throws not-found for nonexistent variant', async () => {
+    await assert.rejects(
+      () => handlers['download-font'](
+        { id: 'nonexistent' },
+        { profileId: ids.profileId }
+      ),
+      { type: 'not-found' }
+    );
+  });
+
+  it('throws not-found for variant with no font files', async () => {
+    const now = new Date().toISOString();
+    pool.insertOnConflictDoNothing('team_font_variant', {
+      id: 'fv-nofiles',
+      team_id: ids.teamId,
+      profile_id: ids.profileId,
+      font_id: 'font-nofiles',
+      font_family: 'EmptyFont',
+      font_weight: 400,
+      font_style: 'normal',
+      otf_file_id: null,
+      ttf_file_id: null,
+      woff1_file_id: null,
+      woff2_file_id: null,
+      created_at: now,
+      modified_at: now,
+    });
+
+    await assert.rejects(
+      () => handlers['download-font'](
+        { id: 'fv-nofiles' },
+        { profileId: ids.profileId }
+      ),
+      { type: 'not-found' }
+    );
+  });
+
+  it('throws authorization for non-member', async () => {
+    const now = new Date().toISOString();
+    const fakeFontData = Buffer.from([0x00, 0x01, 0x02, 0x03]);
+    const storageObj = putStorageObject(pool, fakeFontData, {
+      contentType: 'font/ttf',
+      bucket: 'team-font-variant',
+    });
+
+    pool.insertOnConflictDoNothing('team_font_variant', {
+      id: 'fv-dl-auth',
+      team_id: ids.teamId,
+      profile_id: ids.profileId,
+      font_id: 'font-dl-auth',
+      font_family: 'AuthFont',
+      font_weight: 400,
+      font_style: 'normal',
+      ttf_file_id: storageObj.id,
+      created_at: now,
+      modified_at: now,
+    });
+
+    const outsiderId = 'outsider-font-dl';
+    pool.insertReturning('profile', {
+      id: outsiderId, fullname: 'Out', email: 'out-font-dl@x.com',
+      password: '!', is_active: '1', is_demo: '0', is_blocked: '0',
+      auth_source: 'password', created_at: now, modified_at: now,
+    });
+
+    await assert.rejects(
+      () => handlers['download-font'](
+        { id: 'fv-dl-auth' },
+        { profileId: outsiderId }
+      ),
+      { type: 'authorization' }
+    );
+  });
+});
+
+describe('rpc/fonts — download-font-family', () => {
+  let pool;
+  let ids;
+  let handlers;
+
+  beforeEach(() => {
+    pool = createTestPool();
+    ids = seedFullHierarchy(pool);
+    handlers = captureHandlers(pool);
+  });
+  afterEach(() => { destroyTestPool(pool); });
+
+  it('throws not-found for nonexistent font family', async () => {
+    await assert.rejects(
+      () => handlers['download-font-family'](
+        { fontId: 'nonexistent' },
+        { profileId: ids.profileId }
+      ),
+      { type: 'not-found' }
+    );
+  });
+
+  it('throws authorization for non-member on font family download', async () => {
+    const now = new Date().toISOString();
+    const fontId = 'font-family-auth';
+    const fakeFontData = Buffer.from([0x00, 0x01, 0x02, 0x03]);
+    const storageObj = putStorageObject(pool, fakeFontData, {
+      contentType: 'font/ttf',
+      bucket: 'team-font-variant',
+    });
+
+    pool.insertOnConflictDoNothing('team_font_variant', {
+      id: 'fv-fam-1',
+      team_id: ids.teamId,
+      profile_id: ids.profileId,
+      font_id: fontId,
+      font_family: 'FamilyFont',
+      font_weight: 400,
+      font_style: 'normal',
+      ttf_file_id: storageObj.id,
+      created_at: now,
+      modified_at: now,
+    });
+
+    const outsiderId = 'outsider-font-fam';
+    pool.insertReturning('profile', {
+      id: outsiderId, fullname: 'Out', email: 'out-font-fam@x.com',
+      password: '!', is_active: '1', is_demo: '0', is_blocked: '0',
+      auth_source: 'password', created_at: now, modified_at: now,
+    });
+
+    await assert.rejects(
+      () => handlers['download-font-family'](
+        { fontId },
+        { profileId: outsiderId }
+      ),
+      { type: 'authorization' }
+    );
   });
 });
