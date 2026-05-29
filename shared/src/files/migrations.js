@@ -1848,16 +1848,20 @@ function collectNewFeatures(diff) {
   return features;
 }
 
-export function migrate(file, libs) {
+export function migrate(file, libs, options = {}) {
+  const skipFormatMigrations = options.skipFormatMigrations ?? false;
   const diff = difference(availableMigrations, new Set(file.migrations ?? []));
 
   let data = { ...file.data, libs };
+  const appliedMigrations = new Set();
 
   for (const id of diff) {
+    if (skipFormatMigrations && /^\d{4}/.test(id)) continue;
     const migrationFn = migrationRegistry[id];
     if (migrationFn) {
       data = migrationFn(data, libs);
     }
+    appliedMigrations.add(id);
   }
 
   const { libs: _libs, ...cleanData } = data;
@@ -1866,12 +1870,13 @@ export function migrate(file, libs) {
     ...file,
     data: { ...cleanData, id: file.id },
     version: defaultVersion,
-    migrations: union(new Set(file.migrations ?? []), diff),
+    migrations: union(new Set(file.migrations ?? []), appliedMigrations),
   };
 }
 
-export function migrateFile(file, libs) {
+export function migrateFile(file, libs, options = {}) {
   const version = file.version ?? file.data?.version;
+  const skipFormatMigrations = options.skipFormatMigrations ?? false;
 
   let result = {
     ...file,
@@ -1880,7 +1885,7 @@ export function migrateFile(file, libs) {
   };
 
   result = { ...result, features: cfeat.migrateLegacyFeatures(result.features) };
-  result = migrate(result, libs);
+  result = migrate(result, libs, { skipFormatMigrations });
 
   const newFeatures = collectNewFeatures(result.migrations ?? new Set());
   result = { ...result, features: union(new Set(result.features ?? []), newFeatures) };

@@ -18,9 +18,9 @@ template.innerHTML = `<style>
   
   </style>
   <label class="penpot-cb__checkbox-wrapper">
-    <span class="penpot-cb__checkbox-box" id="box"><span class="penpot-cb__check">\u2713</span></span>
+    <span class="penpot-cb__checkbox-box" id="box" role="checkbox" aria-checked="false"><span class="penpot-cb__check">\u2713</span></span>
     <span class="penpot-cb__checkbox-label" id="label"><slot></slot></span>
-    <input type="checkbox" id="input" style="position:absolute;opacity:0;width:0;height:0;" />
+    <input type="checkbox" id="input" style="position:absolute;opacity:0;width:0;height:0;" aria-hidden="true" tabindex="-1" />
   </label>`;
 
 export class PenpotCheckbox extends PenpotElement {
@@ -37,6 +37,15 @@ export class PenpotCheckbox extends PenpotElement {
       if (!this.disabled) {
         this.checked = !this.checked;
         this.emit('penpot-change', { checked: this.checked });
+      }
+    });
+    this.addEventListener('keydown', (e) => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        if (!this.disabled) {
+          this.checked = !this.checked;
+          this.emit('penpot-change', { checked: this.checked });
+        }
       }
     });
   }
@@ -56,6 +65,7 @@ export class PenpotCheckbox extends PenpotElement {
 
     box.classList.toggle('penpot-cb__checked', this.checked);
     box.classList.toggle('penpot-cb__disabled', this.disabled);
+    box.setAttribute('aria-checked', this.checked ? 'true' : 'false');
     label.classList.toggle('penpot-cb__disabled', this.disabled);
     input.checked = this.checked;
     input.disabled = this.disabled;

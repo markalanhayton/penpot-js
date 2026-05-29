@@ -25,29 +25,29 @@ template.innerHTML = `<style>
   
   </style>
   <penpot-main-menu id="main-menu"></penpot-main-menu>
-  <div class="penpot-toolbar__separator"></div>
-  <button class="penpot-toolbar__back-btn" id="back">&larr; Dashboard</button>
-  <div class="penpot-toolbar__separator"></div>
-  <span class="penpot-toolbar__file-name" id="file-name">Untitled file</span>
+  <div class="penpot-toolbar__separator" role="separator"></div>
+  <button class="penpot-toolbar__back-btn" id="back" aria-label="Back to dashboard">&larr; Dashboard</button>
+  <div class="penpot-toolbar__separator" role="separator"></div>
+  <span class="penpot-toolbar__file-name" id="file-name" aria-label="File name">Untitled file</span>
   <span class="penpot-toolbar__spacer"></span>
   <penpot-presence-bar id="presence"></penpot-presence-bar>
-  <div class="penpot-toolbar__toolbar-actions">
-    <button class="penpot-toolbar__toolbar-btn" id="comment-btn" title="Comments (C)">&#128172;</button>
-    <button class="penpot-toolbar__toolbar-btn" id="undo-btn" title="Undo (Ctrl+Z)">&#8630;</button>
-    <button class="penpot-toolbar__toolbar-btn" id="redo-btn" title="Redo (Ctrl+Y)">&#8631;</button>
-    <button class="penpot-toolbar__toolbar-btn" id="component-btn" title="Create Component (Ctrl+Alt+K)">&#9733;</button>
-    <button class="penpot-toolbar__toolbar-btn" id="align-left-btn" title="Align Left">&#8676;</button>
-    <button class="penpot-toolbar__toolbar-btn" id="align-center-h-btn" title="Align Center Horizontal">&#8596;</button>
-    <button class="penpot-toolbar__toolbar-btn" id="align-right-btn" title="Align Right">&#8677;</button>
-    <button class="penpot-toolbar__toolbar-btn" id="align-top-btn" title="Align Top">&#8673;</button>
-    <button class="penpot-toolbar__toolbar-btn" id="align-center-v-btn" title="Align Center Vertical">&#8597;</button>
-    <button class="penpot-toolbar__toolbar-btn" id="align-bottom-btn" title="Align Bottom">&#8675;</button>
-    <button class="penpot-toolbar__toolbar-btn" id="export-btn" title="Export (Ctrl+E)">Export</button>
-    <button class="penpot-toolbar__toolbar-btn" id="version-btn" title="Version History">&#128337;</button>
-    <button class="penpot-toolbar__toolbar-btn" id="mcp-btn" title="MCP Panel (Ctrl+Shift+M)">&#x1F916;</button>
-    <button class="penpot-toolbar__toolbar-btn" id="plugin-btn" title="Plugins (Ctrl+Shift+P)">&#x1F50C;</button>
-    <button class="penpot-toolbar__toolbar-btn" id="share-btn" title="Share">Share</button>
-    <button class="penpot-toolbar__toolbar-btn penpot-toolbar__primary" id="save-btn">Save</button>
+  <div class="penpot-toolbar__toolbar-actions" role="toolbar" aria-label="Toolbar actions">
+    <button class="penpot-toolbar__toolbar-btn" id="comment-btn" title="Comments (C)" aria-label="Comments">&#128172;</button>
+    <button class="penpot-toolbar__toolbar-btn" id="undo-btn" title="Undo (Ctrl+Z)" aria-label="Undo">&#8630;</button>
+    <button class="penpot-toolbar__toolbar-btn" id="redo-btn" title="Redo (Ctrl+Y)" aria-label="Redo">&#8631;</button>
+    <button class="penpot-toolbar__toolbar-btn" id="component-btn" title="Create Component (Ctrl+Alt+K)" aria-label="Create component">&#9733;</button>
+    <button class="penpot-toolbar__toolbar-btn" id="align-left-btn" title="Align Left" aria-label="Align left">&#8676;</button>
+    <button class="penpot-toolbar__toolbar-btn" id="align-center-h-btn" title="Align Center Horizontal" aria-label="Align center horizontal">&#8596;</button>
+    <button class="penpot-toolbar__toolbar-btn" id="align-right-btn" title="Align Right" aria-label="Align right">&#8677;</button>
+    <button class="penpot-toolbar__toolbar-btn" id="align-top-btn" title="Align Top" aria-label="Align top">&#8673;</button>
+    <button class="penpot-toolbar__toolbar-btn" id="align-center-v-btn" title="Align Center Vertical" aria-label="Align center vertical">&#8597;</button>
+    <button class="penpot-toolbar__toolbar-btn" id="align-bottom-btn" title="Align Bottom" aria-label="Align bottom">&#8675;</button>
+    <button class="penpot-toolbar__toolbar-btn" id="export-btn" title="Export (Ctrl+E)" aria-label="Export">Export</button>
+    <button class="penpot-toolbar__toolbar-btn" id="version-btn" title="Version History" aria-label="Version history">&#128337;</button>
+    <button class="penpot-toolbar__toolbar-btn" id="mcp-btn" title="MCP Panel (Ctrl+Shift+M)" aria-label="MCP panel">&#x1F916;</button>
+    <button class="penpot-toolbar__toolbar-btn" id="plugin-btn" title="Plugins (Ctrl+Shift+P)" aria-label="Plugins">&#x1F50C;</button>
+    <button class="penpot-toolbar__toolbar-btn" id="share-btn" title="Share" aria-label="Share">Share</button>
+    <button class="penpot-toolbar__toolbar-btn penpot-toolbar__primary" id="save-btn" aria-label="Save">Save</button>
   </div>`;
 
 export class PenpotToolbar extends PenpotElement {

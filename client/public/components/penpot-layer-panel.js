@@ -1,7 +1,7 @@
 'use strict';
 import { PenpotElement } from './base.js';
 import { isFrame, isGroup, isBool } from '../lib/types.js';
-import { isComponentInstance, isComponentMain } from '../lib/components-lib.js';
+import { isComponentInstance, isComponentMain, isVariantContainer } from '../lib/components-lib.js';
 
 const INDENT = 16;
 const DROP_ZONE_THRESHOLD = 6;
@@ -17,6 +17,25 @@ const SHAPE_ICONS = {
   path: '\u270E', text: 'T', image: '\u25B3', 'svg-raw': '\u2605', bool: '\u2229',
   'masked-group': '\u25D3',
 };
+
+function buildBadgeHtml(shape, escHtmlFn) {
+  const parts = [];
+  if (isVariantContainer(shape)) {
+    parts.push('<span class="penpot-layer__variant-badge">\u25C6</span>');
+  } else if (isComponentInstance(shape)) {
+    parts.push('<span class="penpot-layer__instance-badge">\u25C6</span>');
+  } else if (isComponentMain(shape)) {
+    parts.push('<span class="penpot-layer__instance-badge">\u2605</span>');
+  }
+  const vProps = shape['variant-properties'] || shape.variantProperties;
+  if (vProps && vProps.length > 0) {
+    const displayName = vProps.map(p => p.value || '').filter(v => v).join(' / ');
+    if (displayName) {
+      parts.push(`<span class="penpot-layer__variant-name">${escHtmlFn(displayName)}</span>`);
+    }
+  }
+  return parts.join('');
+}
 
 const FILTER_TYPES = [
   { id: 'all', label: 'All', types: null },
@@ -58,6 +77,8 @@ template.innerHTML = `<style>
     .penpot-layer__layer-collapse:hover { color: var(--penpot-text, #e6e6e6); }
     .penpot-layer__layer-icon { font-size: 10px; width: 16px; text-align: center; flex-shrink: 0; }
     .penpot-layer__instance-badge { color: var(--penpot-primary, #31efb8); font-size: 9px; margin-left: 1px; }
+    .penpot-layer__variant-badge { color: var(--penpot-accent, #c084fc); font-size: 9px; margin-left: 1px; }
+    .penpot-layer__variant-name { color: var(--penpot-text-dim, #999); font-size: 8px; margin-left: 2px; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 80px; }
     .penpot-layer__layer-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
     .penpot-layer__layer-name mark { background: rgba(49,239,184,0.3); color: var(--penpot-primary, #31efb8); border-radius: 1px; padding: 0 1px; }
     .penpot-layer__layer-name-input { background: var(--penpot-input-bg, #333); border: 1px solid var(--penpot-primary, #31efb8); color: var(--penpot-text, #e6e6e6); font-size: 11px; padding: 0 2px; outline: none; width: 100%; }
@@ -248,7 +269,7 @@ export class PenpotLayerPanel extends PenpotElement {
         const isLocked = shape.locked === true;
         const icon = SHAPE_ICONS[shape.type] || '\u25A1';
         const isSelected = this.#selectedIds.has(shape.id);
-        const instanceIcon = isComponentInstance(shape) ? '<span class="penpot-layer__instance-badge">\u25C6</span>' : (isComponentMain(shape) ? '<span class="penpot-layer__instance-badge">\u2605</span>' : '');
+        const badgeHtml = buildBadgeHtml(shape, this.escHtml.bind(this));
         const classes = [
           'penpot-layer__layer-item',
           isSelected ? 'penpot-layer__selected' : '',
@@ -259,7 +280,7 @@ export class PenpotLayerPanel extends PenpotElement {
 
         html += `<div class="${classes}" data-shape-id="${this.escAttr(shape.id)}" draggable="true">`;
         html += `<span class="penpot-layer__layer-icon">${icon}</span>`;
-        html += `${instanceIcon}<span class="penpot-layer__layer-name" data-name-id="${this.escAttr(shape.id)}">${this.#highlightName(shape.name || shape.type)}</span>`;
+        html += `${badgeHtml}<span class="penpot-layer__layer-name" data-name-id="${this.escAttr(shape.id)}">${this.#highlightName(shape.name || shape.type)}</span>`;
         html += `<button class="penpot-layer__layer-toggle ${isLocked ? '' : 'penpot-layer__off'}" data-lock-id="${this.escAttr(shape.id)}" title="${isLocked ? 'Unlock' : 'Lock'}">${isLocked ? LOCK_ON : ''}</button>`;
         html += `<button class="penpot-layer__layer-toggle ${isHidden ? 'penpot-layer__off' : ''}" data-vis-id="${this.escAttr(shape.id)}" title="${isHidden ? 'Show' : 'Hide'}">${isHidden ? VISIBILITY_OFF : VISIBILITY_ON}</button>`;
         html += `</div>`;
@@ -285,8 +306,7 @@ export class PenpotLayerPanel extends PenpotElement {
         const isSelected = this.#selectedIds.has(shape.id);
         const isHidden = shape.visible === false;
         const isLocked = shape.locked === true;
-        const icon = SHAPE_ICONS[shape.type] || '\u25A1';
-        const instanceIcon = isComponentInstance(shape) ? '<span class="penpot-layer__instance-badge">\u25C6</span>' : (isComponentMain(shape) ? '<span class="penpot-layer__instance-badge">\u2605</span>' : '');
+        const badgeHtml = buildBadgeHtml(shape, this.escHtml.bind(this));
         const indent = `padding-left: ${8 + depth * INDENT}px;`;
 
         const classes = [
@@ -306,7 +326,7 @@ export class PenpotLayerPanel extends PenpotElement {
         }
 
         html += `<span class="penpot-layer__layer-icon">${icon}</span>`;
-        html += `${instanceIcon}<span class="penpot-layer__layer-name" data-name-id="${this.escAttr(shape.id)}">${this.escHtml(shape.name || shape.type)}</span>`;
+        html += `${badgeHtml}<span class="penpot-layer__layer-name" data-name-id="${this.escAttr(shape.id)}">${this.escHtml(shape.name || shape.type)}</span>`;
 
         html += `<button class="penpot-layer__layer-toggle ${isLocked ? '' : 'penpot-layer__off'}" data-lock-id="${this.escAttr(shape.id)}" title="${isLocked ? 'Unlock' : 'Lock'}">${isLocked ? LOCK_ON : ''}</button>`;
         html += `<button class="penpot-layer__layer-toggle ${isHidden ? 'penpot-layer__off' : ''}" data-vis-id="${this.escAttr(shape.id)}" title="${isHidden ? 'Show' : 'Hide'}">${isHidden ? VISIBILITY_OFF : VISIBILITY_ON}</button>`;

@@ -22,47 +22,8 @@ import nodemailer from 'nodemailer';
 import { config } from '../config/index.js';
 
 /**
- * Check if an email address is allowed based on the blacklist and whitelist.
- *
- * Whitelist takes priority over blacklist. If a whitelist is configured,
- * only domains on the whitelist are allowed. If no whitelist, domains on
- * the blacklist are blocked.
- *
- * @param {string} email - Email address to check.
- * @returns {boolean} `true` if the email is allowed, `false` if blocked.
- */
-export function isEmailAllowed(email) {
-  if (!email || typeof email !== 'string') return false;
-
-  const domain = email.split('@')[1]?.toLowerCase();
-  if (!domain) return false;
-
-  const whitelist = (process.env.PENPOT_EMAIL_WHITELIST || '')
-    .split(',')
-    .map(d => d.trim().toLowerCase())
-    .filter(Boolean);
-
-  const blacklist = (process.env.PENPOT_EMAIL_BLACKLIST || '')
-    .split(',')
-    .map(d => d.trim().toLowerCase())
-    .filter(Boolean);
-
-  // Whitelist takes priority: if configured, only whitelisted domains are allowed
-  if (whitelist.length > 0) {
-    return whitelist.includes(domain);
-  }
-
-  // Blacklist: block known disposable/temporary email domains
-  if (blacklist.length > 0 && blacklist.includes(domain)) {
-    return false;
-  }
-
-  return true;
-}
-
-/**
- * Common disposable email domains blocked by default when
- * PENPOT_EMAIL_BLOCK_DISPOSABLE is enabled.
+ * Common disposable email domains blocked when
+ * `PENPOT_EMAIL_BLOCK_DISPOSABLE` is enabled.
  */
 const DISPOSABLE_DOMAINS = [
   'mailinator.com', 'guerrillamail.com', 'guerrillamailblock.com',
@@ -71,6 +32,53 @@ const DISPOSABLE_DOMAINS = [
   'tempmail.com', 'temp-mail.org', '10minutemail.com', 'maildrop.cc',
   'mailnesia.com', 'getnonsense.com', 'tempail.com', 'fakeinbox.com',
 ];
+
+/**
+ * Check if an email address is allowed based on whitelist, blacklist,
+ * and disposable-domain settings.
+ *
+ * Evaluation order:
+ * 1. If `email.whitelist` is configured, only whitelisted domains pass.
+ * 2. If `email.blacklist` is configured, blacklisted domains are blocked.
+ * 3. If `email.blockDisposable` is `true`, known disposable domains are blocked.
+ * 4. Otherwise the email is allowed.
+ *
+ * @param {string} email - Email address to check.
+ * @param {{ whitelist?: string, blacklist?: string, blockDisposable?: boolean }} [emailConfig] - Override email config (for testing).
+ * @returns {boolean} `true` if the email is allowed, `false` if blocked.
+ */
+export function isEmailAllowed(email, emailConfig) {
+  if (!email || typeof email !== 'string') return false;
+
+  const domain = email.split('@')[1]?.toLowerCase();
+  if (!domain) return false;
+
+  const whitelist = (emailConfig?.whitelist ?? config.email.whitelist ?? '')
+    .split(',')
+    .map(d => d.trim().toLowerCase())
+    .filter(Boolean);
+
+  const blacklist = (emailConfig?.blacklist ?? config.email.blacklist ?? '')
+    .split(',')
+    .map(d => d.trim().toLowerCase())
+    .filter(Boolean);
+
+  const blockDisposable = emailConfig?.blockDisposable ?? config.email.blockDisposable ?? false;
+
+  if (whitelist.length > 0) {
+    return whitelist.some(w => domain === w || domain.endsWith('.' + w));
+  }
+
+  if (blacklist.length > 0 && blacklist.some(b => domain === b || domain.endsWith('.' + b))) {
+    return false;
+  }
+
+  if (blockDisposable && DISPOSABLE_DOMAINS.some(d => domain === d || domain.endsWith('.' + d))) {
+    return false;
+  }
+
+  return true;
+}
 
 /** @type {import('nodemailer').Transporter|null} */
 let transporter = null;

@@ -202,65 +202,21 @@ an `onSend` hook that issues a fresh session cookie.
 
 ## 4. Code Quality & DevEx
 
-### 4.1 [~] Unit tests
-`package.json` declares `"test": "node --test test/**/*.test.js"`. 57 test files
-now exist covering 529 test cases across 183 test suites:
+### 4.1 [x] Unit tests
+`package.json` declares `"test": "node --test test/**/*.test.js"`. 78 test files
+now exist covering 909 test cases across 296 test suites, all passing.
 
-| Test file | Coverage |
-|-----------|----------|
-| `test/config-features.test.js` | Feature constants, parseFeatures, computeFileFeatures, checkClientFeatures |
-| `test/config.test.js` | Config loading, env var parsing |
-| `test/blob.test.js` | File data encode/decode (versions 1, 3, 5), UUID round-trip, large data |
-| `test/transit.test.js` | Transit codec, kebab↔camelCase, decode/encode, decodeRequest/encodeResponse |
-| `test/dispatcher.test.js` | RpcError, errors factory, registerMethod/getRegisteredMethods |
-| `test/sqlite.test.js` | Pool CRUD, transactions, soft-delete, insertOnConflict, jsonRead/Write |
-| `test/password.test.js` | Argon2id derive/verify, isNoPasswordSet sentinel |
-| `test/tokens.test.js` | JWE create/verify, session/registration/recovery/email tokens, expiration |
-| `test/permissions.test.js` | ROLE_FLAGS, assignRoleFlags, read/edit/admin/team permission checks |
-| `test/quotes.test.js` | Quota limits, override from DB, exceeded quota errors |
-| `test/ssrf.test.js` | SSRF URL validation: blocks loopback, private, link-local, metadata |
-| `test/files-rpc.test.js` | File get/rename/delete, library link/unlink |
-| `test/files-create.test.js` | Advanced file creation: initial data, owner role, migrations |
-| `test/files-update.test.js` | Revn/vern conflict detection, file data persistence |
-| `test/files-share-rpc.test.js` | File sharing, permission updates |
-| `test/teams-projects.test.js` | Team/project CRUD, membership |
-| `test/teams-invitations-rpc.test.js` | Team invitation CRUD |
-| `test/webhook-client.test.js` | postWebhook SSRF protection, blocked requests |
-| `test/webhooks-rpc.test.js` | Webhook registration, update, delete |
-| `test/file-gc.test.js` | collectUsedMediaIds, media shape walking |
-| `test/storage-fs.test.js` | Filesystem storage put/get/delete, hash, VALID_BUCKETS |
-| `test/storage-fs-highlevel.test.js` | FS high-level putAny/getData/getUrl operations |
-| `test/storage-gc.test.js` | Storage garbage collection |
-| `test/media.test.js` | Image format detection |
-| `test/media-rpc.test.js` | Media upload/processing RPC |
-| `test/comments-rpc.test.js` | Comment thread CRUD, read tracking |
-| `test/audit-logger.test.js` | Audit event logging |
-| `test/email.test.js` | Email functions (SMTP disabled mode) |
-| `test/registration.test.js` | User registration flow |
-| `test/auth-index.test.js` | Auth module exports |
-| `test/auth-middleware.test.js` | JWE auth middleware, token extraction |
-| `test/security-middleware.test.js` | HTTP security headers |
-| `test/rate-limit.test.js` | Per-IP rate limiting |
-| `test/cond.test.js` | ETag conditional execution |
-| `test/retry.test.js` | Conflict retry middleware |
-| `test/sse.test.js` | SSE endpoint |
-| `test/migrate.test.js` | Migration runner |
-| `test/loggers.test.js` | Structured logging |
-| `test/metrics.test.js` | Prometheus metrics registry |
-| `test/scheduler.test.js` | Task scheduler |
-| `test/telemetry.test.js` | Telemetry stats collection |
-| `test/worker.test.js` | Background worker tasks |
-| `test/ws.test.js` | WebSocket notifications |
-| `test/setup.test.js` | Instance bootstrapping |
-| `test/integration.test.js` | Full request lifecycle |
-| `test/rpc-modules.test.js` | RPC module registration |
-| `test/profile-rpc.test.js` | Profile RPC commands |
-| `test/fonts-rpc.test.js` | Font upload/management RPC |
-| `test/search.test.js` | FTS5 search |
-| `test/access-token-rpc.test.js` | Access token CRUD |
-| `test/viewer-rpc.test.js` | Viewer read-only access |
-| `test/assets-http.test.js` | Static asset serving |
-| `test/sqlite-extras.test.js` | SQLite extension loading |
+Key test file categories:
+- Config: `config.test.js`, `config-features.test.js`, `feature-flags.test.js`
+- Auth/security: `auth-index.test.js`, `auth-middleware.test.js`, `auth-rpc-handler.test.js`, `password.test.js`, `tokens.test.js`, `permissions.test.js`, `rate-limit.test.js`, `security-middleware.test.js`, `ssrf.test.js`, `registration.test.js`, `oidc-rpc-handler.test.js`
+- Transit/data: `transit.test.js`, `blob.test.js`, `changes.test.js`
+- Database: `sqlite.test.js`, `sqlite-extras.test.js`, `migrate.test.js`
+- Storage: `storage-fs.test.js`, `storage-fs-highlevel.test.js`, `storage-s3.test.js`, `storage-gc.test.js`, `assets-http.test.js`
+- RPC commands: `files-rpc.test.js`, `files-rpc-handler.test.js`, `files-create.test.js`, `files-update.test.js`, `files-update-handler.test.js`, `files-share-rpc.test.js`, `files-snapshots-handler.test.js`, `files-thumbnails-handler.test.js`, `binfile.test.js`, `teams-projects.test.js`, `teams-rpc-handler.test.js`, `teams-invitations-rpc.test.js`, `profile-rpc.test.js`, `profile-rpc-handler.test.js`, `comments-rpc.test.js`, `comments-rpc-handler.test.js`, `fonts-rpc.test.js`, `media-rpc.test.js`, `media-rpc-handler.test.js`, `webhooks-rpc.test.js`, `viewer-rpc.test.js`, `access-token-rpc.test.js`, `search.test.js`, `management-rpc.test.js`, `demo-rpc-handler.test.js`, `feedback-rpc-handler.test.js`, `export-rpc-handler.test.js`, `ldap-rpc-handler.test.js`, `nitrate-rpc-handler.test.js`, `verify-token-handler.test.js`
+- Middleware: `errors-middleware.test.js`, `cond.test.js`, `retry.test.js`, `quotes.test.js`
+- Infrastructure: `dispatcher.test.js`, `integration.test.js`, `loggers.test.js`, `metrics.test.js`, `scheduler.test.js`, `telemetry.test.js`, `worker.test.js`, `ws.test.js`, `sse.test.js`, `setup.test.js`, `audit-logger.test.js`, `email.test.js`, `email-filter.test.js`, `webhook-client.test.js`, `wire-compat.test.js`
+- File GC: `file-gc.test.js`
+- Media: `media.test.js`
 
 Also fixed bugs discovered by tests:
 - `files/blob.js` jsonReplacer infinite recursion with UUID objects
@@ -489,12 +445,15 @@ team/project/file/user counts, team averages, auth provider distribution, and
 audit event batches. Runs every 3 hours via the task scheduler. Garbage-collects
 old telemetry audit_log events (older than 7 days).
 
-### 5.45 [~] Fine-grained file GC
-`scheduler.js` `fileGc` and `worker.js` `file-gc` handler now decode file data
-blobs, walk shapes/components to collect used media IDs, query historical
-`file_change` snapshots, and soft-delete unreferenced `file_media_object`,
-old `file_thumbnail` (revn < current), and unused `file_data` fragments.
-Cross-library component usage checks not yet implemented.
+### 5.45 [x] Fine-grained file GC
+`scheduler.js` `fileGc` and `worker.js` `file-gc` handler now perform deep
+analysis: decode file data blob, walk shapes/components to collect used media
+IDs, query historical `file_change` snapshots, and soft-delete unreferenced
+`file_media_object`, old `file_thumbnail` (revn < current), and unused
+`file_data` fragments. Cross-library component GC is implemented:
+`cleanDeletedComponents` checks consumer files (via `file_library_rel`) and
+removes only truly unused deleted components from the library file's data.
+6 new `collectComponentReferences` tests added.
 
 ---
 

@@ -1,5 +1,5 @@
 /* global console */
-import { updateAllShapes, updateComponents } from '../types/file.js';
+import { updateAllShapes, updateComponents, findRefShape, findNearMatch } from '../types/file.js';
 import { subcopyHeadQ, getSwapSlot, setSwapSlot } from '../types/component.js';
 
 export function removeUnneededObjectsInComponents(fileData) {
@@ -95,12 +95,4 @@ function syncOneIteration(fileData, libraries) {
     );
     return { result: 'update', 'updated-shape': updated };
   });
-}
-
-function findNearMatch(file, container, libraries, shape) {
-  return null;
-}
-
-function findRefShape(file, container, libraries, shape) {
-  return null;
 }

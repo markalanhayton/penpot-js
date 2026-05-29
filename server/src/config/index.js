@@ -48,7 +48,7 @@ const flags = (process.env.PENPOT_FLAGS || '')
   .filter(Boolean)
   .reduce((acc, flag) => {
     if (flag.startsWith('enable-')) acc[flag.slice(7).replace(/-/g, '_')] = true;
-    if (flag.startsWith('disable-')) acc[flag.slice(9).replace(/-/g, '_')] = false;
+    if (flag.startsWith('disable-')) acc[flag.slice(8).replace(/-/g, '_')] = false;
     return acc;
   }, {});
 
@@ -94,6 +94,8 @@ const defaultFlags = {
   mcp: true,
   telemetry: false,
   quotes: true,
+  file_migrations: true,
+  fdata: false,
 };
 
 /** @type {Record<string, boolean>} Merged defaults + env overrides. */
@@ -154,6 +156,10 @@ if (isHttp && publicUri.indexOf('localhost') < 0) {
  * @property {string}           smtp.defaultReplyTo      - Default `Reply-To` address.
  * @property {boolean}          smtp.ssl                 - Use SSL for SMTP connection.
  * @property {boolean}          smtp.tls                 - Use TLS (STARTTLS) for SMTP connection.
+ * @property {object}           email                    - Email filtering configuration.
+ * @property {string}           email.whitelist          - Comma-separated list of allowed email domains (takes priority over blacklist).
+ * @property {string}           email.blacklist          - Comma-separated list of blocked email domains.
+ * @property {boolean}          email.blockDisposable    - Block known disposable email domains.
  * @property {object}           ldap                     - LDAP configuration.
  * @property {boolean}          ldap.enabled             - Whether LDAP authentication is enabled.
  * @property {string}           ldap.host                - LDAP server hostname.
@@ -233,17 +239,22 @@ export const config = Object.freeze({
       pathStyle: env('PENPOT_STORAGE_S3_PATH_STYLE', false),
     },
   },
-  smtp: {
-    enabled: env('PENPOT_SMTP_ENABLED', false),
-    host: env('PENPOT_SMTP_HOST', ''),
-    port: env('PENPOT_SMTP_PORT', 587),
-    username: env('PENPOT_SMTP_USERNAME', ''),
-    password: env('PENPOT_SMTP_PASSWORD', ''),
-    defaultFrom: env('PENPOT_SMTP_DEFAULT_FROM', 'Penpot <no-reply@example.com>'),
-    defaultReplyTo: env('PENPOT_SMTP_DEFAULT_REPLY_TO', 'Penpot <no-reply@example.com>'),
-    ssl: env('PENPOT_SMTP_SSL', false),
-    tls: env('PENPOT_SMTP_TLS', false),
-  },
+   smtp: {
+     enabled: env('PENPOT_SMTP_ENABLED', false),
+     host: env('PENPOT_SMTP_HOST', ''),
+     port: env('PENPOT_SMTP_PORT', 587),
+     username: env('PENPOT_SMTP_USERNAME', ''),
+     password: env('PENPOT_SMTP_PASSWORD', ''),
+     defaultFrom: env('PENPOT_SMTP_DEFAULT_FROM', 'Penpot <no-reply@example.com>'),
+     defaultReplyTo: env('PENPOT_SMTP_DEFAULT_REPLY_TO', 'Penpot <no-reply@example.com>'),
+     ssl: env('PENPOT_SMTP_SSL', false),
+     tls: env('PENPOT_SMTP_TLS', false),
+   },
+   email: {
+     whitelist: env('PENPOT_EMAIL_WHITELIST', ''),
+     blacklist: env('PENPOT_EMAIL_BLACKLIST', ''),
+     blockDisposable: env('PENPOT_EMAIL_BLOCK_DISPOSABLE', false),
+   },
   ldap: {
     enabled: env('PENPOT_LDAP_ENABLED', false),
     host: env('PENPOT_LDAP_HOST', ''),

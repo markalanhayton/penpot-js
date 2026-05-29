@@ -21,12 +21,12 @@ template.innerHTML = `<style>
     .penpot-dd__dropdown-separator { height: 1px; background: var(--penpot-border, #444); margin: var(--penpot-spacing-xs, 4px) 0; }
   
   </style>
-  <button class="penpot-dd__dropdown-trigger" id="trigger">
+  <button class="penpot-dd__dropdown-trigger" id="trigger" aria-haspopup="listbox" aria-expanded="false">
     <span id="label">Select...</span>
     <span class="penpot-dd__dropdown-arrow">\u25BE</span>
   </button>
   <div class="penpot-dd__dropdown-overlay" id="overlay"></div>
-  <div class="penpot-dd__dropdown-menu" id="menu"><slot></slot></div>`;
+  <div class="penpot-dd__dropdown-menu" id="menu" role="listbox"><slot></slot></div>`;
 
 export class PenpotDropdown extends PenpotElement {
   _template = template;
@@ -68,16 +68,24 @@ export class PenpotDropdown extends PenpotElement {
 
   open() {
     this.#open = true;
-    this.querySelector('#trigger').classList.add('penpot-dd__open');
-    this.querySelector('#menu').classList.add('penpot-dd__open');
-    this.querySelector('#overlay').classList.add('penpot-dd__open');
+    const trigger = this.querySelector('#trigger');
+    const menu = this.querySelector('#menu');
+    const overlay = this.querySelector('#overlay');
+    trigger.classList.add('penpot-dd__open');
+    trigger.setAttribute('aria-expanded', 'true');
+    menu.classList.add('penpot-dd__open');
+    overlay.classList.add('penpot-dd__open');
   }
 
   close() {
     this.#open = false;
-    this.querySelector('#trigger').classList.remove('penpot-dd__open');
-    this.querySelector('#menu').classList.remove('penpot-dd__open');
-    this.querySelector('#overlay').classList.remove('penpot-dd__open');
+    const trigger = this.querySelector('#trigger');
+    const menu = this.querySelector('#menu');
+    const overlay = this.querySelector('#overlay');
+    trigger.classList.remove('penpot-dd__open');
+    trigger.setAttribute('aria-expanded', 'false');
+    menu.classList.remove('penpot-dd__open');
+    overlay.classList.remove('penpot-dd__open');
   }
 
   #update() {

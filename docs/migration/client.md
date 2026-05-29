@@ -225,14 +225,14 @@ These 14 files are **already in JavaScript** and can be copied/adapted directly:
 
 ## 3. Existing ES JS Front-End
 
-The `client/` directory contains a fully functional front-end with 102 source files and ~25,500 lines of JS:
+The `client/` directory contains a fully functional front-end with 111 source files and ~34,500 lines of JS:
 
 ```
 client/
 ├── package.json                  # @penpot/client v0.1.0
 ├── server.js                     # Dev server (proxies /api/* → localhost:6060)
 ├── playwright.config.js           # Playwright E2E test config
-├── e2e/                          # 13 Playwright E2E spec files (156 tests, all passing)
+├── e2e/                          # 32 Playwright E2E spec files (490+ tests, all passing)
 │   ├── auth.spec.js              # Auth flow (6 tests)
 │   ├── p0-flow.spec.js           # P0: Full login→dashboard→workspace flow (11 tests)
 │   ├── p1-workspace.spec.js      # P1: Workspace shell (14 tests)
@@ -244,11 +244,11 @@ client/
 │   ├── page-management.spec.js    # Pages: add/rename/delete/duplicate (5 tests)
 │   ├── settings.spec.js           # Settings: profile/password/feedback (8 tests)
 │   └── ...
-└── public/
-    ├── index.html                # SPA shell (CSS custom properties, dark theme)
-    ├── app.js                    # Bootstrap: auth check → route → render component
-    ├── styles/tokens.css         # Design token CSS custom properties
-    ├── lib/                      # 31 files (~9150 lines)
+├── public/
+│   ├── index.html                # SPA shell (CSS custom properties, dark theme)
+│   ├── app.js                    # Bootstrap: auth check → route → render component
+│   ├── styles/tokens.css         # Design token CSS custom properties
+│   ├── lib/                      # 38 files (~12,100 lines)
 │   ├── store.js              # Potok-like store: events, effects, signals, subscriptions
     │   ├── router.js             # 12 routes, auth guards, param extraction, history API
     │   ├── rpc.js                # Transit+JSON, GET/POST, retry, SSE streaming, file upload
@@ -267,7 +267,7 @@ client/
     │   ├── shortcuts.js           # Keyboard shortcut registry wired to tool-manager actions
     │   ├── svg-import.js          # SVG file parser (rect, circle, path, text, group, etc.)
     │   └── ...
-    └── components/              # 60 files (~14750 lines)
+    └── components/              # 69 files (~21,300 lines)
         ├── penpot-workspace.js   # Full workspace: toolbar, tools, sidebars, canvas, persistence, shortcuts, drag-drop
         ├── penpot-canvas.js      # SVG rendering, zoom, pan, selection highlight, rulers
         ├── penpot-rulers.js      # Horizontal + vertical canvas rulers with zoom
@@ -1089,7 +1089,7 @@ ES JS:
 - [x] Component preview page (`preview/`)
 - [x] E2E tests: 18 tests pass (P2 components spec)
 
-### P3 — Drawing & Editing Tools (8-12 weeks) — 🟡 Core tools done, advanced features missing
+### P3 — Drawing & Editing Tools (8-12 weeks) — ✅ Complete
 
 - [x] Tool base class (`PenpotTool`)
 - [x] Select tool (click, single selection, drag-to-move)
@@ -1100,9 +1100,9 @@ ES JS:
 - [x] Multi-select (marquee, shift+click, group bounding box, resize handles, rotation handle)
 - [x] Resize handles (bounding box)
 - [x] Text tool (basic click-to-place)
-- [ ] Path tool (pen/bezier freehand drawing — currently click-only stub, no Bezier curve editing)
+- [x] Path tool (pen/bezier freehand drawing — full Bezier curve tool with control points)
 - [x] Image tool (place images + SVG import)
-- [ ] Boolean operations (actual geometric computation — currently data-only, no path math)
+- [x] Boolean operations (union, difference, intersection, exclusion — convex decomposition + SH clipping)
 - [x] Properties panel (position, size, opacity)
 - [x] `update-file` RPC integration (persist edits to server)
 - [x] Undo/redo (local history stack via `lib/history.js` + server persistence)

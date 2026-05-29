@@ -256,3 +256,54 @@ describe("migrations - migrate preserves data structure", () => {
     assert.equal(originalFile.version, originalVersion);
   });
 });
+
+describe("migrations - skipFormatMigrations option (BE-8)", () => {
+  it("skips named format migrations when skipFormatMigrations is true", () => {
+    const pageId = uuid.random();
+    const shapeId = uuid.random();
+    const file = makeFile({
+      version: 0,
+      data: {
+        pagesIndex: {
+          [pageId]: makePage({
+            [shapeId]: makeShape("rect"),
+          }),
+        },
+      },
+    });
+
+    const resultWithMigrations = m.migrateFile(file, []);
+    const resultWithoutMigrations = m.migrateFile(file, [], { skipFormatMigrations: true });
+
+    // With migrations, the version should be updated and migrations applied
+    assert.equal(resultWithMigrations.version, m.version);
+    assert.ok(resultWithMigrations.migrations.size > 0, "migrations should be applied by default");
+
+    // Without format migrations, the version should be updated but named format migrations skipped
+    assert.equal(resultWithoutMigrations.version, m.version);
+    // The result should NOT have named format migrations (0001, 0002, etc.) but SHOULD have legacy ones
+    const namedMigrations = [...resultWithoutMigrations.migrations].filter(id => /^\d{4}/.test(id));
+    const legacyMigrations = [...resultWithoutMigrations.migrations].filter(id => /^legacy-/.test(id));
+    assert.equal(namedMigrations.length, 0, "named format migrations should be skipped");
+    assert.ok(legacyMigrations.length > 0, "legacy migrations should still be applied");
+  });
+
+  it("applies all migrations by default (skipFormatMigrations = false)", () => {
+    const pageId = uuid.random();
+    const shapeId = uuid.random();
+    const file = makeFile({
+      version: 0,
+      data: {
+        pagesIndex: {
+          [pageId]: makePage({
+            [shapeId]: makeShape("rect"),
+          }),
+        },
+      },
+    });
+
+    const result = m.migrateFile(file, []);
+    const namedMigrations = [...result.migrations].filter(id => /^\d{4}/.test(id));
+    assert.ok(namedMigrations.length > 0, "named format migrations should be applied by default");
+  });
+});

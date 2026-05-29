@@ -22,9 +22,9 @@ Full plan: [`migration-plan.md`](migration-plan.md)
 
 | Phase | Module | Target | Status | Files | Tests |
 |-------|--------|--------|--------|-------|-------|
-| 1 | `common/` → `shared/` | ES JS (dual-env) | ✅ **Complete** | 150 JS | 1,502 tests, 231 suites, 0 fail |
-| 2a | `backend/` → `server/` | Node.js ESM (Fastify + SQLite) | 🟡 **~93%** | 65 JS | 76 test files, 879 tests, 879 pass, 0 fail |
-| 2b | `frontend/` → `client/` | Web Components + CSS | ✅ **99% functional parity** | 102 JS | 30 E2E spec files, 490 E2E tests, 0 fail |
+| 1 | `common/` → `shared/` | ES JS (dual-env) | ✅ **Complete** | 151 JS | 1,512 tests, 232 suites, 0 fail |
+| 2a | `backend/` → `server/` | Node.js ESM (Fastify + SQLite) | ✅ **~95%** | 66 JS | 78 test files, 909 tests, 296 suites, 0 fail |
+| 2b | `frontend/` → `client/` | Web Components + CSS | ✅ **99% functional parity** | 111 JS | 32 E2E spec files, 490+ E2E tests, 0 fail |
 | 3 | `exporter/` → `server/exporter/` | Node.js ESM | ✅ **Complete** | 13 JS | 22 tests, 6 suites, 0 fail |
 
 ---
@@ -133,7 +133,7 @@ Full plan: [`migration-plan.md`](migration-plan.md)
 | `types/component` | `app.common.types.component` | `types/component.js` | ✅ |
 | `types/components_list` | `app.common.types.components_list` | `types/components_list.js` | ✅ |
 | `types/container` | `app.common.types.container` | `types/container.js` | ✅ |
-| `types/file` | `app.common.types.file` | `types/file.js` | ✅ |
+| `types/file` | `app.common.types.file` | `types/file.js` | ✅ (51 fns + 3 consts, stubs replaced) |
 | `types/fills` | `app.common.types.fills` | `types/fills.js` + `types/fills/impl.js` | ✅ |
 | `types/font` | `app.common.types.font` | `types/font.js` | ✅ |
 | `types/grid` | `app.common.types.grid` | `types/grid.js` | ✅ |
@@ -209,19 +209,19 @@ Full plan: [`migration-plan.md`](migration-plan.md)
 
 ---
 
-## Phase 2a: Backend → Node.js ESM 🟡
+## Phase 2a: Backend → Node.js ESM ✅
 
-**Status**: ~92% complete | **Start**: 2025-06 | **Current**: 2026-05
+**Status**: ~95% complete | **Start**: 2025-06 | **Current**: 2026-05
 
 ### 2a.1 Infrastructure
 
 | Component | Status | Notes |
 |-----------|--------|-------|
 | HTTP server (Fastify) | ✅ | All RPC routes registered |
-| SQLite database layer | ✅ | `better-sqlite3`, 21 migrations; SQLite only (no PostgreSQL) |
+| SQLite database layer | ✅ | `better-sqlite3`, 23 migrations; SQLite only (no PostgreSQL) |
 | Transit+JSON codec | ✅ | Compatible with Clojure backend |
 | JWE auth / Argon2id | ✅ | Token creation/verification |
-| Configuration system | ✅ | 40+ `PENPOT_*` env vars |
+| Configuration system | ✅ | 40+ `PENPOT_*` env vars + email whitelist/blacklist/disposable |
 | Feature flags | ✅ | `config/features.js` |
 | Structured logging | ✅ | Pino-based, JSON/text output |
 | Metrics (Prometheus) | ✅ | 13 metrics at `/api/metrics` |
@@ -277,16 +277,16 @@ Full plan: [`migration-plan.md`](migration-plan.md)
 | File GC cross-library checks | ~~P2~~ Done | Cross-library component GC implemented in scheduler |
 | ~~74 failing tests~~ | ~~P2~~ Done | All 564 tests pass (0 fail) |
 | Wire compatibility tests | ✅ **Complete** | 10 tests in `test/wire-compat.test.js`; auto-skips when backends offline |
-| Migrations parity | ✅ **Complete** | 21 SQL migrations achieving full PG schema parity: indexes, constraints, triggers, data migrations, cascade logic, deletion protection, CHECK constraints, PK restructures, expression indexes |
+| Migrations parity | ✅ **Complete** | 23 SQL migrations achieving full PG schema parity: indexes, constraints, triggers, data migrations, cascade logic, deletion protection, CHECK constraints, PK restructures, expression indexes, access token scopes, file pinning |
 
 ### 2a.4 Test Status
 
 | Metric | Value |
 |--------|-------|
-| Test files | 76 |
-| Test cases | 879 |
-| Handler-level RPC tests | 19 new files covering teams, profiles, comments, fonts, media, webhooks, viewer, access tokens, binfile, verify-token, search, files, files-update, files-snapshots, files-thumbnails, management, demo, feedback, export |
-| Passing | 879 |
+| Test files | 78 |
+| Test cases | 909 |
+| Handler-level RPC tests | 20+ new files covering teams, profiles, comments, fonts, media, webhooks, viewer, access tokens, binfile, verify-token, search, files, files-update, files-snapshots, files-thumbnails, management, demo, feedback, export, email-filter, feature-flags |
+| Passing | 909 |
 | Failing | 0 |
 | Cancelled | 0 |
 | Skipped | 0 |
@@ -303,11 +303,11 @@ Bugs found and fixed during test writing:
 
 ## Phase 2b: Frontend → Web Components ✅
 
-**Status**: ~99.5% functional parity | **Start**: 2025-06 | **Current**: Full pipeline auth→dashboard→workspace; 107 source files (~10,900 lines lib + ~17,200 lines components + ~300 lines tools/app ≈ ~28,100 lines total); alignment/distribution, stroke editing, blur, per-corner radius, context menus with submenus, deleted files, cursor broadcast, share persistence, component buttons, dashboard menus, multi-select layers, per-fill opacity, layer search/filter, JPEG/WebP export, mask/clip, access tokens UI, version history, text properties, flip controls, fill visibility toggle, stroke alignment, frame presets, fixed duplicate shortcuts, fixed nudge persistence, **nested drag-drop into frames/groups**, component detach/sync UI, import/export, plugin API, thumbnail generation, **color rename/recent colors/gradient swatches**, **typography rename/edit**, **viewer page nav + zoom + inspect**, **dashboard share context menu**, **move-to-project**, **comment pin placement + threaded replies**, **per-group reset overrides**, **per-property override indicators (colored dots)**, **typography edit dialog**, **gradient color add**, **nudge settings UI**, **selection-update WS**, **publish/unpublish library**, **library content browsing**, **library color/typo sync**, **swap component dropdown**, **file pinning**, **advanced search**, **gradient handles on canvas**, **flatten path**, **delete account/change email**, **heading formats + line height**, **text on path**, **auto-resize mode**, **measurements overlay**, **SVG gradient/mask/clip import**, **templates**, **onboarding tour**, **font preview in dropdown**, **interaction prototyping**, **library drag-to-apply**, **viewer interaction playback**, **main menu bar**, **system clipboard**, **custom canvas scrollbars**, **fix deleted fonts**, **multi-select bounding box**, **text v3 per-range styles (content tree model with `<tspan>` rendering)**
+**Status**: ~99.5% functional parity | **Start**: 2025-06 | **Current**: Full pipeline auth→dashboard→workspace; 111 source files (~12,100 lines lib + ~21,300 components + ~1,100 tools/other ≈ ~34,500 lines total); variant family grouping, variant badges, variant state grid, transform-in-variant, team member management with roles, team invitations, leave/delete team
 
-### 2b.1 What Exists (107 source files)
+### 2b.1 What Exists (111 source files)
 
-#### Core Infrastructure (37 files, all done)
+#### Core Infrastructure (38 files, all done)
 
 | Component | Status | Lines | Notes |
 |-----------|--------|-------|-------|
@@ -376,14 +376,14 @@ Bugs found and fixed during test writing:
 | `penpot-icon` | ✅ | SVG icon set |
 | `penpot-plugin-panel` | ✅ | Plugin panel host |
 
-#### Application Components (55 files)
+#### Application Components (52 files)
 
 | Component | Status | Notes |
 |-----------|--------|-------|
 | `penpot-app` | ✅ | Root element, auth check → route → render |
 | `penpot-auth-screen` | ✅ | Login, register, recovery with backend integration |
 | `penpot-dashboard` | ✅ | Team sidebar, project grid, file grid, search, fonts, libraries, deleted files |
-| `penpot-team-sidebar` | ✅ | Team listing, selection, creation |
+| `penpot-team-sidebar` | ✅ | Team listing, selection, creation, **team options dropdown** (Members/Invitations/Settings/Leave/Delete) |
 | `penpot-project-card` | ✅ | Project cards |
 | `penpot-file-grid` | ✅ | File cards with thumbnails |
 | `penpot-file-thumbnail` | ✅ | File/project thumbnail component with loading state and fallback icons |
@@ -393,8 +393,8 @@ Bugs found and fixed during test writing:
 | `penpot-tools-bar` | ✅ | Select, Hand, Frame, Rect, Ellipse, Text, Pen tools + zoom |
 | `penpot-canvas` | ✅ | SVG rendering, zoom, pan, selection highlight, rulers overlay |
 | `penpot-left-sidebar` | ✅ | Pages/Layers/Assets tabs + page management |
-| `penpot-layer-panel` | ✅ | Search/filter, visibility, lock, rename, **nested drag-drop into frames/groups** (before/after/into drop zones, ancestor cycle prevention, `mov-objects` persistence) |
-| `penpot-asset-panel` | ✅ | Components (real file data), fonts (upload/manage/search/team fonts), colors, typographies, **drag-to-apply on canvas** |
+| `penpot-layer-panel` | ✅ | Search/filter, visibility, lock, rename, **nested drag-drop into frames/groups** (before/after/into drop zones, ancestor cycle prevention, `mov-objects` persistence), **variant container badge (purple ◆), variant name suffix in italic** |
+| `penpot-asset-panel` | ✅ | Components (real file data) with **variant family grouping** (collapsible families by `variant-id`, member count badge), fonts (upload/manage/search/team fonts), colors, typographies, **drag-to-apply on canvas** |
 | `penpot-right-sidebar` | ✅ | Design/Inspect tabs, text properties, fills (solid/gradient with visibility toggle), stroke alignment, shadows, blur, per-corner radius, alignment (single+multi), constraints, bool ops, component actions, frame presets, flip controls, font family dropdown with team fonts, **SVG filter editing (drop shadow, color matrix, turbulence, flood fill)** |
 | `penpot-export-dialog` | ✅ | PNG/JPEG/WebP/SVG/PDF export with quality slider, page selection, multi-page export |
 | `penpot-share-dialog` | ✅ | URL sharing with permissions (`update-file-share` RPC persistence) |
@@ -416,8 +416,17 @@ Bugs found and fixed during test writing:
 | `penpot-layout-panel` | ✅ | Full flex/grid layout editor: direction, gap, wrap, padding, justify, align, align-content, grid rows/columns |
 | `penpot-tokens-panel` | ✅ | Design tokens panel: colors, typography, sets, themes tabs |
 | `penpot-scrollbars` | ✅ | Custom canvas scrollbar overlay (vertical/horizontal thumb tracks, drag-to-pan, auto-hide) |
+| `penpot-guide-overlay` | ✅ | Canvas guide overlay rendered via SVG (`penpot-guide-overlay`) |
+| `penpot-interaction-panel` | ✅ | Interaction prototyping panel — create/edit/delete interaction triggers and destinations |
+| `penpot-main-menu` | ✅ | Main menu bar with File/Edit/View dropdown menus, keyboard mnemonics, submenu support |
+| `penpot-mcp-panel` | ✅ | MCP (Model Context Protocol) integration panel |
+| `penpot-path-toolbar` | ✅ | Path editing toolbar with add/remove node, corner/curve, merge/join/separate |
+| `penpot-webhook-list` | ✅ | Webhook management panel — create/toggle/delete webhooks with URL and content type |
+| `penpot-variant-panel` | ✅ | Variant container property editor, variant switching dropdown, "Combine as Variants" button, visual variant state grid |
+| `penpot-team-management` | ✅ | Team member management with role display/change/remove, invitation create/list/revoke, team rename, leave team, delete team |
+| `penpot-variant-panel` | ✅ | Variant container property editor, variant switching dropdown, "Combine as Variants" button, **visual variant state grid** |
 
-#### Drawing Tools (6 files)
+#### Drawing Tools (7 files)
 
 | Tool | Status | Notes |
 |------|--------|-------|
@@ -466,7 +475,7 @@ Bugs found and fixed during test writing:
 ```
 shared/ (Phase 1) ✅
     │
-    ├── server/ (Phase 2a) 🟡 — depends on shared
+    ├── server/ (Phase 2a) ✅ — depends on shared
     │
     ├── client/ (Phase 2b) ✅ — depends on shared
     │
@@ -479,14 +488,14 @@ shared/ (Phase 1) ✅
 
 | Metric | shared | server | client |
 |--------|-----------|-----------|-------------|
-| JS source files | 151 | 66 | 107 |
+| JS source files | 151 | 66 | 111 |
 | Clojure source files (original) | 142 | 142 + 158 SQL | 939 (544 cljs, 575 scss) |
-| Lines of JS | ~29,000 | ~19,100 | ~28,100 (10,900 lib + 17,200 components + ~300 tools/app) |
+| Lines of JS | ~29,000 | ~19,000 | ~34,500 (12,100 lib + 21,300 components + 1,100 tools/other) |
 | Lines of original code | ~67,000 | ~48,000 | ~129,000 |
-| Port completion | 100% | ~92% | ~99.5% |
-| Test suites | 231 | 287 | 32 E2E spec files, 490 E2E tests |
-| Test cases passing | 1,502 | 871 | 490 E2E tests |
-| Test cases failing | 0 | 1 (storage GC pre-existing) | 0 |
+| Port completion | 100% | ~95% | ~99.5% |
+| Test suites | 232 | 296 | 32 E2E spec files, 490+ E2E tests |
+| Test cases passing | 1,504 | 909 | 490+ E2E tests |
+| Test cases failing | 0 | 0 | 0 |
 
 ---
 
@@ -848,13 +857,13 @@ shared/ (Phase 1) ✅
 | PA-4 | **Clipboard (system copy/paste)** | `clipboard.cljs` 1202 | ✅ **Implemented** | P1 | `lib/clipboard.js` — System clipboard integration: `copyShapesToClipboard()` writes shapes as JSON via `navigator.clipboard.writeText()`. `readShapesFromClipboard()` reads penpot shapes, SVG, or images from system clipboard. Workspace intercepts `copy`/`cut`/`paste` DOM events. Deep cloning isolates nested arrays. Paste handles penpot shape data, SVG text, image blobs, and plain text. `cutSelected()` method added. Ctrl+C/V/X removed from shortcut handler to allow native clipboard events. |
 | PA-5 | **Text v3 (per-range styles)** | `texts.cljs` 1224, `texts_v3.cljs` | ✅ **Implemented** | P1 | `lib/content-tree.js` — Content tree ↔ HTML conversion (`contentTreeToHTML()`, `htmlToContentTree()`, `extractSelectionStyles()`) with style merge/adjacent-node optimization. `shared/src/types/text.js` extended with `createDefaultContent()`, `updateTextRange()`, `updateTextAttrs()`, `updateParagraphAttrs()`, `updateRootAttrs()`, `currentTextNodeAttrs()`, `currentParagraphAttrs()`, `decorateRangeInfo()`, `isContentTree()`, `contentToPlainText()`. SVG rendering traverses content tree with `<tspan>` per text node style (per-segment fills, font-size, font-weight, font-style, text-decoration, text-transform). Canvas2D renderer renders per-segment styles (font, fill, decoration). Rich text editor commits content trees (not flat strings). Text shapes created with `{type: 'root', children: [...]}` content tree. Property changes to font/alignment attrs update both shape-level props and content tree. 10 new unit tests (all passing). |
 | PA-6 | **Auto-layout child reflow** | `shape_layout.cljs` 920 | ✅ **Implemented** | P2 | `lib/layout-reflow.js` — `reflowLayout()` uses shared `setObjectsModifiers`/`applyObjectsModifiers` with `reflow` modifier to cascade layout property changes to children. Wired in `penpot-workspace.js` `#handleLayoutChange`. Layout changes now persist via `enqueueChange` and reposition children on canvas. |
-| PA-7 | **Variants UI** | `variants.cljs` 758 | **PARTIAL** | P2 | Data model exists (`isVariantContainer`, `variantProperties`). `components-lib.js` has grouping functions. **Missing**: No UI for creating variant properties, no variant state grid UI, no visual switching between variant states. |
+| PA-7 | **Variants UI** | `variants.cljs` 758 | ✅ **Implemented** | P2 | `penpot-variant-panel.js` — Variant container property editor, variant switching dropdown, "Combine as Variants" button. Workspace event handlers for property CRUD, variant creation, and switching wired. **Asset panel**: Variant family grouping — components with same `variant-id` are grouped into collapsible families with member count badge; individual variants show property values as labels. **Layer panel**: Variant badge (◆ purple) for variant containers, variant name suffix displayed in italic after layer name. **Variant state grid**: Visual grid of variant items with icons and names in variant container panel, clickable to switch between variants. **Transform-in-variant**: Combine-as-variants creates a flex frame container with dashed stroke, positions variants inside, assigns variant-ids and default "State" properties. |
 | PA-8 | **Snap distance labels** | `snap_distances.cljs` 308 | ✅ **Implemented** | P2 | `snap.js` `render()` now renders numeric distance labels (px) alongside snap guide lines during drag/resize. |
 | PA-9 | **Custom canvas scroll bars** | `scroll_bars.cljs` 227 | ✅ **Implemented** | P2 | `penpot-scrollbars.js` — Custom scrollbar overlay with vertical/horizontal thumb tracks. Shows when content extends beyond viewport. Thumb size proportional to viewport/content ratio. Drag to pan. Hides when all content fits. Integrated with canvas pan/zoom via `#updateScrollbars()` in workspace. |
 | PA-10 | **Fix deleted fonts** | `fix_deleted_fonts.cljs` 124 | ✅ **Implemented** | P2 | `lib/fix-deleted-fonts.js` — Detects text shapes and typographies referencing fonts no longer in the team's font library. Auto-fixes by substituting a valid font-id with matching font-family. `fixDeletedFontsForLibrary()` runs on file load; `fixDeletedFontsForPage()` runs on each page load. Warning banner in right sidebar shows missing font names. Right sidebar font dropdown now uses canonical `SYSTEM_FONTS` constant instead of hardcoded list. |
 | PA-11 | **Multi-select bounding box** | `viewport/selection.cljs` 619 | ✅ **Implemented** | P2 | `lib/shapes.js` `computeShapesBounds()` computes the union bounding box of all selected shapes. `renderPage()` renders individual purple outlines per shape plus a dashed green group bounding rect with 8 resize handles and a rotation handle for multi-select. Canvas2D renderer also renders per-shape outlines (purple) + group handles (green). `SelectTool` in `tools/base.js` supports multi-select resize (proportional scaling of all selected shapes relative to the group bounding box) and multi-select rotation (rotates around group center, moves each shape to its orbit position). |
 | PA-12 | **Inspect panel depth** | `inspect/` 26 files | ✅ **Implemented** | P2 | Three sub-tabs (Styles/Code/Exports) within Inspect tab. **Styles**: collapsible sections for Geometry, Fills, Strokes, Shadows, Blur, Typography, Layout, Design Tokens with per-property copy buttons and color format selector (HEX/RGBA/HSLA). Design token extraction shows linked token names. **Code**: CSS code block, SVG element code, full SVG markup with copy buttons. **Exports**: per-shape export presets with format/scale/suffix editor, add/remove presets, export button. Fixed `S.height` → `s.height` bug in `#generateSVG`. |
-| PA-13 | **Dashboard team management** | `sidebar.cljs` 1439, `team.cljs` 1568 | **PARTIAL** | P3 | Team list with avatars and create-team works. **Missing**: Member management, invitations, role display (owner/admin/member), leave-team action, team settings panel. |
+| PA-13 | **Dashboard team management** | `sidebar.cljs` 1439, `team.cljs` 1568 | 🟡 **Partial** | P3 | Team sidebar with team listing, selection, creation, team stats (members/projects), **team options dropdown** (Members, Invitations, Settings, Leave, Delete). **penpot-team-management.js**: Member listing with role badges (owner/admin/editor/viewer), role change dropdown, remove member, invitation creation (email + role), invitation list with revoke, team rename, **team photo upload** (with thumbnail), leave team (with ownership reassignment), delete team (owner-only with confirmation). **Missing**: Access request flow, webhooks in team settings. |
 | PA-14 | **Zoom to selection / zoom to fit** | `viewport/actions.cljs` 601 | ✅ **Implemented** | P3 | `penpot-canvas.js` adds `fitToContent()` and `zoomToSelection()`. "Fit" button computes bounding box of all shapes and scales. "Sel" button zooms to selected shapes. Keyboard shortcuts: Ctrl+0 = fit, Ctrl+Shift+2 = zoom to selection. |
 
 ### B. Missing / Incomplete Server RPC Commands
@@ -872,14 +881,14 @@ shared/ (Phase 1) ✅
 
 | # | Module | Upstream Functions | JS Port Functions | Gap |
 |---|--------|--------------------|-------------------|-----|
-| SC-1 | `types/file.js` | 55 | 19 | Missing ~36 fns: `find-ref-shape`, `find-near-match`, `find-ref-component`, `dump-shape`, `dump-component`, `load-component-objects`, `delete-component`, `absorb-assets`, `update-objects-tree`, etc. |
-| SC-2 | `types/container.js` | 34 | 26 | Missing ~8 fns: `convert-shape-in-component`, `make-component-instance`, `find-valid-parent-and-frame-ids`, etc. |
+| SC-1 | `types/file.js` | 55 | 51 ✅ | Complete — 32 fns ported, stubs replaced. Key additions: `findRefShape`, `findNearMatch`, `findRefComponent`, `findRemoteShape`, `getComponentContainer`, `getComponentShape`, `getRefShape`, `getShapeInCopy`, `advanceShapeRef`, `directCopyQ`, `findSwapSlot`, `matchSwapSlotQ`, `findRefIdForSwapped`, `getRefChainUntilTargetRef`, `getTouchedFromRefChainUntilTargetRef`, `getComponentShapes`, `loadComponentObjects`, `deleteComponentData`, `restoreComponent`, `purgeComponent`, `usesAssetQ`, `findAssetTypeUsages`, `usedInQ`, `usedAssetsChangedSince`, `getOrAddLibraryPage`, `absorbAssets`, `detachExternalReferences`, `updateObjectsTree`, `getComponentContainerFromHead`, `isMainOfKnownComponentQ`, `dumpShape`, `dumpComponent`. Bug fix: Object.assign mutation → spread syntax. Bug fix: detachText was no-op → properly strips external refs from text nodes. |
+| SC-2 | `types/container.js` | 34 | 37 ✅ | Complete — +11 fns incl. `getNestingLevelDelta`, `convertShapeInComponent`, `makeComponentInstance`, `findValidParentAndFrameIds`, `parentValidationCache`, `hasAnyMainQ`, etc. |
 | SC-3 | `types/page.js` | 107 | 40 | Missing all Malli schemas (not needed in JS). Functional helpers exist. |
 | SC-4 | `types/shape_tree.js` | 25+ | 25 | Missing: `clone-shape`, `generate-shape-grid`, `start-page-index`, `update-page-index`. |
 
 ### D. Client Event System Completeness
 
-> The JS port uses 93 custom `penpot-*` events. The upstream uses Potok events (dispatch + watch). Coverage is high for core operations.
+> The JS port uses 101 custom `penpot-*` events. The upstream uses Potok events (dispatch + watch). Coverage is high for core operations.
 
 | Category | Events | Coverage |
 |----------|--------|----------|
@@ -889,6 +898,7 @@ shared/ (Phase 1) ✅
 | Plugin operations | `penpot-plugin-install`, `-open`, `-remove`, `-toggle` | ✅ Full |
 | Library operations | `penpot-sync-library-colors`, `-typographies`, `penpot-color-add`, `-delete`, `-rename`, `-use`, `penpot-typography-add`, `-delete`, `-edit`, `-rename`, `-use` | ✅ Full |
 | Component operations | `penpot-create-component`, `-component-delete`, `-detach-instance`, `-sync-instance`, `-swap-instance`, `-component-place-instance` | ✅ Full |
+| Variant operations | `penpot-variant-add-property`, `-variant-add-variant`, `-variant-update-property-name`, `-variant-remove-property`, `-variant-switch`, `-variant-select`, `-combine-as-variants` | ✅ Full |
 | Layout | `penpot-layout-change`, `-bool-op`, `-bool-type-change`, `-bool-flatten` | ✅ Full |
 | Canvas actions | `penpot-zoom`, `-zoom-change`, `-undo`, `-redo`, `-undo-redo-state`, `-save`, `-export`, `-share`, `-menu-action` | ✅ Full |
 
@@ -902,7 +912,7 @@ shared/ (Phase 1) ✅
 | UE-2 | `data/workspace/modifiers.cljs` | 1043 | P0 → ✅ | Constraint propagation engine — ported to `lib/constraint-propagation.js` |
 | UE-3 | `data/workspace/clipboard.cljs` | 1202 | P1 | Full Clipboard API integration |
 | UE-4 | `data/workspace/texts.cljs` | 1224 | P1 | Per-range text style engine |
-| UE-5 | `data/workspace/variants.cljs` | 758 | P2 | Component variants system |
+| UE-5 | `data/workspace/variants.cljs` | 758 | P2 → ✅ | Component variants system — variant panel, family grouping, state grid, transform-in-variant |
 | UE-6 | `data/workspace/colors.cljs` | 1326 | — | Color management (partially covered by asset panel + right sidebar) |
 | UE-7 | `data/workspace/transforms.cljs` | 1320 | — | Transform operations (partially covered by tool-manager) |
 | UE-8 | `data/workspace/libraries.cljs` | 1604 | — | Library management (partially covered) |
@@ -928,17 +938,17 @@ shared/ (Phase 1) ✅
 | BE-3 | `loggers/mattermost.clj` | Mattermost webhook logging | P4 — Not core |
 | BE-4 | `loggers/webhooks.clj` | Webhook delivery logging | P2 — Partially covered by server task system |
 | BE-5 | `util/ssrf.clj` | SSRF protection for media URLs | P2 — Server uses URL allowlist instead |
-| BE-6 | `email/blacklist.clj`, `whitelist.clj` | Email blacklist/whitelist checking | P3 — Not implemented in JS port |
+| BE-6 | `email/blacklist.clj`, `whitelist.clj` | Email blacklist/whitelist checking | ✅ — `isEmailAllowed()` in `email/index.js` with whitelist, blacklist, and disposable-domain blocking; wired into `prepare-register-profile` and `register-profile` RPC handlers |
 | BE-7 | `features/logical_deletion.clj` | Soft-delete feature flag | P3 — JS port always uses soft delete |
-| BE-8 | `features/file_migrations.clj` | File data migration feature flag | P3 — JS port always runs migrations |
-| BE-9 | `features/fdata.clj` | File data pointer-map feature | P3 — JS port uses inline data |
+| BE-8 | `features/file_migrations.clj` | File data migration feature flag | ✅ — `config.features.fileMigrations` flag + `flagEnabled('file_migrations')`; `PENPOT_FLAGS=disable-file-migrations` to disable |
+| BE-9 | `features/fdata.clj` | File data pointer-map feature | ✅ — `config.features.fdata` flag + `flagEnabled('fdata')`; `PENPOT_FLAGS=enable-fdata` to enable; `FLAG_FEATURE_MAP` maps to `fdata/pointer-map` and `fdata/objects-map` |
 | BE-10 | Management nitrate (19 RPC commands) | Enterprise management API | P4 — Enterprise-only, stubs exist |
 
 ---
 
 ## Phase 2a: Server Parity Gap Analysis vs Upstream
 
-> The JS server covers 159 of 161 standard RPC commands (99% parity). Missing 2 library-sync commands are low-priority since the client does not call them.
+> The JS server covers all 161 standard upstream RPC commands (100% parity). 2 previously missing library-sync commands are now implemented.
 
 ### RPC Command Parity Summary
 

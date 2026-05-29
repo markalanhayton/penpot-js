@@ -24,12 +24,12 @@ template.innerHTML = `<style>
     .penpot-select__select-option.penpot-select__disabled { opacity: 0.4; cursor: not-allowed; }
   
   </style>
-  <button class="penpot-select__select-trigger" id="trigger">
+  <button class="penpot-select__select-trigger" id="trigger" aria-haspopup="listbox" aria-expanded="false">
     <span id="label">Select...</span>
     <span class="penpot-select__select-arrow">\u25BE</span>
   </button>
   <div class="penpot-select__select-overlay" id="overlay"></div>
-  <div class="penpot-select__select-menu" id="menu"></div>`;
+  <div class="penpot-select__select-menu" id="menu" role="listbox"></div>`;
 
 export class PenpotSelect extends PenpotElement {
   _template = template;
@@ -81,16 +81,24 @@ export class PenpotSelect extends PenpotElement {
 
   open() {
     this.#open = true;
-    this.querySelector('#trigger').classList.add('penpot-select__open');
-    this.querySelector('#menu').classList.add('penpot-select__open');
-    this.querySelector('#overlay').classList.add('penpot-select__open');
+    const trigger = this.querySelector('#trigger');
+    const menu = this.querySelector('#menu');
+    const overlay = this.querySelector('#overlay');
+    trigger.classList.add('penpot-select__open');
+    trigger.setAttribute('aria-expanded', 'true');
+    menu.classList.add('penpot-select__open');
+    overlay.classList.add('penpot-select__open');
   }
 
   close() {
     this.#open = false;
-    this.querySelector('#trigger').classList.remove('penpot-select__open');
-    this.querySelector('#menu').classList.remove('penpot-select__open');
-    this.querySelector('#overlay').classList.remove('penpot-select__open');
+    const trigger = this.querySelector('#trigger');
+    const menu = this.querySelector('#menu');
+    const overlay = this.querySelector('#overlay');
+    trigger.classList.remove('penpot-select__open');
+    trigger.setAttribute('aria-expanded', 'false');
+    menu.classList.remove('penpot-select__open');
+    overlay.classList.remove('penpot-select__open');
   }
 
   #update() {
@@ -109,6 +117,8 @@ export class PenpotSelect extends PenpotElement {
       const el = document.createElement('div');
       el.className = 'penpot-select__select-option' + (opt.value === val ? ' penpot-select__selected' : '');
       el.textContent = opt.label;
+      el.setAttribute('role', 'option');
+      el.setAttribute('aria-selected', opt.value === val ? 'true' : 'false');
       el.addEventListener('click', (e) => {
         e.stopPropagation();
         this.value = opt.value;

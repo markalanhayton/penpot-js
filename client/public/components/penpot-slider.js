@@ -15,11 +15,11 @@ template.innerHTML = `<style>
   
   </style>
   <div class="penpot-slider__slider-wrapper">
-    <div class="penpot-slider__slider-track" id="track">
+    <div class="penpot-slider__slider-track" id="track" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="Slider value">
       <div class="penpot-slider__slider-fill" id="fill"></div>
       <div class="penpot-slider__slider-thumb" id="thumb" tabindex="0"></div>
     </div>
-    <span class="penpot-slider__slider-value" id="value"></span>
+    <span class="penpot-slider__slider-value" id="value" aria-hidden="true"></span>
   </div>`;
 
 export class PenpotSlider extends PenpotElement {
@@ -103,12 +103,18 @@ export class PenpotSlider extends PenpotElement {
     const fill = this.querySelector('#fill');
     const thumb = this.querySelector('#thumb');
     const valueEl = this.querySelector('#value');
+    const track = this.querySelector('#track');
     if (!fill || !thumb) return;
 
     const ratio = (this.#max - this.#min) > 0 ? (this.#value - this.#min) / (this.#max - this.#min) : 0;
     fill.style.width = `${ratio * 100}%`;
     thumb.style.left = `${ratio * 100}%`;
     valueEl.textContent = parseFloat(this.#value.toFixed(2));
+    if (track) {
+      track.setAttribute('aria-valuemin', this.#min);
+      track.setAttribute('aria-valuemax', this.#max);
+      track.setAttribute('aria-valuenow', this.#value);
+    }
   }
 
   render() {}

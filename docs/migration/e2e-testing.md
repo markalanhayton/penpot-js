@@ -52,9 +52,9 @@ The Penpot JS port uses a layered testing strategy tailored to each module's run
 
 | Module | Test Type | Runner | Location | Count |
 |--------|-----------|--------|----------|-------|
-| `client/` | E2E | Playwright | `client/e2e/*.spec.js` | 30 spec files, 490 tests |
-| `server/` | Integration + Unit | `node:test` | `server/test/*.test.js` | 75 files, 872 tests |
-| `shared/` | Unit | `node:test` | `shared/test/*.test.js` | 176 suites, 1,492 assertions |
+| `client/` | E2E | Playwright | `client/e2e/*.spec.js` | 32 spec files, 490+ tests |
+| `server/` | Integration + Unit | `node:test` | `server/test/*.test.js` | 78 files, 909 tests, 296 suites |
+| `shared/` | Unit | `node:test` | `shared/test/*.test.js` | 65 files, 232 suites, 1,596 tests |
 | `server/exporter/` | Unit | `node:test` | `server/exporter/test/*.test.js` | 22 tests |
 | `frontend/` (upstream) | E2E | Playwright | `frontend/playwright/ui/specs/*.spec.js` | 35 spec files |
 
@@ -178,7 +178,7 @@ The client E2E tests cover the full user journey from authentication through des
 | `drawing-cycle.spec.js` | Other | ~420 | 17 | Draw shapes, undo/redo, properties, selection |
 | `file-persistence.spec.js` | Other | ~260 | 16 | Save, undo, redo, file name, keyboard shortcuts |
 
-**Total**: 30 spec files, ~5,500+ lines, 490 tests.
+**Total**: 32 spec files, ~5,500+ lines, 490+ tests.
 
 ### 3.2 Test Helpers
 
@@ -422,7 +422,7 @@ describe('Rate Limiter', () => {
 
 ### 5.1 Overview
 
-The `shared/` module has 176 test suites with 1,492 assertions across 63 test files. Tests cover pure functions — geometry calculations, type definitions, data transformations, codecs, and validation logic.
+The `shared/` module has 176 test suites with 1,584+ assertions across 63 test files. Tests cover pure functions — geometry calculations, type definitions, data transformations, codecs, and validation logic.
 
 ### 5.2 Test Organization
 
@@ -867,11 +867,11 @@ Set these environment variables for CI:
 
 | Module | Test Type | Test Files | Test Cases/Assertions | Pass | Fail | Skip |
 |--------|-----------|-----------|----------------------|------|------|------|
-| `shared/` | Unit | 176 suites | 1,492 assertions | 1,492 | 0 | 0 |
-| `server/` | Integration | 75 | 872 tests, 287 suites | 872 | 0 | 0 |
+| `shared/` | Unit | 65 files | 1,596 tests, 232 suites | 1,596 | 0 | 0 |
+| `server/` | Integration | 78 | 909 tests, 296 suites | 909 | 0 | 0 |
 | `server/exporter/` | Unit | 1 | 22 tests, 6 suites | 22 | 0 | 0 |
-| `client/` | E2E | 30 spec files | 490 tests | 490 | 0 | 0 |
-| **Total** | | **~280** | **2,876** | **2,876** | **0** | **0** |
+| `client/` | E2E | 32 spec files | 490+ tests | 490+ | 0 | 0 |
+| **Total** | | **~176** | **2,945+** | **2,945+** | **0** | **0** |
 
 ### 11.2 By Test Category
 
@@ -1382,7 +1382,7 @@ describe('PenpotMcpPanel', () => {
 
 ```bash
 # All unit + integration tests (fast, ~1 minute total)
-cd shared && npm test       # ~2s, 1418 assertions
+cd shared && npm test       # ~2s, 1596 assertions
 cd server && npm test     # ~8s, 570 tests
 cd server/exporter && node --test test/exporter.test.js  # ~1s, 22 tests
 

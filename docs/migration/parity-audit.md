@@ -1,6 +1,6 @@
 # Parity Audit: JS Port vs Upstream
 
-> Last updated: 2026-05-27
+> Last updated: 2026-05-28
 
 This document tracks the functional parity between the upstream Penpot codebase (Clojure/ClojureScript) and the JS port (penpot-js). It covers all major modules and identifies what is ported, what is intentionally skipped, and what gaps remain.
 
@@ -203,7 +203,9 @@ This document tracks the functional parity between the upstream Penpot codebase 
 | Logic | 5 | 5 | 0 | 0 | 0 |
 | **Total** | **134** | **134** | **0** | **0** | **4** |
 
-**shared/ completion: 100%** (all modules fully ported; 0 stubs; 0 missing; 4 intentionally excluded JVM-only modules; ~28,700 lines JS)
+**shared/ completion: 100%** (all modules fully ported; 0 stubs; 0 missing; 4 intentionally excluded JVM-only modules; ~29,600 lines JS; 1,596 tests)
+
+**Recent update (SC-1):** `types/file.js` expanded from 19 → 51 exported functions. 32 new functions ported from upstream `common/src/app/common/types/file.cljc`, including all component lookup helpers (`findRefShape`, `findNearMatch`, `findRefComponent`, `findRemoteShape`, `getComponentContainer`, `getComponentShape`, `getRefShape`, `getShapeInCopy`), component lifecycle functions (`loadComponentObjects`, `deleteComponentData`, `restoreComponent`, `purgeComponent`), asset management (`usesAssetQ`, `findAssetTypeUsages`, `usedInQ`, `usedAssetsChangedSince`, `absorbAssets`, `detachExternalReferences`), tree traversal (`updateObjectsTree`), ref chain helpers (`getRefChainUntilTargetRef`, `getTouchedFromRefChainUntilTargetRef`), and debug helpers (`dumpShape`, `dumpComponent`). Stub implementations in 4 consumer files replaced with real implementations. Bug fix: `Object.assign` mutation → spread syntax; `detachText` was a no-op → now properly strips external refs from text nodes.
 
 ---
 
@@ -342,7 +344,7 @@ This document tracks the functional parity between the upstream Penpot codebase 
 | Unit tests | 55 tests |
 | **Overall** | **~100% functional parity** |
 
-Lines comparison: ~28,100 lines (JS) vs ~129,000 lines (cljs + scss). The JS port achieves functional parity with approximately 4.6x fewer lines of code.
+Lines comparison: ~34,500 lines (JS) vs ~129,000 lines (cljs + scss). The JS port achieves functional parity with approximately 3.7x fewer lines of code.
 
 ---
 
@@ -433,8 +435,8 @@ Lines comparison: ~28,100 lines (JS) vs ~129,000 lines (cljs + scss). The JS por
 | RPC commands | 149/143 = 104% (6 JS-specific) |
 | Database schema | Full (21 migrations, PG parity) |
 | Middleware | 8/8 layers |
-| Test coverage | 75 files, 872 tests, 1 failure (pre-existing storage GC) |
-| **Overall** | **~92%** (all major features functional, file GC pipeline complete) |
+| Test coverage | 78 files, 909 tests, 0 failures |
+| **Overall** | **~95%** (all major features functional, all RPC commands implemented) |
 
 Remaining gaps:
 - Some edge-case RPC handler logic may not cover every optional parameter the upstream provides
@@ -470,29 +472,30 @@ Tests: 22 tests in 1 file, 6 test suites.
 
 | Metric | Value |
 |---|---|
-| Test files | 63 |
-| Test suites | 231 |
-| Assertions | 2,764+ |
+| Test files | 65 |
+| Test suites | 232 |
+| Test cases | 1,596 |
 | Failures | 0 |
 
-Coverage spans: geometry (point, rect, matrix, shapes, flex_layout bounds, grid layout), types (color, component, container, file, fills, path, shape_tree, text, variant, identity, tokens_lib, typographies_list), files (changes, changes_builder, helpers_stats_focus_indices, page_diff_tokens), colors, data (undo_stack), core (UUID, time, math, json, encoding, exceptions, flags, features, observable, schema, modifiers, migration, transit, media), text (content tree, per-range styles, updateTextRange, updateTextAttrs, createDefaultContent, isContentTree, contentToPlainText, decorateRangeInfo).
+Coverage spans: geometry (point, rect, matrix, shapes, flex_layout bounds, grid layout), types (color, component, container, file, fills, path, shape_tree, text, variant, identity, tokens_lib, typographies_list), files (changes, changes_builder, helpers_stats_focus_indices, page_diff_tokens, builder, shapes_builder, migrations, repair), colors, data (undo_stack), core (UUID, time, math, json, encoding, exceptions, flags, features, observable, schema, modifiers, migration, transit, media), text (content tree, per-range styles, updateTextRange, updateTextAttrs, createDefaultContent, isContentTree, contentToPlainText, decorateRangeInfo), bool-ops (convex decomposition, Sutherland-Hodgman, point-in-polygon), path (svg_parser complex).
 
 ### 5.2 server/ Tests
 
 | Metric | Value |
 |---|---|
-| Test files | 75 |
-| Test cases | 594 |
-| Failures | 2 (pre-existing storage GC) |
+| Test files | 78 |
+| Test cases | 909 |
+| Test suites | 296 |
+| Failures | 0 |
 
-Coverage spans: config, auth, tokens, password, permissions, quotes, rate-limit, transit, dispatcher, SQLite, storage (FS, S3), media, RPC modules (files, teams, comments, webhooks, profile, fonts, access_token, viewer, search), SSE, metrics, logging, scheduler, worker, setup, integration, wire-compat.
+Coverage spans: config, auth, tokens, password, permissions, quotes, rate-limit, transit, dispatcher, SQLite, storage (FS, S3), media, RPC modules (files, teams, comments, webhooks, profile, fonts, access_token, viewer, search, binfile, files_share, files_snapshots, files_thumbnails, management, demo, feedback, export, email-filter, feature-flags, verify_token, oidc, ldap, nitrate), SSE, metrics, logging, scheduler, worker, setup, integration, wire-compat, blob, changes, file-gc.
 
 ### 5.3 client/ Tests
 
 | Metric | Value |
 |---|---|
-| E2E spec files | 20 |
-| E2E tests | 480+ |
+| E2E spec files | 32 |
+| E2E tests | 490+ |
 | Unit tests | 55 |
 | Atomic E2E scenarios | 550+ |
 | Failures | 0 |
@@ -514,9 +517,9 @@ Categories: auth (6), P0 flow (11), workspace shell (14), components (18), tools
 
 | Module | Upstream Lines | JS Port Lines | Port Completion | Test Coverage |
 |---|---|---|---|---|
-| **shared/** | ~67,000 | ~29,000 | **100%** (0 stubs, 0 missing) | 1,502 pass, 231 suites |
-| **client/** | ~129,000 | ~28,100 | **~99.5%** | 32 spec files, 490+ E2E, 55 unit |
-| **server/** | ~48,000 | ~19,100 | **~92%** | 871 pass, 287 suites, 1 fail |
+| **shared/** | ~67,000 | ~29,600 | **100%** (0 stubs, 0 missing) | 1,596 pass, 232 suites |
+| **client/** | ~129,000 | ~34,500 | **~100%** | 32 spec files, 490+ E2E, 55 unit |
+| **server/** | ~48,000 | ~19,000 | **~95%** | 909 pass, 296 suites, 0 fail |
 | **server/exporter/** | ~4,000 | ~1,500 | **100%** (+ WebP) | 22 tests, 6 suites |
 
 ## 7. Intentional Skips
@@ -945,7 +948,25 @@ These are intentional constants/enums, not mock data:
 | `client/public/lib/file-import.js` | Default dimensions `1200x800` | Matches upstream's default page dimensions |
 | `server/src/rpc/demo.js` | Demo user email pattern | Intentional demo-mode temporary user creation |
 
-### 9.5 Improvement Opportunities (Not Bugs)
+### 9.5 Stub Replacements (SC-1)
+
+During the `types/file.js` function port (SC-1), four files had stub implementations replaced with real logic:
+
+| File | Stub | Replacement | Source |
+|---|---|---|---|
+| `shared/src/files/validate.js` | `findRefShape()` → `null` | `findRefShapeLocal()` → delegates to `findRefShape()` from `types/file.js` | Upstream `common/src/app/common/types/file.cljc` |
+| `shared/src/files/validate.js` | `findNearMatch()` → `null` | `findNearMatchLocal()` → delegates to `findNearMatch()` from `types/file.js` | Upstream |
+| `shared/src/files/comp_processors.js` | `findRefShape()` → `null`, `findNearMatch()` → `null` | Imports from `types/file.js` | Upstream |
+| `shared/src/logic/variants.js` | `findRefShape()` → `null`, `findRemoteShape()` → `null`, `getTouchedFromRefChainUntilTargetRef()` → `{}`, `findRefIdForSwapped()` → `shape['shape-ref']` | Delegates to `types/file.js` implementations | Upstream |
+| `shared/src/logic/libraries.js` | `usesAssetsQ()` → `false` | Delegates to `usesAssetQ()` from `types/file.js` | Upstream multimethod |
+
+Notable bugs found and fixed during porting:
+- **Object.assign mutation**: 4 places used `Object.assign(shape, {...})` to attach `_fileCtx`/`_containerCtx` metadata, which mutated shared shape objects. Fixed with spread syntax: `{ ...shape, _fileCtx, _containerCtx }`.
+- **detachText no-op**: `detachExternalReferences`'s inner `detachText` function only cloned the text tree without removing external fill-color-ref or typography-ref properties from text nodes. The upstream Clojure version uses `transform-nodes` to strip these. Fixed by importing and using `transformNodes`/`removeTypographyFromNode` from `typography.js`.
+- **Conditional text processing**: The JS port only called `detachText` for text shapes where other properties changed (`result !== shape`), but upstream always processes text shapes. Fixed by unconditionally applying `detachText` to all text shapes.
+- **`seek(pred, coll)` argument order**: The `seek` function from `data.js` takes `(pred, coll)` but was initially called as `(coll, pred)` in several places (Clojure convention). Fixed after test failures revealed the issue.
+
+### 9.6 Improvement Opportunities (Not Bugs)
 
 | Issue | Priority | Status |
 |---|---|---|

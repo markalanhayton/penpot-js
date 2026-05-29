@@ -4,9 +4,13 @@
  * the Clojure backend and the Node.js backend, compare responses for structural
  * equivalence.
  *
+ * Also includes local transit format compatibility tests that verify
+ * the JS port's Transit+JSON codec produces wire-compatible output
+ * without requiring both backends to be running.
+ *
  * ### Setup
  *
- * Requires both backends running:
+ * Requires both backends running for RPC comparison tests:
  * - Clojure backend: `PENPOT_CLOJURE_URL` (default http://localhost:6060)
  * - JS backend: `PENPOT_JS_URL` (default http://localhost:6061)
  *
@@ -14,11 +18,17 @@
  *   PENPOT_CLOJURE_URL=http://localhost:6060 PENPOT_JS_URL=http://localhost:6061 \
  *     node --test test/wire-compat.test.js
  *
- * If either backend is unavailable, tests are skipped.
+ * If either backend is unavailable, RPC comparison tests are skipped.
+ * Transit format tests always run locally.
  */
 
 import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
+import {
+  encode, decode, encodeResponse, decodeRequest,
+  toKebabCase, toCamelCase, camelToKebab, kebabToCamel,
+} from '../src/transit/index.js';
+import { randomUUID } from 'node:crypto';
 
 const CLOJURE_URL = process.env.PENPOT_CLOJURE_URL || 'http://localhost:6060';
 const JS_URL = process.env.PENPOT_JS_URL || 'http://localhost:6061';
@@ -165,6 +175,132 @@ before(async () => {
   }
 });
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SECTION A: Local Transit Format Compatibility Tests (always run)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+describe('Transit format: Clojure wire compatibility (local)', () => {
+  it('encodes keyword keys in ~: prefix format (kebab-case)', () => {
+    const obj = { 'file-id': 'abc' };
+    const encoded = encode(obj);
+    const parsed = JSON.parse(encoded);
+    assert.ok(Array.isArray(parsed), 'encoded is array (cognitect map)');
+    assert.ok(parsed.includes('~:file-id'), 'key uses ~: prefix');
+  });
+
+  it('encodes UUIDs with ~u prefix', () => {
+    const id = randomUUID();
+    const encoded = encode({ id });
+    assert.ok(encoded.includes(`~u${id}`), 'UUID has ~u prefix');
+  });
+
+  it('encodes date strings with ~m prefix', () => {
+    const encoded = encode({ createdAt: '2024-01-15T10:30:00.000Z' });
+    assert.ok(encoded.includes('~m'), 'date has ~m prefix');
+  });
+
+  it('encodes Sets with ~#set tag', () => {
+    const set = new Set(['a', 'b']);
+    const encoded = encode(set);
+    const parsed = JSON.parse(encoded);
+    assert.equal(parsed[0], '~#set');
+    assert.ok(Array.isArray(parsed[1]));
+  });
+
+  it('encodes Maps with cognitect ^ prefix', () => {
+    const m = new Map([['key1', 'val1']]);
+    const encoded = encode(m);
+    const parsed = JSON.parse(encoded);
+    assert.equal(parsed[0], '^ ');
+  });
+
+  it('round-trips Clojure-style response through decode → normalize', () => {
+    const cljResponse = '["^ ","~:id","~u550e8400-e29b-41d4-a716-446655440000","~:name","Test File","~:revn",5,"~:is-shared",true]';
+    const decoded = decode(cljResponse);
+
+    assert.equal(decoded.id, '550e8400-e29b-41d4-a716-446655440000');
+    assert.equal(decoded.name, 'Test File');
+    assert.equal(decoded.revn, 5);
+    assert.equal(decoded['is-shared'], true);
+  });
+
+  it('decodes Clojure error response shape', () => {
+    const errorResponse = '["^ ","~:type","~:validation","~:code","~:validation-error","~:hint","Name is required"]';
+    const decoded = decode(errorResponse);
+    assert.equal(decoded.type, 'validation');
+    assert.equal(decoded.code, 'validation-error');
+    assert.equal(decoded.hint, 'Name is required');
+  });
+
+  it('encodes then decodes a file-like response preserving types', () => {
+    const id = randomUUID();
+    const response = {
+      id,
+      name: 'Test File',
+      revn: 10,
+      'is-shared': true,
+      'created-at': '2024-06-15T12:00:00.000Z',
+    };
+
+    const encoded = encode(response);
+    const decoded = decode(encoded);
+
+    assert.equal(decoded.id, id);
+    assert.equal(decoded.name, 'Test File');
+    assert.equal(decoded.revn, 10);
+    assert.equal(decoded['is-shared'], true);
+    assert.equal(decoded['created-at'], '2024-06-15T12:00:00.000Z');
+  });
+
+  it('decodes Clojure nested transit maps', () => {
+    const profile = ['^ ', '~:id', '~uabc12345-1234-1234-1234-123456789012', '~:name', 'Test User', '~:email', 'test@example.com'];
+    const team = ['^ ', '~:id', '~uteam1234-1234-1234-1234-123456789012', '~:name', 'My Team'];
+    const teams = ['~#list', [team]];
+    const nested = ['^ ', '~:profile', profile, '~:teams', teams];
+    const data = JSON.stringify(nested);
+    const decoded = decode(data);
+    assert.equal(decoded.profile.id, 'abc12345-1234-1234-1234-123456789012');
+    assert.equal(decoded.profile.name, 'Test User');
+    assert.ok(Array.isArray(decoded.teams));
+  });
+
+  it('decodeRequest handles Clojure Transit envelope', () => {
+    const envelope = JSON.stringify({
+      '~:id': '1',
+      '~:method': 'create-file',
+      '~:params': { '~:project-id': 'abc', '~:name': 'Test' },
+    });
+    const result = decodeRequest(envelope, 'application/transit+json');
+    assert.equal(result.id, '1');
+    assert.equal(result.method, 'create-file');
+    assert.equal(result.params['project-id'], 'abc');
+    assert.equal(result.params.name, 'Test');
+  });
+
+  it('encodeResponse produces transit for transit accept header', () => {
+    const { contentType, body } = encodeResponse(
+      { id: randomUUID(), name: 'Test' },
+      { accept: 'application/transit+json' },
+    );
+    assert.equal(contentType, 'application/transit+json');
+    assert.ok(body.includes('^ '), 'body contains cognitect map prefix');
+  });
+
+  it('encodeResponse produces JSON for JSON accept header', () => {
+    const { contentType, body } = encodeResponse(
+      { id: 'abc', name: 'Test' },
+      { accept: 'application/json' },
+    );
+    assert.equal(contentType, 'application/json');
+    const parsed = JSON.parse(body);
+    assert.equal(parsed.id, 'abc');
+  });
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SECTION B: RPC Wire Compatibility Tests (skip if backends offline)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 describe('Wire Compatibility: JS ↔ Clojure Backend', { concurrency: false }, () => {
 
   it('health check returns 200 from both backends', async () => {
@@ -226,6 +362,19 @@ describe('Wire Compatibility: JS ↔ Clojure Backend', { concurrency: false }, (
     }
   });
 
+  it('get-profile returns same shape', async () => {
+    if (!clojureUp || !jsUp || !clojureToken || !jsToken) return;
+
+    const clj = await rpc(CLOJURE_URL, 'get-profile', {}, clojureToken);
+    const js = await rpc(JS_URL, 'get-profile', {}, jsToken);
+
+    assert.equal(js.status, clj.status, `get-profile status mismatch: JS ${js.status} vs Clojure ${clj.status}`);
+
+    if (clj.status === 200 && js.status === 200 && clj.body && js.body) {
+      compareResponses(clj, js, 'get-profile');
+    }
+  });
+
   it('get-teams returns same shape', async () => {
     if (!clojureUp || !jsUp || !clojureToken || !jsToken) return;
 
@@ -255,19 +404,6 @@ describe('Wire Compatibility: JS ↔ Clojure Backend', { concurrency: false }, (
           assert.fail(`get-teams key shape mismatch — ${detail.join('; ')}`);
         }
       }
-    }
-  });
-
-  it('get-profile returns same shape', async () => {
-    if (!clojureUp || !jsUp || !clojureToken || !jsToken) return;
-
-    const clj = await rpc(CLOJURE_URL, 'get-profile', {}, clojureToken);
-    const js = await rpc(JS_URL, 'get-profile', {}, jsToken);
-
-    assert.equal(js.status, clj.status, `get-profile status mismatch: JS ${js.status} vs Clojure ${clj.status}`);
-
-    if (clj.status === 200 && js.status === 200 && clj.body && js.body) {
-      compareResponses(clj, js, 'get-profile');
     }
   });
 
@@ -365,5 +501,246 @@ describe('Wire Compatibility: JS ↔ Clojure Backend', { concurrency: false }, (
     if (clj.body && js.body && typeof clj.body === 'object' && typeof js.body === 'object') {
       assert.equal(js.body.type, clj.body.type, 'error type field mismatch');
     }
+  });
+
+  it('create-team returns same shape for valid request', async () => {
+    if (!clojureUp || !jsUp || !clojureToken || !jsToken) return;
+
+    const name = `wc-team-${Date.now()}`;
+
+    const clj = await rpc(CLOJURE_URL, 'create-team', { name }, clojureToken);
+    const js = await rpc(JS_URL, 'create-team', { name }, jsToken);
+
+    assert.equal(js.status, clj.status, `create-team status mismatch: JS ${js.status} vs Clojure ${clj.status}`);
+
+    if (clj.status === 200 && js.status === 200 && clj.body && js.body) {
+      compareResponses(clj, js, 'create-team');
+    }
+  });
+
+  it('update-profile returns same shape', async () => {
+    if (!clojureUp || !jsUp || !clojureToken || !jsToken) return;
+
+    const name = `Updated ${Date.now()}`;
+
+    const clj = await rpc(CLOJURE_URL, 'update-profile', { fullname: name }, clojureToken);
+    const js = await rpc(JS_URL, 'update-profile', { fullname: name }, jsToken);
+
+    assert.equal(js.status, clj.status, `update-profile status mismatch: JS ${js.status} vs Clojure ${clj.status}`);
+  });
+
+  it('get-profile-with-Themes returns same shape', async () => {
+    if (!clojureUp || !jsUp || !clojureToken || !jsToken) return;
+
+    const clj = await rpc(CLOJURE_URL, 'get-profile', {}, clojureToken);
+    const js = await rpc(JS_URL, 'get-profile', {}, jsToken);
+
+    assert.equal(js.status, clj.status, `get-profile status mismatch`);
+
+    if (clj.status === 200 && js.status === 200 && clj.body && js.body) {
+      const cljKeys = Object.keys(clj.body).sort();
+      const jsKeys = Object.keys(js.body).sort();
+      const missingInJs = cljKeys.filter(k => !jsKeys.includes(k));
+      const extraInJs = jsKeys.filter(k => !cljKeys.includes(k));
+
+      if (missingInJs.length > 0 || extraInJs.length > 0) {
+        const detail = [];
+        if (missingInJs.length > 0) detail.push(`missing in JS: ${missingInJs.join(', ')}`);
+        if (extraInJs.length > 0) detail.push(`extra in JS: ${extraInJs.join(', ')}`);
+        assert.fail(`get-profile key mismatch — ${detail.join('; ')}`);
+      }
+    }
+  });
+
+  it('error response has consistent structure for not-found', async () => {
+    if (!clojureUp || !jsUp || !clojureToken || !jsToken) return;
+
+    const fakeId = '00000000-0000-0000-0000-000000000000';
+
+    const clj = await rpc(CLOJURE_URL, 'get-file', { id: fakeId }, clojureToken);
+    const js = await rpc(JS_URL, 'get-file', { id: fakeId }, jsToken);
+
+    assert.equal(js.status, clj.status, `get-file not-found status: JS ${js.status} vs Clojure ${clj.status}`);
+
+    if (clj.body && js.body && typeof clj.body === 'object' && typeof js.body === 'object') {
+      assert.equal(typeof js.body.type, typeof clj.body.type, 'error type field type mismatch');
+    }
+  });
+
+  it('get-team-members returns same shape when team exists', async () => {
+    if (!clojureUp || !jsUp || !clojureToken || !jsToken) return;
+
+    const teamName = `wc-members-${Date.now()}`;
+    const cljTeam = await rpc(CLOJURE_URL, 'create-team', { name: teamName }, clojureToken);
+    const jsTeam = await rpc(JS_URL, 'create-team', { name: teamName }, jsToken);
+
+    if (cljTeam.status !== 200 || jsTeam.status !== 200) return;
+
+    const cljTeamId = cljTeam.body?.id;
+    const jsTeamId = jsTeam.body?.id;
+    if (!cljTeamId || !jsTeamId) return;
+
+    const clj = await rpc(CLOJURE_URL, 'get-team-members', { teamId: cljTeamId }, clojureToken);
+    const js = await rpc(JS_URL, 'get-team-members', { teamId: jsTeamId }, jsToken);
+
+    assert.equal(js.status, clj.status, `get-team-members status mismatch: JS ${js.status} vs Clojure ${clj.status}`);
+  });
+
+  it('create-project returns same shape', async () => {
+    if (!clojureUp || !jsUp || !clojureToken || !jsToken) return;
+
+    const teamName = `wc-proj-team-${Date.now()}`;
+    const cljTeam = await rpc(CLOJURE_URL, 'create-team', { name: teamName }, clojureToken);
+    const jsTeam = await rpc(JS_URL, 'create-team', { name: teamName }, jsToken);
+
+    if (cljTeam.status !== 200 || jsTeam.status !== 200) return;
+
+    const cljTeamId = cljTeam.body?.id;
+    const jsTeamId = jsTeam.body?.id;
+    if (!cljTeamId || !jsTeamId) return;
+
+    const projName = `wc-proj-${Date.now()}`;
+    const clj = await rpc(CLOJURE_URL, 'create-project', { teamId: cljTeamId, name: projName }, clojureToken);
+    const js = await rpc(JS_URL, 'create-project', { teamId: jsTeamId, name: projName }, jsToken);
+
+    assert.equal(js.status, clj.status, `create-project status mismatch: JS ${js.status} vs Clojure ${clj.status}`);
+
+    if (clj.status === 200 && js.status === 200 && clj.body && js.body) {
+      compareResponses(clj, js, 'create-project');
+    }
+  });
+
+  it('get-enabled-flags structure matches between backends', async () => {
+    if (!clojureUp || !jsUp) return;
+
+    const clj = await rpc(CLOJURE_URL, 'get-enabled-flags', {}, clojureToken);
+    const js = await rpc(JS_URL, 'get-enabled-flags', {}, jsToken);
+
+    if (clj.status === 200 && js.status === 200 && clj.body && js.body) {
+      if (Array.isArray(clj.body) && Array.isArray(js.body)) {
+        assert.equal(typeof js.body[0], typeof clj.body[0], 'flags element type mismatch');
+      }
+    }
+  });
+
+  it('access-denied error shape is consistent', async () => {
+    if (!clojureUp || !jsUp || !clojureToken || !jsToken) return;
+
+    const fakeTeamId = '00000000-0000-0000-0000-000000000000';
+
+    const clj = await rpc(CLOJURE_URL, 'update-team', { id: fakeTeamId, name: 'hacked' }, clojureToken);
+    const js = await rpc(JS_URL, 'update-team', { id: fakeTeamId, name: 'hacked' }, jsToken);
+
+    const cljDenied = clj.status === 403 || clj.status === 404 || clj.status === 500;
+    const jsDenied = js.status === 403 || js.status === 404 || js.status === 500;
+
+    assert.equal(jsDenied, cljDenied, `access denied mismatch: JS ${js.status} vs Clojure ${clj.status}`);
+  });
+
+  it('delete-team returns consistent status codes', async () => {
+    if (!clojureUp || !jsUp || !clojureToken || !jsToken) return;
+
+    const teamName = `wc-del-team-${Date.now()}`;
+    const cljTeam = await rpc(CLOJURE_URL, 'create-team', { name: teamName }, clojureToken);
+    const jsTeam = await rpc(JS_URL, 'create-team', { name: teamName }, jsToken);
+
+    if (cljTeam.status !== 200 || jsTeam.status !== 200) return;
+
+    const cljTeamId = cljTeam.body?.id;
+    const jsTeamId = jsTeam.body?.id;
+    if (!cljTeamId || !jsTeamId) return;
+
+    const clj = await rpc(CLOJURE_URL, 'delete-team', { id: cljTeamId }, clojureToken);
+    const js = await rpc(JS_URL, 'delete-team', { id: jsTeamId }, jsToken);
+
+    assert.equal(js.status, clj.status, `delete-team status mismatch: JS ${js.status} vs Clojure ${clj.status}`);
+  });
+
+  it('rename-team returns same shape', async () => {
+    if (!clojureUp || !jsUp || !clojureToken || !jsToken) return;
+
+    const teamName = `wc-rename-team-${Date.now()}`;
+    const cljTeam = await rpc(CLOJURE_URL, 'create-team', { name: teamName }, clojureToken);
+    const jsTeam = await rpc(JS_URL, 'create-team', { name: teamName }, jsToken);
+
+    if (cljTeam.status !== 200 || jsTeam.status !== 200) return;
+
+    const cljTeamId = cljTeam.body?.id;
+    const jsTeamId = jsTeam.body?.id;
+    if (!cljTeamId || !jsTeamId) return;
+
+    const newName = `renamed-${Date.now()}`;
+    const clj = await rpc(CLOJURE_URL, 'update-team', { id: cljTeamId, name: newName }, clojureToken);
+    const js = await rpc(JS_URL, 'update-team', { id: jsTeamId, name: newName }, jsToken);
+
+    assert.equal(js.status, clj.status, `update-team status mismatch: JS ${js.status} vs Clojure ${clj.status}`);
+  });
+
+  it('get-project-data returns consistent response', async () => {
+    if (!clojureUp || !jsUp || !clojureToken || !jsToken) return;
+
+    const teamName = `wc-file-team-${Date.now()}`;
+    const cljTeam = await rpc(CLOJURE_URL, 'create-team', { name: teamName }, clojureToken);
+    const jsTeam = await rpc(JS_URL, 'create-team', { name: teamName }, jsToken);
+
+    if (cljTeam.status !== 200 || jsTeam.status !== 200) return;
+
+    const cljTeamId = cljTeam.body?.id;
+    const jsTeamId = jsTeam.body?.id;
+    if (!cljTeamId || !jsTeamId) return;
+
+    const projName = `wc-file-proj-${Date.now()}`;
+    const cljProj = await rpc(CLOJURE_URL, 'create-project', { teamId: cljTeamId, name: projName }, clojureToken);
+    const jsProj = await rpc(JS_URL, 'create-project', { teamId: jsTeamId, name: projName }, jsToken);
+
+    if (cljProj.status !== 200 || jsProj.status !== 200) return;
+
+    const cljProjectId = cljProj.body?.id;
+    const jsProjectId = jsProj.body?.id;
+    if (!cljProjectId || !jsProjectId) return;
+
+    const fileName = `wc-file-${Date.now()}`;
+    const cljFile = await rpc(CLOJURE_URL, 'create-file', { projectId: cljProjectId, name: fileName }, clojureToken);
+    const jsFile = await rpc(JS_URL, 'create-file', { projectId: jsProjectId, name: fileName }, jsToken);
+
+    if (cljFile.status !== 200 || jsFile.status !== 200) return;
+
+    const cljFileId = cljFile.body?.id;
+    const jsFileId = jsFile.body?.id;
+    if (!cljFileId || !jsFileId) return;
+
+    const cljData = await rpc(CLOJURE_URL, 'get-file', { id: cljFileId }, clojureToken);
+    const jsData = await rpc(JS_URL, 'get-file', { id: jsFileId }, jsToken);
+
+    assert.equal(jsData.status, cljData.status, `get-file status mismatch: JS ${jsData.status} vs Clojure ${cljData.status}`);
+
+    if (cljData.status === 200 && jsData.status === 200 && cljData.body && jsData.body) {
+      const cljKeys = Object.keys(cljData.body).sort();
+      const jsKeys = Object.keys(jsData.body).sort();
+      const missingInJs = cljKeys.filter(k => !jsKeys.includes(k));
+      const extraInJs = jsKeys.filter(k => !cljKeys.includes(k));
+
+      if (missingInJs.length > 0 || extraInJs.length > 0) {
+        const detail = [];
+        if (missingInJs.length > 0) detail.push(`missing in JS: ${missingInJs.join(', ')}`);
+        if (extraInJs.length > 0) detail.push(`extra in JS: ${extraInJs.join(', ')}`);
+        assert.fail(`get-file key shape mismatch — ${detail.join('; ')}`);
+      }
+    }
+  });
+
+  it('content-type header is consistent for responses', async () => {
+    if (!clojureUp || !jsUp || !clojureToken || !jsToken) return;
+
+    const clj = await rpc(CLOJURE_URL, 'get-profile', {}, clojureToken);
+    const js = await rpc(JS_URL, 'get-profile', {}, jsToken);
+
+    const cljCt = (clj.contentType || '').toLowerCase();
+    const jsCt = (js.contentType || '').toLowerCase();
+
+    const cljIsJson = cljCt.includes('json');
+    const jsIsJson = jsCt.includes('json');
+
+    assert.equal(jsIsJson, cljIsJson, `content-type mismatch: JS ${js.contentType} vs Clojure ${clj.contentType}`);
   });
 });

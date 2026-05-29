@@ -93,7 +93,10 @@
     "./files/page-diff": "./src/files/page_diff.js",
     "./files/tokens": "./src/files/tokens.js",
     "./colors": "./src/colors.js",
-    "./constants": "./src/constants.js"
+    "./constants": "./src/constants.js",
+    "./logic/variant-properties": "./src/logic/variant_properties.js",
+    "./logic/variants": "./src/logic/variants.js",
+    "./files/variant": "./src/files/variant.js"
   },
   "scripts": {
     "test": "node --test test/**/*.test.js",

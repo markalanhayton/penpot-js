@@ -19,6 +19,8 @@ import { initWasmRenderer, destroyWasmRenderer, isWasmAvailable, getRenderMode, 
 import { loadTeamFontsIntoDocument, uploadFontVariant, groupFontsByFamily, deleteFontVariant, fetchTeamFonts } from '../lib/fonts.js';
 import { fixDeletedFontsForPage, fixDeletedFontsForLibrary, findMissingFonts, buildFontRegistry } from '../lib/fix-deleted-fonts.js';
 import { generateAndUploadThumbnail } from '../lib/thumbnail.js';
+import { nextPropertyNumber, propertiesToName, distance } from '@penpot/shared/types/variant.js';
+import { generateAddNewProperty, generateUpdatePropertyName, generateRemoveProperty, generateUpdatePropertyValue } from '@penpot/shared/logic/variant_properties.js';
 import { propagateFrameResize } from '../lib/constraint-propagation.js';
 import { reflowLayout, reflowLayoutWithResize } from '../lib/layout-reflow.js';
 import { PluginManager } from '../lib/plugin-api.js';
@@ -717,6 +719,27 @@ export class PenpotWorkspace extends PenpotElement {
     });
     this.addEventListener('penpot-bool-flatten', (e) => {
       this.#handleBoolFlatten(e.detail.shapeId);
+    });
+    this.addEventListener('penpot-variant-add-property', (e) => {
+      this.#handleVariantAddProperty(e.detail);
+    });
+    this.addEventListener('penpot-variant-add-variant', (e) => {
+      this.#handleVariantAddVariant(e.detail);
+    });
+    this.addEventListener('penpot-variant-update-property-name', (e) => {
+      this.#handleVariantUpdatePropertyName(e.detail);
+    });
+    this.addEventListener('penpot-variant-remove-property', (e) => {
+      this.#handleVariantRemoveProperty(e.detail);
+    });
+    this.addEventListener('penpot-variant-switch', (e) => {
+      this.#handleVariantSwitch(e.detail);
+    });
+    this.addEventListener('penpot-variant-select', (e) => {
+      this.#handleVariantSelect(e.detail);
+    });
+    this.addEventListener('penpot-combine-as-variants', (e) => {
+      this.#handleCombineAsVariants(e.detail);
     });
     this.addEventListener('penpot-layout-change', (e) => {
       this.#handleLayoutChange(e.detail);
@@ -1599,6 +1622,289 @@ export class PenpotWorkspace extends PenpotElement {
     if (!this.#toolManager) return;
     this.#toolManager.boolToGroup(shapeId);
     this.renderCurrentPage();
+  }
+
+  #handleVariantAddProperty({ shapeId, variantId }) {
+    const page = this.#pages[this.#currentPageIndex];
+    if (!page) return;
+    const shape = this.#findShape(page, shapeId);
+    if (!shape) return;
+
+    const componentData = this.#fileData?.data?.components;
+    if (!componentData) return;
+
+    const component = shape.componentId ? componentData[shape.componentId] : Object.values(componentData).find(c => c['variant-id'] === variantId);
+    if (!component) return;
+
+    const existingProps = component['variant-properties'] || component.variantProperties || [];
+    const newProp = { name: `Property ${nextPropertyNumber(existingProps)}`, value: 'Value 1' };
+    const updatedProps = [...existingProps, newProp];
+
+    const variantComponents = Object.entries(componentData)
+      .filter(([, c]) => c['variant-id'] === variantId);
+
+    for (const [compId, comp] of variantComponents) {
+      const compProps = comp['variant-properties'] || comp.variantProperties || [];
+      compProps[existingProps.length] = { name: newProp.name, value: '' };
+      comp['variant-properties'] = [...compProps];
+      const mainShape = this.#findMainShapeForComponent(compId);
+      if (mainShape) {
+        enqueueChange(makeModifyChange(page.id, mainShape.id, { 'variant-name': propertiesToName(compProps) }));
+      }
+    }
+
+    this.renderCurrentPage();
+  }
+
+  #handleVariantAddVariant({ shapeId, variantId }) {
+    const page = this.#pages[this.#currentPageIndex];
+    if (!page || !this.#toolManager) return;
+
+    const componentData = this.#fileData?.data?.components;
+    if (!componentData) return;
+
+    const variants = Object.entries(componentData)
+      .filter(([, c]) => c['variant-id'] === variantId);
+
+    if (variants.length === 0) return;
+
+    const sourceComp = variants[0][1];
+    const sourceShape = this.#findMainShapeForComponent(variants[0][0]);
+    if (!sourceShape) return;
+
+    const newId = crypto.randomUUID ? crypto.randomUUID() : ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c => (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16)));
+    const newShapeId = crypto.randomUUID ? crypto.randomUUID() : ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c => (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16)));
+
+    const newShape = {
+      ...sourceShape,
+      id: newShapeId,
+      componentId: variants[0][0],
+      x: (sourceShape.x || 0) + (sourceShape.width || 100) + 20,
+      'component-root': false,
+      componentRoot: false,
+    };
+
+    const objects = page.objects || page.children;
+    if (Array.isArray(objects)) {
+      objects.push(newShape);
+    } else if (objects) {
+      objects[newShapeId] = newShape;
+    }
+
+    enqueueChange(makeCreateChange(page.id, newShapeId, newShape));
+    this.renderCurrentPage();
+  }
+
+  #handleVariantUpdatePropertyName({ shapeId, variantId, pos, newName }) {
+    const page = this.#pages[this.#currentPageIndex];
+    if (!page) return;
+
+    const componentData = this.#fileData?.data?.components;
+    if (!componentData) return;
+
+    const variants = Object.entries(componentData)
+      .filter(([, c]) => c['variant-id'] === variantId);
+
+    for (const [compId, comp] of variants) {
+      const props = comp['variant-properties'] || comp.variantProperties || [];
+      if (pos < props.length) {
+        props[pos] = { ...props[pos], name: newName };
+        comp['variant-properties'] = [...props];
+        const mainShape = this.#findMainShapeForComponent(compId);
+        if (mainShape) {
+          enqueueChange(makeModifyChange(page.id, mainShape.id, { 'variant-name': propertiesToName(props) }));
+        }
+      }
+    }
+
+    this.renderCurrentPage();
+  }
+
+  #handleVariantRemoveProperty({ shapeId, variantId, pos }) {
+    const page = this.#pages[this.#currentPageIndex];
+    if (!page) return;
+
+    const componentData = this.#fileData?.data?.components;
+    if (!componentData) return;
+
+    const variants = Object.entries(componentData)
+      .filter(([, c]) => c['variant-id'] === variantId);
+
+    for (const [compId, comp] of variants) {
+      const props = comp['variant-properties'] || comp.variantProperties || [];
+      props.splice(pos, 1);
+      comp['variant-properties'] = [...props];
+      const mainShape = this.#findMainShapeForComponent(compId);
+      if (mainShape) {
+        enqueueChange(makeModifyChange(page.id, mainShape.id, { 'variant-name': propertiesToName(props) }));
+      }
+    }
+
+    this.renderCurrentPage();
+  }
+
+  #handleVariantSwitch({ shapeId, variantId, propIndex, newValue }) {
+    const page = this.#pages[this.#currentPageIndex];
+    if (!page) return;
+
+    const shape = this.#findShape(page, shapeId);
+    if (!shape) return;
+
+    const componentData = this.#fileData?.data?.components;
+    if (!componentData) return;
+
+    const currentComp = shape.componentId ? componentData[shape.componentId] : null;
+    if (!currentComp) return;
+
+    const currentProps = currentComp['variant-properties'] || currentComp.variantProperties || [];
+    const allVariants = Object.entries(componentData)
+      .filter(([, c]) => c['variant-id'] === variantId);
+
+    const currentValues = currentProps.map(p => p.value || '');
+    currentValues[propIndex] = newValue;
+
+    let bestVariant = null;
+    let bestDist = Infinity;
+    for (const [compId, comp] of allVariants) {
+      const vProps = comp['variant-properties'] || comp.variantProperties || [];
+      const vValues = vProps.map(p => p.value || '');
+      let dist = 0;
+      for (let i = 0; i < Math.max(currentValues.length, vValues.length); i++) {
+        if ((currentValues[i] || '') !== (vValues[i] || '')) dist += Math.pow(2, Math.max(currentValues.length, vValues.length) - i);
+      }
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestVariant = compId;
+      }
+    }
+
+    if (bestVariant) {
+      shape.componentId = bestVariant;
+      const touched = new Set(shape.touched || []);
+      touched.add(`swap-slot-${bestVariant}`);
+      shape.touched = touched;
+      shape['component-root'] = false;
+      shape.componentRoot = false;
+      enqueueChange(makeModifyChange(page.id, shapeId, { 'component-id': bestVariant, 'component-root': false, touched: [...touched] }));
+      this.renderCurrentPage();
+    }
+  }
+
+  #handleVariantSelect({ componentId }) {
+    const mainShapeId = this.#findMainShapeIdForComponent(componentId);
+    if (mainShapeId) {
+      this.emit('penpot-shape-select', { selectedIds: [mainShapeId] });
+    }
+  }
+
+  #handleCombineAsVariants() {
+    const selectedIds = this.#toolManager?.getSelectedIds?.() || [];
+    if (selectedIds.length < 2) return;
+
+    const page = this.#pages[this.#currentPageIndex];
+    if (!page) return;
+
+    const shapes = this.#toolManager.getCurrentPageShapes();
+    const selectedShapes = selectedIds.map(id => this.#findShape(page, id)).filter(Boolean);
+    if (selectedShapes.length < 2) return;
+
+    const variantId = crypto.randomUUID ? crypto.randomUUID() : 'var-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const s of selectedShapes) {
+      if (s.x != null && s.y != null) {
+        minX = Math.min(minX, s.x);
+        minY = Math.min(minY, s.y);
+        maxX = Math.max(maxX, s.x + (s.width || 0));
+        maxY = Math.max(maxY, s.y + (s.height || 0));
+      }
+    }
+    if (minX === Infinity) return;
+
+    const padding = 20;
+    const frameX = minX - padding;
+    const frameY = minY - padding;
+    const frameW = (maxX - minX) + padding * 2;
+    const frameH = (maxY - minY) + padding * 2;
+
+    const frameId = 'frame-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+
+    const frameShape = {
+      id: frameId,
+      type: 'frame',
+      name: 'Variant Container',
+      x: frameX,
+      y: frameY,
+      width: frameW,
+      height: frameH,
+      fills: [],
+      strokes: [{ style: 'dashed', width: 1, color: { color: '#7b6ff2', opacity: 1 } }],
+      layout: 'flex',
+      'layout-content-h': null,
+      'layout-content-v': null,
+      'gap': 20,
+      'layout-gap': { row: 20, column: 20 },
+      'layout-padding-type': 'simple',
+      'layout-padding': { top: 20, right: 20, bottom: 20, left: 20 },
+      'layout-align-items': 'stretch',
+      'layout-justify-content': 'flex-start',
+      'is-variant-container': true,
+      isVariantContainer: true,
+      'variant-id': variantId,
+      shapes: selectedShapes.map(s => s.id),
+      visible: true,
+      locked: false,
+    };
+
+    const changes = [];
+    changes.push(makeCreateChange(page.id, frameShape));
+
+    for (const shape of selectedShapes) {
+      const propName = shape.name || shape.type || 'Variant';
+      const variantProps = [{ name: 'State', value: propName }];
+
+      const relativeX = (shape.x || 0) - minX + padding;
+      const relativeY = (shape.y || 0) - minY + padding;
+
+      changes.push(makeModifyChange(page.id, shape.id, {
+        x: relativeX,
+        y: relativeY,
+        'parent-id': frameId,
+        parentId: frameId,
+        'variant-id': variantId,
+      }));
+
+      if (shape.componentId) {
+        const comp = this.#fileData?.data?.components?.[shape.componentId];
+        if (comp) {
+          comp['variant-id'] = variantId;
+          comp['variant-properties'] = variantProps;
+          comp['variant-name'] = propertiesToName(variantProps);
+          changes.push(makeModifyChange(page.id, shape.id, {
+            'variant-name': propertiesToName(variantProps),
+          }));
+        }
+      }
+    }
+
+    for (const change of changes) {
+      enqueueChange(change);
+    }
+
+    this.renderCurrentPage();
+  }
+
+  #findMainShapeIdForComponent(componentId) {
+    if (!this.#pages) return null;
+    for (const page of this.#pages) {
+      const objects = page?.objects || page?.children;
+      if (!objects) continue;
+      const shapes = Array.isArray(objects) ? objects : Object.values(objects);
+      for (const s of shapes) {
+        if (s.componentId === componentId) return s.id;
+      }
+    }
+    return null;
   }
 
   #convertToPath(shapeId) {

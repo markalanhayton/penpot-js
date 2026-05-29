@@ -11,6 +11,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { RpcError } from './dispatcher.js';
 import { hashPassword, createSession, stripPrivateAttrs } from '../auth/index.js';
+import { isEmailAllowed } from '../email/index.js';
 
 export default function registerLdapCommands(register, pool) {
   register('login-with-ldap', {
@@ -29,6 +30,10 @@ export default function registerLdapCommands(register, pool) {
       }
 
       const cleanEmail = email.trim().toLowerCase();
+
+      if (!isEmailAllowed(cleanEmail)) {
+        throw new RpcError('validation', 'email-domain-not-allowed', 'Email domain is not allowed');
+      }
 
       let ldapResult = null;
       try {

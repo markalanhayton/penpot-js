@@ -135,6 +135,8 @@ exporter/                         # Standalone Playwright-based export service
   - 0019: FK corrections (storage_object refs RESTRICT, file refs RESTRICT, sso_provider CASCADE), NOT NULL tightening (comment_thread), file_media_object.is_local dropped
   - 0020: Final parity cleanup — obsolete tables dropped (pending_to_delete, storage_pending), file_object_thumbnail FK fix, can_edit DEFAULT false, team_access_request NOT NULL, audit_log.profile_id NOT NULL + tracked_at DEFAULT, missing indexes (project/team_id, task/scheduled_at+queue, team_font_variant/team+font)
   - 0021: Remaining FK fix (file_library_rel.library_file_id CASCADE), page obsolete columns dropped (version, share_token), covering index for file_tagged_object_thumbnail deleted_at
+  - 0022: Access token scopes — adds `scopes` TEXT column to `access_token` table for fine-grained API permissions
+  - 0023: File pinning — adds `is_pinned` INTEGER column to `file` table, `pinned_at` TEXT column, and index for pinned file queries
 - **Message bus**: `ws/msgbus.js` provides topic-based pub/sub via a pure Node.js
   EventBus. Since SQLite is single-instance, no Redis is needed — all messaging
   is in-process. The `broadcast` function in `notifications.js` publishes to
@@ -173,7 +175,7 @@ node --test test/**/*.test.js
 npm run lint
 ```
 
-Tests run with `node --test test/**/*.test.js` (57 test files, 529 tests, 0 fail). Exporter tests run with `node --test test/exporter.test.js` (22 tests, 0 fail). When adding tests, use the built-in `node:test` and `node:assert` modules.
+Tests run with `node --test test/**/*.test.js` (78 test files, 909 tests, 296 suites, 0 fail). Exporter tests run with `node --test test/exporter.test.js` (22 tests, 0 fail). When adding tests, use the built-in `node:test` and `node:assert` modules.
 
 ## Environment
 

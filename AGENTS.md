@@ -32,6 +32,39 @@ precision while maintaining a strong focus on maintainability and performance.
 5. When searching code, prefer `ripgrep` (`rg`) over `grep` — it respects
    `.gitignore` by default.
 
+### Real Code Rules
+
+Production code (`src/`, `public/`, `shared/src/`) must follow these rules:
+
+1. **No mocks, fakes, or simulations.** Every function must do real work. No
+   stub handlers returning `{ status: 'ok' }`. No hardcoded data arrays posing
+   as real results. If a feature isn't ready, don't ship a placeholder.
+
+2. **No silent errors.** Every `catch` must log or rethrow. Empty `catch {}`
+   blocks are forbidden. Use `console.warn('[module]', err.message)` for
+   recoverable errors and `throw` for unrecoverable ones.
+
+3. **No fallbacks that hide failures.** `const x = data.x || default` masks
+   bugs. If `data.x` is required, throw. If it's optional, log that the
+   fallback was used. Config defaults belong in `config/index.js`.
+
+4. **No hardcoded values.** Magic numbers, string literals used as enums, and
+   inline URLs belong in constants, config, or enum objects. Use
+   `TEAM_ROLE.OWNER` not `'owner'`. Use `config.exporterUri` not
+   `'http://localhost:6061'`.
+
+5. **Throw all real errors.** RpcError calls must include type, code, and hint:
+   `throw new RpcError('validation', 'email-domain-not-allowed', 'Email
+   domain is not allowed')`. Error messages must include `[module]` prefix.
+
+6. **No fake data in production.** Templates come from resource files, not
+   inline arrays. Auth responses come from real token validation, not mock
+   objects. When a dependency is unavailable (SMTP disabled, exporter offline),
+   log a warning and return a clear "not available" response — don't fake
+   success.
+
+See `.kilo/skills/real-code-rules/SKILL.md` for full details and examples.
+
 ## Changelogs
 
 The project has two changelogs:
@@ -109,6 +142,8 @@ frontend ──> render-wasm  (upstream only, not ported)
 `shared` is a local dependency consumed by both `client` and `server`.
 Changes to `shared` can affect multiple modules — test across consumers
 when modifying shared code.
+
+**Key pattern when porting Clojure to JS:** The upstream uses `with-meta`/`meta` to attach context to shapes (e.g., ref-shape file/container references). In the JS port, use `_fileCtx`/`_containerCtx` properties. Always use spread syntax (`{ ...shape, _fileCtx, _containerCtx }`) rather than `Object.assign(shape, {...})` — the latter mutates shared shape objects and causes data corruption.
 
 ## Migration Documentation
 

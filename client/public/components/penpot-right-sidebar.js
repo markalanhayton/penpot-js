@@ -3,6 +3,7 @@ import { PenpotElement } from './base.js';
 import './penpot-gradient-editor.js';
 import './penpot-shadow-editor.js';
 import './penpot-layout-panel.js';
+import './penpot-variant-panel.js';
 import './penpot-tokens-panel.js';
 import './penpot-interaction-panel.js';
 import { SYSTEM_FONTS } from '@penpot/shared/constants';
@@ -63,12 +64,12 @@ template.innerHTML = `<style>
     .penpot-rside__missing-font-list { margin-top: 4px; font-size: var(--penpot-font-size-xs, 10px); color: #ffcc80; }
   
   </style>
-  <div class="penpot-rside__sidebar-tabs">
-    <button class="penpot-rside__sidebar-tab penpot-rside__active" data-tab="design">Design</button>
-    <button class="penpot-rside__sidebar-tab" data-tab="prototype">Prototype</button>
-    <button class="penpot-rside__sidebar-tab" data-tab="inspect">Inspect</button>
+  <div class="penpot-rside__sidebar-tabs" role="tablist" aria-label="Right sidebar">
+    <button class="penpot-rside__sidebar-tab penpot-rside__active" data-tab="design" role="tab" aria-selected="true" id="tab-design">Design</button>
+    <button class="penpot-rside__sidebar-tab" data-tab="prototype" role="tab" aria-selected="false" id="tab-prototype">Prototype</button>
+    <button class="penpot-rside__sidebar-tab" data-tab="inspect" role="tab" aria-selected="false" id="tab-inspect">Inspect</button>
   </div>
-  <div class="penpot-rside__sidebar-content" id="content">
+  <div class="penpot-rside__sidebar-content" id="content" role="tabpanel" aria-labelledby="tab-design">
     <div class="penpot-rside__empty-state">Select a shape to see its properties.</div>
   </div>`;
 
@@ -95,7 +96,13 @@ export class PenpotRightSidebar extends PenpotElement {
     this.querySelectorAll('.penpot-rside__sidebar-tab').forEach(tab => {
       tab.addEventListener('click', () => {
         this.#activeTab = tab.dataset.tab;
-        this.querySelectorAll('.penpot-rside__sidebar-tab').forEach(t => t.classList.toggle('penpot-rside__active', t.dataset.tab === this.#activeTab));
+        this.querySelectorAll('.penpot-rside__sidebar-tab').forEach(t => {
+          const isActive = t.dataset.tab === this.#activeTab;
+          t.classList.toggle('penpot-rside__active', isActive);
+          t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+        const content = this.querySelector('#content');
+        if (content) content.setAttribute('aria-labelledby', tab.id);
         this.render();
       });
     });
@@ -519,6 +526,7 @@ export class PenpotRightSidebar extends PenpotElement {
       html += `</div>`;
       html += `<button class="penpot-rside__bool-btn" id="reset-overrides-btn" style="width:100%;margin-top:4px;">Reset Overrides</button>`;
       html += `</div>`;
+      html += `<penpot-variant-panel></penpot-variant-panel>`;
     } else if (s.componentId) {
       const instanceOverrideCount = s.touched ? (Array.isArray(s.touched) ? s.touched.length : (s.touched instanceof Set ? s.touched.size : Object.keys(s.touched).length)) : 0;
       html += `<div class="penpot-rside__properties-section">`;
@@ -548,6 +556,7 @@ export class PenpotRightSidebar extends PenpotElement {
         }
       }
       html += `</div>`;
+      html += `<penpot-variant-panel></penpot-variant-panel>`;
     } else if (this.#selectedIds.length >= 1) {
       html += `<div class="penpot-rside__properties-section">`;
       html += `<h4>Actions</h4>`;
@@ -906,6 +915,42 @@ export class PenpotRightSidebar extends PenpotElement {
     if (resetOverridesBtn) {
       resetOverridesBtn.addEventListener('click', () => {
         this.emit('penpot-reset-overrides', { shapeId: s.id });
+      });
+    }
+
+    const variantPanel = content.querySelector('penpot-variant-panel');
+    if (variantPanel) {
+      variantPanel.fileData = this.#fileData;
+      variantPanel.selectedShape = s;
+      variantPanel.pages = this.#pages;
+      variantPanel.currentPageIndex = this.#currentPageIndex;
+
+      variantPanel.addEventListener('penpot-variant-add-property', (e) => {
+        this.emit('penpot-variant-add-property', e.detail);
+      });
+      variantPanel.addEventListener('penpot-variant-add-variant', (e) => {
+        this.emit('penpot-variant-add-variant', e.detail);
+      });
+      variantPanel.addEventListener('penpot-variant-update-property-name', (e) => {
+        this.emit('penpot-variant-update-property-name', e.detail);
+      });
+      variantPanel.addEventListener('penpot-variant-remove-property', (e) => {
+        this.emit('penpot-variant-remove-property', e.detail);
+      });
+      variantPanel.addEventListener('penpot-variant-select', (e) => {
+        this.emit('penpot-variant-select', e.detail);
+      });
+      variantPanel.addEventListener('penpot-variant-switch', (e) => {
+        this.emit('penpot-variant-switch', e.detail);
+      });
+      variantPanel.addEventListener('penpot-combine-as-variants', (e) => {
+        this.emit('penpot-combine-as-variants', e.detail);
+      });
+      variantPanel.addEventListener('penpot-select-shape', (e) => {
+        this.emit('penpot-shape-select', e.detail);
+      });
+      variantPanel.addEventListener('penpot-detach-instance', (e) => {
+        this.emit('penpot-detach-instance', e.detail);
       });
     }
 

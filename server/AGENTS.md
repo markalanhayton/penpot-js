@@ -145,6 +145,12 @@ exporter/                         # Standalone Playwright-based export service
   extensions. See the [Server Next Steps](../docs/migration/server-next-steps.md) §7 for the full catalog. Key ones: `sqlean-uuid`
   (UUIDv7), `sqlean-crypto` (hashing), `sqlean-regexp` (PCRE2), `sqlean-text`
   (Unicode), `sqlean-time` (high-precision timestamps), `sqlite-vec` (vector search).
+  See the [sqlean-extensions skill](.kilo/skills/sqlean-extensions/SKILL.md) for loading instructions and migration patterns.
+- **Design patterns**: See the [design-patterns skill](.kilo/skills/design-patterns/SKILL.md) and [architecture guide](../docs/migration/architecture-guide.md)
+  for GoF pattern guidance mapped to this codebase. Key targets: Strategy+Abstract Factory for storage backends,
+  Command+Mediator+Memento for OT/collaboration, Chain of Responsibility for middleware, State for WebSocket lifecycle.
+- **ESM strict mode**: The server uses `"type": "module"` — all `.js` files are ESM and always strict mode.
+  Do not add `'use strict';` directives to ESM files. They are redundant.
 - **Migration tracking**: See [`docs/migration/tracking.md`](../docs/migration/tracking.md)
   for the master migration document tracking progress across all phases (shared,
   server, client, server/exporter). Includes file counts, test status, and per-module

@@ -24,7 +24,7 @@ template.innerHTML = `<style>
   .penpot-menu__submenu { display: none; position: absolute; left: 100%; top: 0; min-width: 180px; background: var(--penpot-surface-high, #333); border: 1px solid var(--penpot-border, #444); border-radius: var(--penpot-radius-m, 8px); box-shadow: var(--penpot-shadow-m, 0 4px 12px rgba(0,0,0,0.4)); padding: var(--penpot-spacing-xs, 4px) 0; }
   .penpot-menu__item:hover > .penpot-menu__submenu { display: block; }
 </style>
-<nav class="penpot-menu__bar" id="bar"></nav>`;
+<nav class="penpot-menu__bar" id="bar" role="menubar" aria-label="Main menu"></nav>`;
 
 const MENU_DEFS = [
   {
@@ -137,6 +137,7 @@ export class PenpotMainMenu extends PenpotElement {
       trigger.className = 'penpot-menu__trigger';
       trigger.setAttribute('aria-expanded', 'false');
       trigger.setAttribute('aria-haspopup', 'true');
+      trigger.setAttribute('role', 'menuitem');
       trigger.dataset.menuId = menu.id;
       const mIdx = menu.label.indexOf(menu.mnemonic);
       const before = mIdx >= 0 ? menu.label.slice(0, mIdx) : '';
@@ -166,9 +167,11 @@ export class PenpotMainMenu extends PenpotElement {
     const trigger = this.querySelector(`[data-menu-id="${menuId}"]`);
     if (!trigger) return;
     trigger.setAttribute('aria-expanded', 'true');
-    const panel = document.createElement('div');
-    panel.className = 'penpot-menu__panel';
-    panel.dataset.panelId = menuId;
+      const panel = document.createElement('div');
+      panel.className = 'penpot-menu__panel';
+      panel.dataset.panelId = menuId;
+      panel.setAttribute('role', 'menu');
+      panel.setAttribute('aria-label', menu.label);
     this.#renderItems(menu.items, panel);
     trigger.style.position = 'relative';
     trigger.appendChild(panel);
@@ -208,6 +211,7 @@ export class PenpotMainMenu extends PenpotElement {
       const el = document.createElement('div');
       el.className = 'penpot-menu__item';
       el.tabIndex = -1;
+      el.setAttribute('role', item.type === 'separator' ? 'separator' : 'menuitem');
       if (item.danger) el.dataset.danger = '';
       if (item.disabled) el.dataset.disabled = '';
       const hasSubmenu = item.submenu && item.submenu.length > 0;

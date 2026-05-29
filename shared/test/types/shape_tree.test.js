@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { addShape, deleteShape, getShape, setShape, getFrames, getRootFrameIds, getRootShapes, rotatedFrameQ } from '../../src/types/shape_tree.js';
+import { addShape, deleteShape, getShape, setShape, getFrames, getRootFrameIds, getRootShapes, rotatedFrameQ, cloneShape, generateShapeGrid, startPageIndex, updatePageIndex } from '../../src/types/shape_tree.js';
 import { zero } from '../../src/uuid.js';
 
 describe('shape_tree', () => {
@@ -69,5 +69,83 @@ describe('shape_tree', () => {
     assert.equal(rotatedFrameQ({ rotation: 45 }), true);
     assert.equal(rotatedFrameQ({ rotation: 0 }), false);
     assert.equal(rotatedFrameQ({}), false);
+  });
+
+  it('cloneShape — clones a shape with new id', () => {
+    const c = makeContainer();
+    const shape = c.objects[shapeId];
+    const [newShape, newShapes, updatedShapes] = cloneShape(shape, frameId, c.objects);
+    assert.notEqual(newShape.id, shapeId, 'clone gets a new id');
+    assert.equal(newShape['parent-id'], frameId, 'clone parent is set');
+    assert.equal(newShape.type, 'rect', 'clone preserves type');
+    assert.equal(newShapes.length, 1, 'one shape in result');
+  });
+
+  it('cloneShape — clones a group with children', () => {
+    const groupId = '44444444-4444-4444-4444-444444444444';
+    const innerId = '55555555-5555-5555-5555-555555555555';
+    const c = {
+      objects: {
+        [rootId]: { id: rootId, type: 'frame', 'parent-id': null, shapes: [groupId], name: 'Root' },
+        [groupId]: { id: groupId, type: 'group', 'parent-id': rootId, 'frame-id': rootId, shapes: [innerId], name: 'Group' },
+        [innerId]: { id: innerId, type: 'rect', 'parent-id': groupId, 'frame-id': rootId, name: 'Inner' },
+      },
+    };
+    const group = c.objects[groupId];
+    const [newGroup, newShapes, _] = cloneShape(group, rootId, c.objects);
+    assert.notEqual(newGroup.id, groupId, 'group gets new id');
+    assert.equal(newShapes.length, 2, 'group + child = 2 shapes');
+    assert.equal(newGroup.shapes.length, 1, 'group has one child');
+    const newInner = newShapes.find((s) => s.id !== newGroup.id);
+    assert.equal(newInner['parent-id'], newGroup.id, 'child parent points to new group');
+  });
+
+  it('cloneShape — keepIds preserves original ids', () => {
+    const c = makeContainer();
+    const shape = c.objects[shapeId];
+    const [newShape] = cloneShape(shape, frameId, c.objects, { keepIds: true });
+    assert.equal(newShape.id, shapeId, 'keepIds preserves original id');
+  });
+
+  it('cloneShape — forceId uses provided id', () => {
+    const c = makeContainer();
+    const shape = c.objects[shapeId];
+    const forcedId = 'forced-id-00000000-000000000000';
+    const [newShape] = cloneShape(shape, frameId, c.objects, { forceId: forcedId });
+    assert.equal(newShape.id, forcedId, 'forceId is used');
+  });
+
+  it('generateShapeGrid — generates grid positions', () => {
+    const shapes = [
+      { width: 100, height: 50, selrect: { x: 0, y: 0, width: 100, height: 50 } },
+      { width: 80, height: 40, selrect: { x: 0, y: 0, width: 80, height: 40 } },
+      { width: 120, height: 60, selrect: { x: 0, y: 0, width: 120, height: 60 } },
+      { width: 90, height: 45, selrect: { x: 0, y: 0, width: 90, height: 45 } },
+    ];
+    const positions = generateShapeGrid(shapes, { x: 0, y: 0 }, 10);
+    assert.equal(positions.length, 4, '4 positions for 4 shapes');
+    assert.equal(positions[0].x, 0, 'first position x=0');
+    assert.equal(positions[0].y, 0, 'first position y=0');
+    assert.ok(positions._width > 0, 'grid has width');
+    assert.ok(positions._height > 0, 'grid has height');
+  });
+
+  it('generateShapeGrid — empty shapes returns empty', () => {
+    const positions = generateShapeGrid([], { x: 0, y: 0 }, 10);
+    assert.deepEqual(positions, [], 'empty input');
+  });
+
+  it('startPageIndex — adds frame index', () => {
+    const c = makeContainer();
+    const indexed = startPageIndex(c.objects);
+    assert.ok(Array.isArray(indexed._indexFrames), 'adds _indexFrames');
+    assert.ok(indexed._indexFrames.includes(frameId), 'frame id in index');
+  });
+
+  it('updatePageIndex — rebuilds frame index', () => {
+    const c = makeContainer();
+    const indexed = updatePageIndex(c.objects);
+    assert.ok(Array.isArray(indexed._indexFrames), 'adds _indexFrames');
+    assert.ok(indexed._indexFrames.includes(frameId), 'frame id in index');
   });
 });

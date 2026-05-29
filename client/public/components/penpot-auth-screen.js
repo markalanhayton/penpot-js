@@ -44,8 +44,8 @@ template.innerHTML = `
   </style>
   <div class="penpot-app__auth-card">
     <h1 class="penpot-app__auth-title" id="title">Sign in to Penpot</h1>
-    <div class="penpot-app__auth-error" id="error"></div>
-    <div class="penpot-app__auth-success" id="success"></div>
+    <div class="penpot-app__auth-error" id="error" role="alert" aria-live="assertive"></div>
+    <div class="penpot-app__auth-success" id="success" role="status" aria-live="polite"></div>
     <div class="penpot-app__oauth-btns" id="oauth-btns"></div>
     <div class="penpot-app__oauth-divider" id="oauth-divider" hidden><span>or</span></div>
     <div class="penpot-app__field" id="name-field" hidden>

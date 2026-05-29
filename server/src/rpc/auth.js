@@ -28,7 +28,7 @@ import { rowToCamel } from '../db/sqlite.js';
 import { RpcError, errors } from '../rpc/dispatcher.js';
 import { downloadImage, getImageInfo, sanitizeImage, profileThumbnail, PROFILE_THUMBNAIL_OPTIONS, withTempFiles, validateMediaType } from '../media/index.js';
 import { putStorageObject } from '../storage/fs.js';
-import { sendPasswordRecovery, sendEmailVerification } from '../email/index.js';
+import { sendPasswordRecovery, sendEmailVerification, isEmailAllowed } from '../email/index.js';
 
 const e = errors;
 
@@ -173,6 +173,10 @@ export default function registerAuthCommands(register, pool) {
       const { fullname, email, password, invitationToken } = params;
       const trimmedEmail = (email || '').trim().toLowerCase();
 
+      if (!isEmailAllowed(trimmedEmail)) {
+        throw e.validation('Email domain is not allowed');
+      }
+
       const existing = pool.get(
         'SELECT id, email, is_active, is_blocked, deleted_at FROM profile WHERE email = ? AND deleted_at IS NULL',
         [trimmedEmail]
@@ -218,6 +222,10 @@ export default function registerAuthCommands(register, pool) {
 
       const { email, fullname, password, invitationToken } = claims;
       const trimmedEmail = (email || '').trim().toLowerCase();
+
+      if (!isEmailAllowed(trimmedEmail)) {
+        throw e.validation('Email domain is not allowed');
+      }
 
       const existing = pool.get(
         'SELECT id, email, is_active, is_blocked, deleted_at FROM profile WHERE email = ? AND deleted_at IS NULL',

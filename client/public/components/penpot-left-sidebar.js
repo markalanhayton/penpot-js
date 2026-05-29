@@ -34,26 +34,26 @@ template.innerHTML = `<style>
     .penpot-lside__panel-container[hidden] { display: none; }
   
   </style>
-  <div class="penpot-lside__sidebar-tabs">
-    <button class="penpot-lside__sidebar-tab penpot-lside__active" data-tab="layers">Layers</button>
-    <button class="penpot-lside__sidebar-tab" data-tab="assets">Assets</button>
-    <button class="penpot-lside__sidebar-tab" data-tab="pages">Pages</button>
+  <div class="penpot-lside__sidebar-tabs" role="tablist" aria-label="Left sidebar">
+    <button class="penpot-lside__sidebar-tab penpot-lside__active" data-tab="layers" role="tab" aria-selected="true" aria-controls="layers-panel" id="tab-layers">Layers</button>
+    <button class="penpot-lside__sidebar-tab" data-tab="assets" role="tab" aria-selected="false" aria-controls="assets-panel" id="tab-assets">Assets</button>
+    <button class="penpot-lside__sidebar-tab" data-tab="pages" role="tab" aria-selected="false" aria-controls="pages-section" id="tab-pages">Pages</button>
   </div>
   <div class="penpot-lside__sidebar-content">
     <div class="penpot-lside__page-section" id="pages-section">
       <div class="penpot-lside__page-section-header">
         <span class="penpot-lside__page-section-title">Pages</span>
         <div class="penpot-lside__page-section-actions">
-          <button class="penpot-lside__page-add-btn" id="page-add-btn" title="Add page">+</button>
-          <button class="penpot-lside__page-section-toggle" id="pages-toggle" title="Toggle pages">\u25BC</button>
+          <button class="penpot-lside__page-add-btn" id="page-add-btn" title="Add page" aria-label="Add page">+</button>
+          <button class="penpot-lside__page-section-toggle" id="pages-toggle" title="Toggle pages" aria-label="Toggle pages">\u25BC</button>
         </div>
       </div>
-      <div class="penpot-lside__page-list" id="page-list"></div>
+      <div class="penpot-lside__page-list" id="page-list" role="listbox" aria-label="Pages"></div>
     </div>
-    <div class="penpot-lside__panel-container" id="layers-panel">
+    <div class="penpot-lside__panel-container" id="layers-panel" role="tabpanel" aria-labelledby="tab-layers">
       <penpot-layer-panel id="layer-panel"></penpot-layer-panel>
     </div>
-    <div class="penpot-lside__panel-container" id="assets-panel" hidden>
+    <div class="penpot-lside__panel-container" id="assets-panel" hidden role="tabpanel" aria-labelledby="tab-assets">
       <penpot-asset-panel id="asset-panel"></penpot-asset-panel>
     </div>
   </div>`;
@@ -75,7 +75,11 @@ export class PenpotLeftSidebar extends PenpotElement {
     this.querySelectorAll('.penpot-lside__sidebar-tab').forEach(tab => {
       tab.addEventListener('click', () => {
         this.#activeTab = tab.dataset.tab;
-        this.querySelectorAll('.penpot-lside__sidebar-tab').forEach(t => t.classList.toggle('penpot-lside__active', t.dataset.tab === this.#activeTab));
+        this.querySelectorAll('.penpot-lside__sidebar-tab').forEach(t => {
+          const isActive = t.dataset.tab === this.#activeTab;
+          t.classList.toggle('penpot-lside__active', isActive);
+          t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
         this.#updatePanelVisibility();
       });
     });

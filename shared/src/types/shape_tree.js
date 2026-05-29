@@ -3,6 +3,7 @@ import { makeRect } from '../geom/rect.js';
 import { next, zero, isZero } from '../uuid.js';
 import { seek, insertAtIndex, notEmpty, unstableSort, withoutObj } from '../data.js';
 import { instanceHeadQ, mainInstanceQ, inComponentCopyQ } from './component.js';
+import { gridLayoutQ } from './shape/layout.js';
 
 export function addShape(id, shape, container, frameId, parentId, index, ignoreTouched) {
   const updateParentShapes = (shapes) => {
@@ -284,4 +285,113 @@ function hasPointQ(shape, pt) {
   if (!shape.selrect) return false;
   const s = shape.selrect;
   return pt.x >= s.x && pt.x <= s.x + s.width && pt.y >= s.y && pt.y <= s.y + s.height;
+}
+
+export function cloneShape(shape, parentId, objects, { updateNewShape, updateOriginalShape, forceId, keepIds, frameId, destObjects } = {}) {
+  if (typeof updateNewShape !== 'function') updateNewShape = (s) => s;
+  if (typeof updateOriginalShape !== 'function') updateOriginalShape = (s) => s;
+  const effectiveDestObjects = destObjects ?? objects;
+
+  const newId = forceId != null
+    ? forceId
+    : keepIds
+      ? shape.id
+      : next();
+
+  let effectiveFrameId = frameId;
+  if (effectiveFrameId == null) {
+    const parent = effectiveDestObjects[parentId];
+    if (parent && isFrameShape(parent)) {
+      effectiveFrameId = parentId;
+    } else {
+      effectiveFrameId = parent?.['frame-id'] ?? zero;
+    }
+  }
+
+  let newDirectChildren = [];
+  let newChildren = [];
+  let updatedChildren = [];
+
+  const childIds = shape.shapes ? [...shape.shapes] : [];
+  for (const childId of childIds) {
+    const child = objects[childId];
+    if (child == null) continue;
+    const childFrameId = isFrameShape(shape) ? newId : effectiveFrameId;
+    const [newChild, newChildShapes, updatedChildShapes] = cloneShape(child, newId, objects, {
+      updateNewShape,
+      updateOriginalShape,
+      forceId: null,
+      keepIds,
+      frameId: childFrameId,
+      destObjects: effectiveDestObjects,
+    });
+    newDirectChildren = [...newDirectChildren, newChild];
+    newChildren = [...newChildren, ...newChildShapes];
+    updatedChildren = [...updatedChildren, ...updatedChildShapes];
+  }
+
+  let newShape = {
+    ...shape,
+    id: newId,
+    'parent-id': parentId,
+    'frame-id': effectiveFrameId,
+  };
+  if (shape.shapes) {
+    newShape = { ...newShape, shapes: newDirectChildren.map((c) => c.id) };
+  }
+
+  let oldId = shape.id;
+  if (newShape.type === 'bool' && newShape['bool-content'] && newChildren.length > 0) {
+    const idsMap = {};
+    for (const cs of newChildren) {
+      idsMap[cs._oldId ?? cs.id] = cs.id;
+    }
+    const gridLayout = newShape.layout === 'grid';
+    if (gridLayout && newShape['grid-cell-ids']) {
+      newShape = {
+        ...newShape,
+        'grid-cell-ids': Object.fromEntries(
+          Object.entries(newShape['grid-cell-ids']).map(([k, v]) => [idsMap[k] ?? k, idsMap[v] ?? v])
+        ),
+      };
+    }
+  }
+
+  newShape = updateNewShape(newShape, shape);
+  const newShapes = [newShape, ...newChildren];
+
+  const updatedShape = updateOriginalShape(shape, newShape);
+  const updatedShapes = Object.is(shape, updatedShape)
+    ? updatedChildren
+    : [updatedShape, ...updatedChildren];
+
+  newShape._oldId = oldId;
+  return [newShape, newShapes, updatedShapes];
+}
+
+export function generateShapeGrid(shapes, startPosition, gap) {
+  if (!shapes || shapes.length === 0) return [];
+
+  const bounds = shapes.map((s) => s.selrect ?? makeRect(0, 0, s.width ?? 0, s.height ?? 0));
+  const gridSize = Math.ceil(Math.sqrt(shapes.length));
+  const rowSize = Math.max(...bounds.map((b) => b.height)) + gap;
+  const columnSize = Math.max(...bounds.map((b) => b.width)) + gap;
+
+  const positions = [];
+  for (let i = 0; i < shapes.length; i++) {
+    const row = Math.floor(i / gridSize);
+    const column = i % gridSize;
+    positions.push(point(column * columnSize + startPosition.x, row * rowSize + startPosition.y));
+  }
+  positions._width = gridSize * columnSize;
+  positions._height = Math.ceil(shapes.length / gridSize) * rowSize;
+  return positions;
+}
+
+export function startPageIndex(objects) {
+  return { ...objects, _indexFrames: getFrameIds(objects) };
+}
+
+export function updatePageIndex(objects) {
+  return { ...objects, _indexFrames: getFrameIds(objects) };
 }

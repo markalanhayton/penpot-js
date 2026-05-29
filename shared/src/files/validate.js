@@ -7,7 +7,7 @@ import { instanceHeadQ, instanceRootQ, mainInstanceQ, inComponentCopyQ, isVarian
 import { getComponent, getDeletedComponent } from '../types/components_list.js';
 import { getShape } from '../types/shape_tree.js';
 import { makeContainer } from '../types/container.js';
-import { getComponentPage, resolveComponent } from '../types/file.js';
+import { getComponentPage, resolveComponent, findRefShape, findNearMatch } from '../types/file.js';
 import { getPage, pagesSeq } from '../types/pages_list.js';
 import { zero } from '../uuid.js';
 
@@ -402,7 +402,7 @@ function checkComponentNotRoot(shape, file, page) {
 
 function checkComponentRef(shape, file, page, libraries) {
   if (!libraryExistsQ(file, libraries, shape)) return;
-  const refShape = findRefShape(file, page, libraries, shape);
+  const refShape = findRefShapeLocal(file, page, libraries, shape);
   if (refShape == null) {
     reportError('ref-shape-not-found', `Referenced shape ${shape?.['shape-ref']} not found in near component`, shape, file, page);
   }
@@ -415,14 +415,14 @@ function checkComponentNotRef(shape, file, page) {
 }
 
 function checkRefIsNotHead(shape, file, page, libraries) {
-  const refShape = findRefShape(file, page, libraries, shape);
+  const refShape = findRefShapeLocal(file, page, libraries, shape);
   if (refShape && instanceHeadQ(refShape)) {
     reportError('ref-shape-is-head', `Referenced shape ${shape?.['shape-ref']} is a component, so the copy must also be`, shape, file, page);
   }
 }
 
 function checkRefIsHead(shape, file, page, libraries) {
-  const refShape = findRefShape(file, page, libraries, shape);
+  const refShape = findRefShapeLocal(file, page, libraries, shape);
   if (refShape && !instanceHeadQ(refShape)) {
     reportError('ref-shape-is-not-head', `Referenced shape ${shape?.['shape-ref']} of a head copy must also be a head`, shape, file, page);
   }
@@ -431,7 +431,7 @@ function checkRefIsHead(shape, file, page, libraries) {
 function checkRefComponentId(shape, file, page, libraries) {
   if (getSwapSlot(shape) != null) return;
 
-  const refShape = findRefShape(file, page, libraries, shape);
+  const refShape = findRefShapeLocal(file, page, libraries, shape);
   if (!refShape) return;
 
   if (
@@ -455,7 +455,7 @@ function checkDuplicateSwapSlot(shape, file, page) {
 }
 
 function checkRequiredSwapSlot(shape, file, page, libraries) {
-  const nearMatch = findNearMatch(file, page, libraries, shape);
+  const nearMatch = findNearMatchLocal(file, page, libraries, shape);
   if (nearMatch && shape?.['shape-ref'] !== nearMatch?.id && getSwapSlot(shape) == null) {
     reportError('missing-slot', 'Shape has been swapped, should have swap slot', shape, file, page);
   }
@@ -527,12 +527,14 @@ function getOrphanShapes(page) {
   return result;
 }
 
-function findRefShape(file, page, libraries, shape) {
-  return null;
+function findRefShapeLocal(file, pageOrContainer, libraries, shape) {
+  const container = pageOrContainer.objects ? pageOrContainer : makeContainer(pageOrContainer, 'page');
+  return findRefShape(file, container, libraries, shape);
 }
 
-function findNearMatch(file, page, libraries, shape) {
-  return null;
+function findNearMatchLocal(file, pageOrContainer, libraries, shape) {
+  const container = pageOrContainer.objects ? pageOrContainer : makeContainer(pageOrContainer, 'page');
+  return findNearMatch(file, container, libraries, shape);
 }
 
 function checkComponent(component, file) {

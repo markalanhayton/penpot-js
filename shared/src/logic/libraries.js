@@ -1,3 +1,5 @@
+import { usesAssetQ } from '../types/file.js';
+
 export function prettyFile(fileId, libraries, currentFileId) {
   if (fileId === currentFileId) return '<local>';
   const lib = libraries?.[fileId];
@@ -53,5 +55,5 @@ function splitGroupName(newName) {
 }
 
 export function usesAssetsQ(assetType, assetId, shape, libraryId) {
-  return false;
+  return usesAssetQ(assetType, shape, libraryId, { id: assetId });
 }

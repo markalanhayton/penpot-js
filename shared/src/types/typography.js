@@ -76,7 +76,7 @@ function nodeSeq(content, pred) {
   return results;
 }
 
-function transformNodes(content, pred, fn) {
+export function transformNodes(content, pred, fn) {
   if (!content) return content;
   let result = pred(content) ? fn(content) : content;
   if (result.children) {

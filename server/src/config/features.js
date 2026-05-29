@@ -68,6 +68,8 @@ export const frontendOnlyFeatures = new Set([
   'text-editor-wasm/v1',
   'tokens/numeric-input',
   'render-wasm/v1',
+  'fdata/pointer-map',
+  'fdata/objects-map',
 ]);
 
 /**

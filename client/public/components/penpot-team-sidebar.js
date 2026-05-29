@@ -70,6 +70,15 @@ export class PenpotTeamSidebar extends PenpotElement {
         appStore.set('currentTeamId', this.#currentTeamId);
       }
 
+      for (const team of this.#teams) {
+        try {
+          const stats = await cmd('get-team-stats', { teamId: team.id });
+          team.memberCount = stats?.memberCount ?? stats?.members ?? team.memberCount;
+          team.projectCount = stats?.projectCount ?? stats?.projects ?? team.projectCount;
+          team.fileCount = stats?.fileCount ?? stats?.files ?? team.fileCount;
+        } catch (_) {}
+      }
+
       this.renderTeams();
       this.emit('penpot-teams-loaded', { teams: this.#teams, currentTeamId: this.#currentTeamId });
     } catch (err) {
@@ -89,14 +98,16 @@ export class PenpotTeamSidebar extends PenpotElement {
     } else {
       html += '<div class="penpot-team__team-section-title">Your teams</div>';
       for (const team of this.#teams) {
-        const initials = (team.name || 'T').charAt(0).toUpperCase();
+    const initials = (team.name || 'T').charAt(0).toUpperCase();
         const memberCount = team.memberCount != null ? team.memberCount : '';
+        const statsHtml = team.projectCount != null ? `${memberCount !== '' ? memberCount : ''}${memberCount !== '' && team.projectCount != null ? '·' : ''}${team.projectCount != null ? team.projectCount + ' proj' : ''}` : (memberCount !== '' ? memberCount : '');
         const isActive = team.id === this.#currentTeamId;
         html += `
           <div class="penpot-team__team-item ${isActive ? 'penpot-team__active' : ''}" data-team-id="${this.escAttr(team.id)}">
             <div class="penpot-team__team-avatar">${initials}</div>
             <span class="penpot-team__team-name">${this.escHtml(team.name || 'Team')}</span>
             ${memberCount !== '' ? `<span class="penpot-team__team-badge">${memberCount}</span>` : ''}
+            <button class="penpot-team__team-options" data-team-options="${this.escAttr(team.id)}" title="Team options">\u22EF</button>
           </div>`;
       }
     }

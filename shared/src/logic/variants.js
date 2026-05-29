@@ -10,6 +10,7 @@ import * as cfv from '../files/variant.js';
 import * as ctn from '../types/container.js';
 import { zero as uuidZero } from '../uuid.js';
 import { getIn, indexOf } from '../data.js';
+import { findRefShape as findRefShapeImpl, findRemoteShape as findRemoteShapeImpl, getTouchedFromRefChainUntilTargetRef as getTouchedImpl, findRefIdForSwapped as findRefIdForSwappedImpl } from '../types/file.js';
 
 export const SHAPE_TYPE_CLASSIFICATION = {
   frame: 'container',
@@ -110,7 +111,7 @@ function findShapeRefChildOf(container, libraries, shape, parentId) {
   const refShape = findRefShape(null, container, libraries, shape, true);
   if (!refShape) return null;
 
-  const refContainer = refShape?.__container ?? null;
+  const refContainer = refShape?._containerCtx ?? null;
   const refObjects = refContainer?.objects ?? {};
   const refParents = cfh.getParentsWithSelf(refObjects, refShape.id);
   const parentSet = new Set(refParents.map((s) => s.id));
@@ -126,19 +127,20 @@ function addTouchedFromRefChain(container, libraries, shape) {
 }
 
 function findRefShape(file, container, libraries, shape, withContextQ) {
-  return null;
+  return findRefShapeImpl(file, container, libraries, shape, { includeDeleted: false, withContext: withContextQ });
 }
 
 function findRemoteShape(container, libraries, shape, opts) {
-  return null;
+  const withContext = opts?.['with-context?'] ?? opts?.withContext ?? false;
+  return findRemoteShapeImpl(container, libraries, shape, { withContext });
 }
 
 function getTouchedFromRefChainUntilTargetRef(container, libraries, shape, targetRefId) {
-  return shape.touched ?? {};
+  return getTouchedImpl(container, libraries, shape, targetRefId);
 }
 
 function findRefIdForSwapped(shape, container, libraries) {
-  return shape['shape-ref'] ?? null;
+  return findRefIdForSwappedImpl(shape, container, libraries);
 }
 
 export function generateKeepTouched(changes, newShape, originalShape, originalShapes, page, libraries, ldata) {
@@ -162,7 +164,7 @@ export function generateKeepTouched(changes, newShape, originalShape, originalSh
   }
 
   const origBaseRefShape = findRemoteShape(container, libraries, originalShape, { 'with-context?': true });
-  const origRefObjects = origBaseRefShape?.__container?.objects ?? {};
+  const origRefObjects = origBaseRefShape?._containerCtx?.objects ?? {};
 
   const oRefShapesWp = addUniquePath(
     [...cfh.getChildrenWithSelf(origRefObjects, origBaseRefShape?.id)].reverse(),

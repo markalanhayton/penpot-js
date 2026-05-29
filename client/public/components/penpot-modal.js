@@ -22,10 +22,10 @@ template.innerHTML = `<style>
   
   </style>
   <div class="penpot-modal__backdrop" id="backdrop"></div>
-  <div class="penpot-modal__modal">
+  <div class="penpot-modal__modal" role="dialog" aria-modal="true" aria-labelledby="title">
     <div class="penpot-modal__modal-header">
       <h3 class="penpot-modal__modal-title" id="title"></h3>
-      <button class="penpot-modal__modal-close" id="close" title="Close">&times;</button>
+      <button class="penpot-modal__modal-close" id="close" aria-label="Close dialog">&times;</button>
     </div>
     <div class="penpot-modal__modal-body"><slot></slot></div>
     <div class="penpot-modal__modal-footer" id="footer"><slot name="footer"></slot></div>
@@ -39,14 +39,31 @@ export class PenpotModal extends PenpotElement {
     super();
   }
 
+  #previousFocus = null;
+
   connectedCallback() {
     super.connectedCallback();
     this.querySelector('#backdrop').addEventListener('click', () => this.close());
     this.querySelector('#close').addEventListener('click', () => this.close());
     this.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') this.close();
+      if (e.key === 'Tab') this.#trapFocus(e);
     });
     this.#update();
+  }
+
+  #trapFocus(e) {
+    const modal = this.querySelector('.penpot-modal__modal');
+    if (!modal) return;
+    const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+    } else {
+      if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
   }
 
   attributeChangedCallback() { this.#update(); }
@@ -57,13 +74,17 @@ export class PenpotModal extends PenpotElement {
   }
 
   open() {
+    this.#previousFocus = document.activeElement;
     this.classList.add('penpot-modal__open');
     this.emit('penpot-modal-open', {});
+    const firstFocusable = this.querySelector('.penpot-modal__modal button, .penpot-modal__modal input, .penpot-modal__modal [tabindex]');
+    if (firstFocusable) firstFocusable.focus();
   }
 
   close() {
     this.classList.remove('penpot-modal__open');
     this.emit('penpot-modal-close', {});
+    if (this.#previousFocus) { this.#previousFocus.focus(); this.#previousFocus = null; }
   }
 
   get isOpen() { return this.classList.contains('open'); }

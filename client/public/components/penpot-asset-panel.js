@@ -2,6 +2,7 @@
 import { PenpotElement } from './base.js';
 import { processFontBlobs, uploadFontVariant, groupFontsByFamily } from '../lib/fonts.js';
 import { SYSTEM_FONTS } from '@penpot/shared/constants';
+import { groupVariantFamilies, buildVariantDisplayName } from '../lib/components-lib.js';
 import './penpot-tokens-panel.js';
 
 const template = document.createElement('template');
@@ -66,6 +67,18 @@ template.innerHTML = `<style>
     .penpot-assets__add-input:focus { border-color: var(--penpot-primary, #31efb8); }
     .penpot-assets__add-color-input { width: 28px; height: 24px; padding: 0; border: 1px solid var(--penpot-border, #444); border-radius: 3px; background: none; cursor: pointer; }
     .penpot-assets__empty-state { color: var(--penpot-text-dim, #999); text-align: center; padding: 24px 12px; font-size: 11px; }
+    .penpot-assets__variant-family { margin-bottom: 8px; }
+    .penpot-assets__variant-family-header { display: flex; align-items: center; gap: 4px; padding: 4px 8px; background: var(--penpot-surface, #2a2a2a); cursor: pointer; user-select: none; border-radius: var(--penpot-radius-s, 4px) var(--penpot-radius-s, 4px) 0 0; }
+    .penpot-assets__variant-family-header:hover { background: var(--penpot-surface-high, #333); }
+    .penpot-assets__variant-family-header .penpot-assets__collapse-arrow { font-size: 8px; transition: transform 0.15s; color: var(--penpot-text-dim, #999); flex-shrink: 0; }
+    .penpot-assets__variant-family-header.collapsed .penpot-assets__collapse-arrow { transform: rotate(-90deg); }
+    .penpot-assets__variant-family-name { font-size: 11px; font-weight: 600; color: var(--penpot-text, #e6e6e6); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .penpot-assets__variant-family-badge { font-size: 9px; background: var(--penpot-primary-bg, rgba(49,239,184,0.15)); color: var(--penpot-primary, #31efb8); padding: 1px 5px; border-radius: 8px; flex-shrink: 0; }
+    .penpot-assets__variant-children { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 4px; padding: 4px 8px 8px; background: rgba(49,239,184,0.03); border: 1px solid rgba(49,239,184,0.1); border-top: none; border-radius: 0 0 var(--penpot-radius-s, 4px) var(--penpot-radius-s, 4px); }
+    .penpot-assets__variant-children.collapsed { display: none; }
+    .penpot-assets__variant-item { background: var(--penpot-surface-high, #333); border: 1px solid var(--penpot-border, #444); border-radius: var(--penpot-radius-s, 4px); cursor: pointer; overflow: hidden; transition: border-color 0.15s; }
+    .penpot-assets__variant-item:hover { border-color: var(--penpot-primary, #31efb8); }
+    .penpot-assets__variant-values { font-size: 8px; color: var(--penpot-text-dim, #999); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 2px 4px 3px; }
   
   </style>
   <div class="penpot-assets__asset-tabs">
@@ -214,14 +227,56 @@ export class PenpotAssetPanel extends PenpotElement {
       }
       return '<div class="penpot-assets__empty-state">No components match your search.</div>';
     }
-    let html = '<div class="penpot-assets__component-grid">';
+
+    const variantIds = new Set();
+    const standalone = [];
+    const families = new Map();
+
     for (const comp of components) {
-      html += `<div class="penpot-assets__component-card" data-component-id="${this.escAttr(comp.id)}" title="${this.escHtml(comp.name)}">
-        <div class="penpot-assets__component-thumb">${comp.icon || '\u25A1'}</div>
-        <div class="penpot-assets__component-label">${this.escHtml(comp.name)}</div>
-      </div>`;
+      const vid = comp['variant-id'] || comp.variantId;
+      if (vid) {
+        variantIds.add(vid);
+        if (!families.has(vid)) {
+          families.set(vid, { name: comp.path || comp.name?.split('/')[0] || comp.name || 'Variant', items: [] });
+        }
+        const vProps = comp['variant-properties'] || comp.variantProperties || [];
+        const displayName = buildVariantDisplayName(vProps) || comp.name || 'Variant';
+        families.get(vid).items.push({ ...comp, _displayName: displayName, _variantProps: vProps });
+      } else {
+        standalone.push(comp);
+      }
     }
-    html += '</div>';
+
+    let html = '';
+    if (standalone.length > 0) {
+      html += '<div class="penpot-assets__component-grid">';
+      for (const comp of standalone) {
+        html += `<div class="penpot-assets__component-card" data-component-id="${this.escAttr(comp.id)}" title="${this.escHtml(comp.name)}">
+          <div class="penpot-assets__component-thumb">${this.escHtml(comp.icon || '\u25A1')}</div>
+          <div class="penpot-assets__component-label">${this.escHtml(comp.name)}</div>
+        </div>`;
+      }
+      html += '</div>';
+    }
+
+    for (const [variantId, family] of families) {
+      const variantCount = family.items.length;
+      html += `<div class="penpot-assets__variant-family" data-variant-id="${this.escAttr(variantId)}">`;
+      html += `<div class="penpot-assets__variant-family-header" data-toggle-variant="${this.escAttr(variantId)}">`;
+      html += `<span class="penpot-assets__collapse-arrow">\u25BC</span>`;
+      html += `<span class="penpot-assets__variant-family-name">${this.escHtml(family.name)}</span>`;
+      html += `<span class="penpot-assets__variant-family-badge">${variantCount}</span>`;
+      html += `</div>`;
+      html += `<div class="penpot-assets__variant-children" data-variant-children="${this.escAttr(variantId)}">`;
+      for (const item of family.items) {
+        html += `<div class="penpot-assets__variant-item" data-component-id="${this.escAttr(item.id)}" title="${this.escHtml(item._displayName)}" draggable="true">
+          <div class="penpot-assets__component-thumb">${this.escHtml(item.icon || '\u25C6')}</div>
+          <div class="penpot-assets__variant-values">${this.escHtml(item._displayName)}</div>
+        </div>`;
+      }
+      html += '</div></div>';
+    }
+
     return html;
   }
 
@@ -376,6 +431,28 @@ export class PenpotAssetPanel extends PenpotElement {
         e.dataTransfer.setData('application/penpot-component', card.dataset.componentId);
         e.dataTransfer.effectAllowed = 'copy';
         try { e.dataTransfer.setDragImage(card, card.offsetWidth / 2, card.offsetHeight / 2); } catch (_) {}
+      });
+    });
+
+    content.querySelectorAll('.penpot-assets__variant-family-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const variantId = header.dataset.toggleVariant;
+        const children = content.querySelector(`[data-variant-children="${CSS.escape(variantId || '')}"]`);
+        if (children) {
+          const isCollapsed = children.classList.toggle('collapsed');
+          header.classList.toggle('collapsed', isCollapsed);
+        }
+      });
+    });
+
+    content.querySelectorAll('.penpot-assets__variant-item').forEach(item => {
+      item.addEventListener('click', () => {
+        this.emit('penpot-asset-use', { type: 'component', id: item.dataset.componentId });
+      });
+      item.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('application/penpot-component', item.dataset.componentId);
+        e.dataTransfer.effectAllowed = 'copy';
+        try { e.dataTransfer.setDragImage(item, item.offsetWidth / 2, item.offsetHeight / 2); } catch (_) {}
       });
     });
 

@@ -16,24 +16,26 @@ template.innerHTML = `<style>
     .penpot-tools__zoom-controls button:hover { background: var(--penpot-surface-high, #333); }
     .penpot-tools__zoom-fit { font-size: var(--penpot-font-size-xs, 10px); }
   </style>
-  <button class="penpot-tools__tool-btn penpot-tools__active" data-tool="select" title="Select (V)"><penpot-icon name="cursor" size="16"></penpot-icon></button>
-  <button class="penpot-tools__tool-btn" data-tool="hand" title="Hand (H)"><penpot-icon name="hand" size="16"></penpot-icon></button>
-  <div class="penpot-tools__tool-sep"></div>
-  <button class="penpot-tools__tool-btn" data-tool="frame" title="Frame (F)"><penpot-icon name="frame" size="16"></penpot-icon></button>
-  <button class="penpot-tools__tool-btn" data-tool="rect" title="Rectangle (R)"><penpot-icon name="square" size="16"></penpot-icon></button>
-  <button class="penpot-tools__tool-btn" data-tool="circle" title="Ellipse (E)"><penpot-icon name="circle" size="16"></penpot-icon></button>
-  <button class="penpot-tools__tool-btn" data-tool="text" title="Text (T)"><penpot-icon name="text" size="16"></penpot-icon></button>
-  <button class="penpot-tools__tool-btn" data-tool="path" title="Polyline (N)"><penpot-icon name="pen" size="16"></penpot-icon></button>
-  <button class="penpot-tools__tool-btn" data-tool="pen" title="Pen Bezier (P)"><penpot-icon name="bezier" size="16"></penpot-icon></button>
-  <button class="penpot-tools__tool-btn" data-tool="image" title="Image"><penpot-icon name="image" size="16"></penpot-icon></button>
-  <div class="penpot-tools__tool-sep"></div>
+  <div class="penpot-tools__tool-group" role="toolbar" aria-label="Drawing tools">
+    <button class="penpot-tools__tool-btn penpot-tools__active" data-tool="select" title="Select (V)" aria-label="Select tool" aria-pressed="true"><penpot-icon name="cursor" size="16"></penpot-icon></button>
+    <button class="penpot-tools__tool-btn" data-tool="hand" title="Hand (H)" aria-label="Hand tool" aria-pressed="false"><penpot-icon name="hand" size="16"></penpot-icon></button>
+    <div class="penpot-tools__tool-sep" role="separator"></div>
+    <button class="penpot-tools__tool-btn" data-tool="frame" title="Frame (F)" aria-label="Frame tool" aria-pressed="false"><penpot-icon name="frame" size="16"></penpot-icon></button>
+    <button class="penpot-tools__tool-btn" data-tool="rect" title="Rectangle (R)" aria-label="Rectangle tool" aria-pressed="false"><penpot-icon name="square" size="16"></penpot-icon></button>
+    <button class="penpot-tools__tool-btn" data-tool="circle" title="Ellipse (E)" aria-label="Ellipse tool" aria-pressed="false"><penpot-icon name="circle" size="16"></penpot-icon></button>
+    <button class="penpot-tools__tool-btn" data-tool="text" title="Text (T)" aria-label="Text tool" aria-pressed="false"><penpot-icon name="text" size="16"></penpot-icon></button>
+    <button class="penpot-tools__tool-btn" data-tool="path" title="Polyline (N)" aria-label="Polyline tool" aria-pressed="false"><penpot-icon name="pen" size="16"></penpot-icon></button>
+    <button class="penpot-tools__tool-btn" data-tool="pen" title="Pen Bezier (P)" aria-label="Pen tool" aria-pressed="false"><penpot-icon name="bezier" size="16"></penpot-icon></button>
+    <button class="penpot-tools__tool-btn" data-tool="image" title="Image" aria-label="Image tool" aria-pressed="false"><penpot-icon name="image" size="16"></penpot-icon></button>
+  </div>
+  <div class="penpot-tools__tool-sep" role="separator"></div>
   <div class="penpot-tools__spacer"></div>
   <div class="penpot-tools__zoom-controls">
-    <button id="zoom-fit" class="penpot-tools__zoom-fit" title="Fit to screen">Fit</button>
-    <button id="zoom-selection" class="penpot-tools__zoom-fit" title="Zoom to selection (Ctrl+Shift+2)">Sel</button>
-    <button id="zoom-out" title="Zoom out"><penpot-icon name="minus" size="14"></penpot-icon></button>
-    <span id="zoom-level">100%</span>
-    <button id="zoom-in" title="Zoom in"><penpot-icon name="plus" size="14"></penpot-icon></button>
+    <button id="zoom-fit" class="penpot-tools__zoom-fit" title="Fit to screen" aria-label="Fit to screen">Fit</button>
+    <button id="zoom-selection" class="penpot-tools__zoom-fit" title="Zoom to selection (Ctrl+Shift+2)" aria-label="Zoom to selection">Sel</button>
+    <button id="zoom-out" title="Zoom out" aria-label="Zoom out"><penpot-icon name="minus" size="14"></penpot-icon></button>
+    <span id="zoom-level" aria-live="polite" aria-label="Zoom level">100%</span>
+    <button id="zoom-in" title="Zoom in" aria-label="Zoom in"><penpot-icon name="plus" size="14"></penpot-icon></button>
   </div>`;
 
 const TOOL_SHORTCUTS = {
@@ -72,7 +74,9 @@ export class PenpotToolsBar extends PenpotElement {
   selectTool(tool) {
     this.#currentTool = tool;
     this.querySelectorAll('.penpot-tools__tool-btn[data-tool]').forEach(btn => {
-      btn.classList.toggle('penpot-tools__active', btn.dataset.tool === tool);
+      const isActive = btn.dataset.tool === tool;
+      btn.classList.toggle('penpot-tools__active', isActive);
+      btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     });
     this.emit('penpot-tool-select', { tool });
   }

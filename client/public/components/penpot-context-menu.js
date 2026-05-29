@@ -22,7 +22,7 @@ template.innerHTML = `<style>
     .penpot-ctx__context-item:hover > .penpot-ctx__submenu { display: block; }
   
   </style>
-  <div class="penpot-ctx__context-menu" id="menu"></div>`;
+  <div class="penpot-ctx__context-menu" id="menu" role="menu"></div>`;
 
 export class PenpotContextMenu extends PenpotElement {
   _template = template;
@@ -57,11 +57,14 @@ export class PenpotContextMenu extends PenpotElement {
       if (item.type === 'separator') {
         const sep = document.createElement('div');
         sep.className = 'penpot-ctx__context-separator';
+        sep.setAttribute('role', 'separator');
         container.appendChild(sep);
         continue;
       }
       const el = document.createElement('div');
       el.className = 'penpot-ctx__context-item' + (item.danger ? ' penpot-ctx__danger' : '') + (item.disabled ? ' penpot-ctx__disabled' : '');
+      el.setAttribute('role', 'menuitem');
+      if (item.disabled) el.setAttribute('aria-disabled', 'true');
       const hasSubmenu = item.submenu && item.submenu.length > 0;
       el.innerHTML = `${item.icon ? `<span class="penpot-ctx__icon">${item.icon}</span>` : '<span class="penpot-ctx__icon"></span>'}<span class="penpot-ctx__label">${item.label || ''}</span>${item.shortcut ? `<span class="penpot-ctx__shortcut">${item.shortcut}</span>` : ''}${hasSubmenu ? '<span class="penpot-ctx__arrow">\u25B6</span>' : ''}`;
       if (hasSubmenu) {

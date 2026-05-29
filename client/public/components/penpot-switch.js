@@ -16,9 +16,9 @@ template.innerHTML = `<style>
     input[type="checkbox"] { position: absolute; opacity: 0; width: 0; height: 0; }
   
   </style>
-  <label class="penpot-switch__switch-track" id="track">
+  <label class="penpot-switch__switch-track" id="track" role="switch" aria-checked="false">
     <span class="penpot-switch__switch-thumb" id="thumb"></span>
-    <input type="checkbox" id="input">
+    <input type="checkbox" id="input" aria-hidden="true" tabindex="-1">
   </label>
   <span class="penpot-switch__switch-label" id="label"><slot></slot></span>`;
 
@@ -50,9 +50,13 @@ export class PenpotSwitch extends PenpotElement {
 
   #update() {
     const input = this.querySelector('#input');
+    const track = this.querySelector('#track');
     if (input) {
       input.checked = this.checked;
       input.disabled = this.disabled;
+    }
+    if (track) {
+      track.setAttribute('aria-checked', this.checked ? 'true' : 'false');
     }
   }
 
