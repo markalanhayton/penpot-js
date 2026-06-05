@@ -97,8 +97,10 @@
 /.playwright-mcp
 
 # JS port — runtime and test artifacts
-/assets/            # file storage objects (thumbnails, uploads, etc.)
+/assets             # file storage objects (thumbnails, uploads, etc.)
+/assets/**
 /client/test-results/
+/client/test-results/**
 /client/penpot.sqlite
 /client/penpot.sqlite-shm
 /client/penpot.sqlite-wal
