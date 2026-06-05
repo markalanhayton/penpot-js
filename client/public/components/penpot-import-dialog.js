@@ -7,8 +7,8 @@ import { appStore } from '../lib/store.js';
 const template = document.createElement('template');
 template.innerHTML = `<style>
   penpot-import-dialog { display: block; }
-  .penpot-import__overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-  .penpot-import__dialog { background: var(--penpot-surface, #2a2a2a); border: 1px solid var(--penpot-border, #444); border-radius: 8px; min-width: 440px; max-width: 560px; color: var(--penpot-text, #e6e6e6); box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+  .penpot-import__overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: var(--penpot-z-overlay, 1000); }
+  .penpot-import__dialog { background: var(--penpot-surface, #2a2a2a); border: 1px solid var(--penpot-border, #444); border-radius: 8px; min-width: 440px; max-width: min(560px, calc(100% - 2 * var(--penpot-spacing-l, 16px))); color: var(--penpot-text, #e6e6e6); box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
   .penpot-import__header { padding: 16px 20px; border-bottom: 1px solid var(--penpot-border, #444); display: flex; align-items: center; justify-content: space-between; }
   .penpot-import__title { font-size: 15px; font-weight: 600; }
   .penpot-import__close { background: none; border: none; color: var(--penpot-text-dim, #999); font-size: 20px; cursor: pointer; padding: 4px; line-height: 1; }
@@ -247,6 +247,7 @@ export class PenpotImportDialog extends PenpotElement {
   }
 
   render() {}
+  escAttr(s) { return (s || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 }
 
 function formatFileSize(bytes) {

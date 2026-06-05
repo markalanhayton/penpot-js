@@ -25,7 +25,7 @@ template.innerHTML = `<style>
   .penpot-plugins__action { background: none; border: 1px solid var(--penpot-border, #444); color: var(--penpot-text-dim, #999); border-radius: var(--penpot-radius-s, 4px); padding: 2px 8px; font-size: 10px; cursor: pointer; margin-left: 4px; }
   .penpot-plugins__action:hover { background: var(--penpot-surface-high, #333); color: var(--penpot-text, #e6e6e6); }
   .penpot-plugins__action.danger:hover { color: var(--penpot-danger, #f44); }
-  .penpot-plugins__perms-dialog { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); }
+  .penpot-plugins__perms-dialog { position: fixed; inset: 0; z-index: var(--penpot-z-modal, 600); display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.5); }
   .penpot-plugins__perms-box { background: var(--penpot-surface, #2a2a2a); border: 1px solid var(--penpot-border, #444); border-radius: var(--penpot-radius-m, 8px); padding: 16px; min-width: 300px; max-width: 400px; }
   .penpot-plugins__perms-title { font-size: 14px; font-weight: 600; color: var(--penpot-text, #e6e6e6); margin-bottom: 12px; text-transform: uppercase; }
   .penpot-plugins__perm-item { font-size: 11px; color: var(--penpot-text-dim, #999); padding: 3px 0; }

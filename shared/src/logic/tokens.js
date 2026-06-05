@@ -8,6 +8,9 @@ import {
 } from '../types/tokens_lib.js';
 import * as pcb from '../files/changes_builder.js';
 
+/**
+ *
+ */
 export function vecStartsWithQ(v1, v2) {
   const len = Math.min(v1.length, v2.length);
   for (let i = 0; i < len; i++) {
@@ -16,6 +19,9 @@ export function vecStartsWithQ(v1, v2) {
   return true;
 }
 
+/**
+ *
+ */
 function generateUpdateActiveSets(changes, tokensLib, updateThemeFn) {
   const activeSetNames = getActiveThemesSetNames(tokensLib);
   const hiddenTheme = getHiddenTheme(tokensLib);
@@ -27,6 +33,9 @@ function generateUpdateActiveSets(changes, tokensLib, updateThemeFn) {
   return changes;
 }
 
+/**
+ *
+ */
 export function generateSetEnabledTokenSet(changes, tokensLib, setName, enabled) {
   if (enabled) {
     return generateUpdateActiveSets(changes, tokensLib, (theme) => enableSet(theme, setName));
@@ -34,10 +43,16 @@ export function generateSetEnabledTokenSet(changes, tokensLib, setName, enabled)
   return generateUpdateActiveSets(changes, tokensLib, (theme) => disableSet(theme, setName));
 }
 
+/**
+ *
+ */
 export function generateToggleTokenSet(changes, tokensLib, setName) {
   return generateUpdateActiveSets(changes, tokensLib, (theme) => toggleSet(theme, setName));
 }
 
+/**
+ *
+ */
 function generateUpdateActiveTokenTheme(changes, tokensLib, updateFn) {
   const updatedLib = updateFn(tokensLib);
   const activePaths = getActiveThemePaths(updatedLib);
@@ -52,6 +67,9 @@ function generateUpdateActiveTokenTheme(changes, tokensLib, updateFn) {
   return pcb.setActiveTokenThemes(changes, filteredPaths);
 }
 
+/**
+ *
+ */
 export function generateSetActiveTokenTheme(changes, tokensLib, id, active) {
   if (active) {
     return generateUpdateActiveTokenTheme(changes, tokensLib, (lib) => activateTheme(lib, id));
@@ -59,10 +77,16 @@ export function generateSetActiveTokenTheme(changes, tokensLib, id, active) {
   return generateUpdateActiveTokenTheme(changes, tokensLib, (lib) => deactivateTheme(lib, id));
 }
 
+/**
+ *
+ */
 export function generateToggleTokenTheme(changes, tokensLib, id) {
   return generateUpdateActiveTokenTheme(changes, tokensLib, (lib) => toggleThemeActive(lib, id));
 }
 
+/**
+ *
+ */
 export function toggleTokenSetGroup(groupPath, tokensLib, tokensLibTheme) {
   const deactivate = setsAtPathAllActiveQ(tokensLib, groupPath) === 'all' ||
                      setsAtPathAllActiveQ(tokensLib, groupPath) === 'partial';
@@ -75,10 +99,16 @@ export function toggleTokenSetGroup(groupPath, tokensLib, tokensLibTheme) {
   return enableSets(tokensLibTheme, setNames);
 }
 
+/**
+ *
+ */
 export function generateToggleTokenSetGroup(changes, tokensLib, groupPath) {
   return generateUpdateActiveSets(changes, tokensLib, (theme) => toggleTokenSetGroup(groupPath, tokensLib, theme));
 }
 
+/**
+ *
+ */
 function calculateMoveTokenSetOrSetGroup(tokensLib, { fromIndex, toIndex, position, collapsedPaths }) {
   const tree = [...walkSetsTreeSeq(getSetTree(tokensLib), {
     skipChildrenPred: collapsedPaths ? (path) => collapsedPaths.has(path.join(' / ')) : undefined,
@@ -131,6 +161,9 @@ function calculateMoveTokenSetOrSetGroup(tokensLib, { fromIndex, toIndex, positi
   return result;
 }
 
+/**
+ *
+ */
 export function generateMoveTokenSet(changes, tokensLib, params) {
   const moveParams = calculateMoveTokenSetOrSetGroup(tokensLib, params);
   if (moveParams) {
@@ -139,6 +172,9 @@ export function generateMoveTokenSet(changes, tokensLib, params) {
   return changes;
 }
 
+/**
+ *
+ */
 export function generateMoveTokenSetGroup(changes, tokensLib, params) {
   const moveParams = calculateMoveTokenSetOrSetGroup(tokensLib, params);
   if (moveParams) {
@@ -147,6 +183,9 @@ export function generateMoveTokenSetGroup(changes, tokensLib, params) {
   return changes;
 }
 
+/**
+ *
+ */
 export function generateDeleteTokenSetGroup(changes, tokensLib, path) {
   const sets = getSetsAtPath(tokensLib, path);
   let result = changes;

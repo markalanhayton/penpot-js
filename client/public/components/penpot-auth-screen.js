@@ -9,7 +9,7 @@ const template = document.createElement('template');
 template.innerHTML = `
   <style>
     penpot-auth-screen { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: var(--penpot-bg, #1c1c1c); }
-    .penpot-app__auth-card { width: 400px; padding: var(--penpot-spacing-xxl, 32px); background: var(--penpot-surface, #2a2a2a); border-radius: var(--penpot-radius-l, 12px); border: 1px solid var(--penpot-border, #444); box-shadow: var(--penpot-shadow-l, 0 8px 24px rgba(0,0,0,0.5)); }
+    .penpot-app__auth-card { width: min(400px, calc(100% - 2 * var(--penpot-spacing-xl, 24px))); padding: var(--penpot-spacing-xxl, 32px); background: var(--penpot-surface, #2a2a2a); border-radius: var(--penpot-radius-l, 12px); border: 1px solid var(--penpot-border, #444); box-shadow: var(--penpot-shadow-l, 0 8px 24px rgba(0,0,0,0.5)); }
     .penpot-app__auth-title { font-size: 24px; font-weight: 600; margin-bottom: var(--penpot-spacing-l, 16px); color: var(--penpot-primary, #31efb8); }
     .penpot-app__auth-subtitle { font-size: var(--penpot-font-size-s, 11px); color: var(--penpot-text-dim, #999); margin-bottom: var(--penpot-spacing-l, 16px); }
     .penpot-app__auth-error { background: var(--penpot-danger-bg, rgba(244,67,54,0.08)); border: 1px solid var(--penpot-danger, #f44); border-radius: var(--penpot-radius-s, 4px); padding: var(--penpot-spacing-s, 8px) var(--penpot-spacing-m, 12px); margin-bottom: var(--penpot-spacing-m, 12px); color: var(--penpot-danger, #f44); font-size: var(--penpot-font-size-s, 11px); display: none; }

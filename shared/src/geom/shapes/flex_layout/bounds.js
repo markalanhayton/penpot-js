@@ -6,17 +6,32 @@ import * as ctl from '../../../types/shape/layout.js';
 let childMinWidthFn = null;
 let childMinHeightFn = null;
 
+/**
+ *
+ */
 export function setChildMinWidthFn(fn) { childMinWidthFn = fn; }
+/**
+ *
+ */
 export function setChildMinHeightFn(fn) { childMinHeightFn = fn; }
 
+/**
+ *
+ */
 function callChildMinWidth(child, childBounds, bounds, objects) {
   return childMinWidthFn ? childMinWidthFn(child, childBounds, bounds, objects) : 0.01;
 }
 
+/**
+ *
+ */
 function callChildMinHeight(child, childBounds, bounds, objects) {
   return childMinHeightFn ? childMinHeightFn(child, childBounds, bounds, objects) : 0.01;
 }
 
+/**
+ *
+ */
 export function childLayoutBoundPoints(parent, child, parentBounds, childBounds, correctV, bounds, objects) {
   if (correctV === undefined) correctV = gpt.point(0, 0);
 
@@ -74,6 +89,9 @@ export function childLayoutBoundPoints(parent, child, parentBounds, childBounds,
   return [result, newCorrectV];
 }
 
+/**
+ *
+ */
 export function layoutContentPoints(bounds, parent, children, objects) {
   const parentId = parent.id;
   const parentBounds = bounds.get(parentId);
@@ -109,6 +127,9 @@ export function layoutContentPoints(bounds, parent, children, objects) {
   return allPoints;
 }
 
+/**
+ *
+ */
 export function layoutContentBounds(bounds, parent, children, objects) {
   const parentId = parent.id;
   const parentBounds = bounds.get(parentId);
@@ -132,6 +153,9 @@ export function layoutContentBounds(bounds, parent, children, objects) {
   return result;
 }
 
+/**
+ *
+ */
 export function calculateFlexLayout(bounds, shape, children, objects, boundsMap, _modifTree) {
   return layoutContentBounds(boundsMap ?? bounds, shape, children, objects);
 }

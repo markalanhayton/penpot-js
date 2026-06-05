@@ -1,15 +1,24 @@
 const DEFAULT_ITEMS = 12;
 
+/**
+ *
+ */
 export function calculateDefaultItemLength(frameLength, margin, gutter) {
   return (frameLength - margin + (margin - gutter) - gutter * DEFAULT_ITEMS) / DEFAULT_ITEMS;
 }
 
+/**
+ *
+ */
 export function calculateSize(frameLength, itemLength, margin, gutter) {
   const il = itemLength ?? calculateDefaultItemLength(frameLength, margin, gutter);
   const flNoMargins = frameLength - (margin + (margin - gutter));
   return Math.floor(flNoMargins / (il + gutter));
 }
 
+/**
+ *
+ */
 function calculateGenericGrid(v, totalLength, params) {
   const { size: rawSize, gutter, margin, 'item-length': itemLength, type } = params;
   const size = typeof rawSize === 'number' ? rawSize : calculateSize(totalLength, itemLength, margin, gutter);
@@ -34,16 +43,25 @@ function calculateGenericGrid(v, totalLength, params) {
   return [size, il, nextV, g];
 }
 
+/**
+ *
+ */
 function calculateColumnGrid(frame, params) {
   const [size, w, nextX, gutter] = calculateGenericGrid(frame.x, frame.width, params);
   return [size, w, frame.height, nextX, () => frame.y];
 }
 
+/**
+ *
+ */
 function calculateRowGrid(frame, params) {
   const [size, h, nextY, gutter] = calculateGenericGrid(frame.y, frame.height, params);
   return [size, frame.width, h, () => frame.x, nextY];
 }
 
+/**
+ *
+ */
 function calculateSquareGrid(frame, params) {
   const { size } = params;
   const colSize = Math.floor(frame.width / size);
@@ -60,6 +78,9 @@ function calculateSquareGrid(frame, params) {
   return [colSize * rowSize, size, size, nextX, nextY];
 }
 
+/**
+ *
+ */
 export function gridGutter(frame, grid) {
   switch (grid.type) {
     case 'column': return calculateGenericGrid(frame.x, frame.width, grid.params)[3];
@@ -68,6 +89,9 @@ export function gridGutter(frame, grid) {
   }
 }
 
+/**
+ *
+ */
 export function gridAreas(frame, grid) {
   let gridFn;
   switch (grid.type) {
@@ -89,6 +113,9 @@ export function gridAreas(frame, grid) {
   return result;
 }
 
+/**
+ *
+ */
 export function gridAreaPoints(area) {
   const { x, y, width, height } = area;
   return [
@@ -99,6 +126,9 @@ export function gridAreaPoints(area) {
   ];
 }
 
+/**
+ *
+ */
 export function gridSnapPoints(shape, grid, coord) {
   if (!grid.display) return [];
   switch (grid.type) {

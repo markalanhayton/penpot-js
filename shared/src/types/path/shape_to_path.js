@@ -12,10 +12,16 @@ import * as segm from './segment.js';
 const BEZIER_CIRCLE_C = 0.551915024494;
 const DISOC_ATTRS = ['x', 'y', 'width', 'height', 'rx', 'ry', 'r1', 'r2', 'r3', 'r4', 'metadata'];
 
+/**
+ *
+ */
 export function withoutPositionAttrs(shape) {
   return d.withoutKeys(shape, DISOC_ATTRS);
 }
 
+/**
+ *
+ */
 function makeCornerArc(from, to, corner, radius) {
   let x, y;
   switch (corner) {
@@ -44,6 +50,9 @@ function makeCornerArc(from, to, corner, radius) {
   return helpers.makeCurveTo(to, h1, h2);
 }
 
+/**
+ *
+ */
 export function circleToPath({ x, y, width, height }) {
   const mx = x + width / 2;
   const my = y + height / 2;
@@ -67,6 +76,9 @@ export function circleToPath({ x, y, width, height }) {
   ];
 }
 
+/**
+ *
+ */
 export function drawRoundedRectPath(x, y, width, height, r1, r2, r3, r4) {
   if (r2 === undefined) { r2 = r1; r3 = r1; r4 = r1; }
   const p1 = gpt.point(x, y + r1);
@@ -90,6 +102,9 @@ export function drawRoundedRectPath(x, y, width, height, r1, r2, r3, r4) {
   return result;
 }
 
+/**
+ *
+ */
 function rectToPath(shape) {
   const { x, y, width, height } = shape;
   switch (ctsr.radiusMode(shape)) {
@@ -105,6 +120,9 @@ function rectToPath(shape) {
   }
 }
 
+/**
+ *
+ */
 function fixFirstRelative(content) {
   if (content.length > 0 && content[0].relative) {
     content[0] = { ...content[0], relative: false };
@@ -112,6 +130,9 @@ function fixFirstRelative(content) {
   return content;
 }
 
+/**
+ *
+ */
 function groupToPath(group, objects) {
   const childAsPaths = (group.shapes || [])
     .map(id => objects[id])
@@ -130,6 +151,9 @@ function groupToPath(group, objects) {
   };
 }
 
+/**
+ *
+ */
 function boolToPath(shape, objects) {
   const children = (shape.shapes || [])
     .map(id => objects[id])
@@ -147,6 +171,9 @@ function boolToPath(shape, objects) {
   }, [...DISOC_ATTRS, 'boolType']);
 }
 
+/**
+ *
+ */
 export function convertToPath(shape, objects) {
   if (!objects) objects = {};
   const type = shape.type;

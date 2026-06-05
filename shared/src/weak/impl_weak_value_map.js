@@ -4,7 +4,13 @@
 //
 // Copyright (c) KALEIDOS INC
 
+/**
+ *
+ */
 export class WeakValueMap {
+  /**
+   *
+   */
   constructor() {
     this._map = new Map();
     this._registry = new FinalizationRegistry((token) => {
@@ -12,6 +18,9 @@ export class WeakValueMap {
     });
   }
 
+  /**
+   *
+   */
   set(key, value) {
     const ref = new WeakRef(value);
     const token = { key };
@@ -20,6 +29,9 @@ export class WeakValueMap {
     return this;
   }
 
+  /**
+   *
+   */
   get(key) {
     const entry = this._map.get(key);
     if (!entry) return undefined;
@@ -31,6 +43,9 @@ export class WeakValueMap {
     return value;
   }
 
+  /**
+   *
+   */
   has(key) {
     const entry = this._map.get(key);
     if (!entry) return false;
@@ -41,6 +56,9 @@ export class WeakValueMap {
     return true;
   }
 
+  /**
+   *
+   */
   delete(key) {
     const entry = this._map.get(key);
     if (!entry) return false;

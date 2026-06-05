@@ -13,51 +13,90 @@ import * as subpath from './path/subpath.js';
 export const BOOL_GROUP_STYLE_PROPERTIES = bool.GROUP_STYLE_PROPERTIES;
 export const BOOL_STYLE_PROPERTIES = bool.STYLE_PROPERTIES;
 
+/**
+ *
+ */
 export function getDefaultBoolFills() {
   return bool.getDefaultFills();
 }
 
+/**
+ *
+ */
 export function contentQ(o) {
   return impl.pathDataQ(o);
 }
 
+/**
+ *
+ */
 export function content(data) {
   return impl.pathData(data);
 }
 
+/**
+ *
+ */
 export function fromBytes(data) {
   return impl.fromBytes(data);
 }
 
+/**
+ *
+ */
 export function fromString(data) {
   return impl.fromString(data);
 }
 
+/**
+ *
+ */
 export function fromPlain(data) {
   return impl.fromPlain(data);
 }
 
+/**
+ *
+ */
 export function checkContent(contentVal) {
   return impl.pathDataQ(contentVal);
 }
 
+/**
+ *
+ */
 export function getByteSize(contentVal) {
   return contentVal.getByteSize();
 }
 
+/**
+ *
+ */
 export function writeTo(contentVal, buffer, offset) {
   contentVal.writeTo(buffer, offset);
 }
 
+/**
+ *
+ */
 export function closeSubpaths(contentVal) {
   return impl.fromPlain(subpath.closeSubpaths(contentVal));
 }
 
+/**
+ *
+ */
 export function mergeTouchingSubpaths(contentVal) {
   return impl.fromPlain(subpath.mergeTouchingSubpaths(contentVal));
 }
 
+/**
+ *
+ */
 export function applyContentModifiers(contentVal, modifiers) {
+  /**
+   *
+   */
   function applyToIndex(contentArr, [index, params]) {
     if (index >= contentArr.length) return contentArr;
     const seg = { ...contentArr[index], params: { ...contentArr[index].params } };
@@ -82,15 +121,24 @@ export function applyContentModifiers(contentVal, modifiers) {
   return contentVal;
 }
 
+/**
+ *
+ */
 export function transformContent(contentVal, transform) {
   return segm.transformContent(contentVal, transform);
 }
 
+/**
+ *
+ */
 export function moveContent(contentVal, moveVec) {
   if (gpt.isZero(moveVec)) return contentVal;
   return segm.moveContent(contentVal, moveVec);
 }
 
+/**
+ *
+ */
 export function updateGeometry(shape, contentVal) {
   if (contentVal !== undefined) shape = { ...shape, content: contentVal };
   const flipX = shape.flipX;
@@ -115,87 +163,150 @@ export function updateGeometry(shape, contentVal) {
   return { ...shape, content: contentData, points: transformedPoints, selrect };
 }
 
+/**
+ *
+ */
 export function getPoints(contentVal) {
   return segm.getPoints(impl.pathData(contentVal));
 }
 
+/**
+ *
+ */
 export function calcSelrect(contentVal) {
   return segm.contentToSelrect(impl.pathData(contentVal));
 }
 
+/**
+ *
+ */
 export function getHandlers(contentVal) {
   return segm.getHandlers(impl.pathData(contentVal));
 }
 
+/**
+ *
+ */
 export function getHandlerPoint(contentVal, index, prefix) {
   return segm.getHandlerPoint(impl.pathData(contentVal), index, prefix);
 }
 
+/**
+ *
+ */
 export function getHandler(command, prefix) {
   return segm.getHandler(command, prefix);
 }
 
+/**
+ *
+ */
 export function handlerToNode(contentVal, index, prefix) {
   return segm.handlerToNode(impl.pathData(contentVal), index, prefix);
 }
 
+/**
+ *
+ */
 export function oppositeIndex(contentVal, index, prefix) {
   return segm.oppositeIndex(impl.pathData(contentVal), index, prefix);
 }
 
+/**
+ *
+ */
 export function pointIndices(contentVal, point) {
   return segm.pointIndices(impl.pathData(contentVal), point);
 }
 
+/**
+ *
+ */
 export function handlerIndices(contentVal, point) {
   return segm.handlerIndices(impl.pathData(contentVal), point);
 }
 
+/**
+ *
+ */
 export function nextNode(contentVal, position, prevPoint, prevHandler) {
   return segm.nextNode(impl.pathData(contentVal), position, prevPoint, prevHandler);
 }
 
+/**
+ *
+ */
 export function appendSegment(contentVal, segment) {
   return segm.appendSegment(impl.pathData(contentVal), segment);
 }
 
+/**
+ *
+ */
 export function pointsToContent(points, opts) {
   return segm.pointsToContent(points, opts);
 }
 
+/**
+ *
+ */
 export function closestPoint(contentVal, position, precision) {
   if (contentVal.length === 0) return undefined;
   return segm.closestPoint(impl.pathData(contentVal), position, precision);
 }
 
+/**
+ *
+ */
 export function makeCornerPoint(contentVal, point) {
   return segm.makeCornerPoint(impl.pathData(contentVal), point);
 }
 
+/**
+ *
+ */
 export function makeCurvePoint(contentVal, point) {
   return segm.makeCurvePoint(impl.pathData(contentVal), point);
 }
 
+/**
+ *
+ */
 export function splitSegments(contentVal, points, value) {
   return segm.splitSegments(impl.pathData(contentVal), points, value);
 }
 
+/**
+ *
+ */
 export function removeNodes(contentVal, points) {
   return segm.removeNodes(impl.pathData(contentVal), points);
 }
 
+/**
+ *
+ */
 export function mergeNodes(contentVal, points) {
   return segm.mergeNodes(impl.pathData(contentVal), points);
 }
 
+/**
+ *
+ */
 export function joinNodes(contentVal, points) {
   return segm.joinNodes(impl.pathData(contentVal), points);
 }
 
+/**
+ *
+ */
 export function separateNodes(contentVal, points) {
   return segm.separateNodes(impl.pathData(contentVal), points);
 }
 
+/**
+ *
+ */
 export function calcBoolContent(shape, objects) {
   const extractContent = (shape.shapes || [])
     .map(id => objects[id])
@@ -211,11 +322,17 @@ export function calcBoolContent(shape, objects) {
   }
 }
 
+/**
+ *
+ */
 export function updateBoolShape(shape, objects) {
   const contentVal = calcBoolContent(shape, objects);
   return updateGeometry({ ...shape, content: contentVal });
 }
 
+/**
+ *
+ */
 export function shapeWithOpenPathQ(shape) {
   if (shape.type !== 'path') return false;
   const svgQ = 'svgAttrs' in shape;
@@ -223,6 +340,9 @@ export function shapeWithOpenPathQ(shape) {
   return !subpath.getSubpaths(maybeClose(shape.content)).every(subpath.isClosedQ);
 }
 
+/**
+ *
+ */
 export function convertToPath(shape, objects) {
   if (!objects) objects = {};
   const result = stp.convertToPath(shape, objects);

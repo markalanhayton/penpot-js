@@ -364,7 +364,7 @@ export class PenpotSettings extends PenpotElement {
   #renderNotifications(content) {
     const p = this.#profile || {};
     let props = {};
-      try { props = typeof p.props === 'string' ? JSON.parse(p.props) : (p.props || {}); } catch { /* malformed props, use defaults */ props = {}; }
+      try { props = typeof p.props === 'string' ? JSON.parse(p.props) : (p.props || {}); } catch (err) { console.warn('[settings] malformed profile props, using defaults:', err.message); props = {}; }
     const notifs = props.notifications || {};
     const dc = notifs.dashboardComments || 'all';
     const ec = notifs.emailComments || 'all';

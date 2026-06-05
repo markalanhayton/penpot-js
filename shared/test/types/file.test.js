@@ -17,10 +17,16 @@ import {
 } from '../../src/types/file.js';
 import { makeContainer } from '../../src/types/container.js';
 
+/**
+ *
+ */
 function makePage(id, name, objects = {}) {
   return { id, name, objects: { [zero]: { id: zero, type: 'frame', name: 'Root', shapes: [], 'parent-id': null }, ...objects } };
 }
 
+/**
+ *
+ */
 function makeSimpleFileData(components = {}) {
   const pageId = next();
   const page = makePage(pageId, 'Page 1');
@@ -33,10 +39,16 @@ function makeSimpleFileData(components = {}) {
   };
 }
 
+/**
+ *
+ */
 function makeShape(id, name, opts = {}) {
   return { id, name, type: 'frame', shapes: [], 'parent-id': zero, 'frame-id': zero, ...opts };
 }
 
+/**
+ *
+ */
 function makeFileWithComponent() {
   const fileId = 'file1';
   const compId = 'comp1';

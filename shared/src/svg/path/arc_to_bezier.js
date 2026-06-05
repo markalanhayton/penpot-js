@@ -8,6 +8,9 @@
 
 const TAU = Math.PI * 2;
 
+/**
+ *
+ */
 function unit_vector_angle(ux, uy, vx, vy) {
   const sign = ux * vy - uy * vx < 0 ? -1 : 1;
   let dot = ux * vx + uy * vy;
@@ -16,6 +19,9 @@ function unit_vector_angle(ux, uy, vx, vy) {
   return sign * Math.acos(dot);
 }
 
+/**
+ *
+ */
 function get_arc_center(x1, y1, x2, y2, fa, fs, rx, ry, sin_phi, cos_phi) {
   const x1p = (cos_phi * (x1 - x2)) / 2 + (sin_phi * (y1 - y2)) / 2;
   const y1p = (-sin_phi * (x1 - x2)) / 2 + (cos_phi * (y1 - y2)) / 2;
@@ -35,13 +41,16 @@ function get_arc_center(x1, y1, x2, y2, fa, fs, rx, ry, sin_phi, cos_phi) {
   const v1y = (y1p - cyp) / ry;
   const v2x = (-x1p - cxp) / rx;
   const v2y = (-y1p - cyp) / ry;
-  let theta1 = unit_vector_angle(1, 0, v1x, v1y);
+  const theta1 = unit_vector_angle(1, 0, v1x, v1y);
   let delta_theta = unit_vector_angle(v1x, v1y, v2x, v2y);
   if (fs === 0 && delta_theta > 0) delta_theta -= TAU;
   if (fs === 1 && delta_theta < 0) delta_theta += TAU;
   return [cx, cy, theta1, delta_theta];
 }
 
+/**
+ *
+ */
 function approximate_unit_arc(theta1, delta_theta) {
   const alpha = (4 / 3) * Math.tan(delta_theta / 4);
   const x1 = Math.cos(theta1);
@@ -56,6 +65,9 @@ function approximate_unit_arc(theta1, delta_theta) {
   ];
 }
 
+/**
+ *
+ */
 export function arcToBeziers(x1, y1, x2, y2, fa, fs, rx, ry, phi) {
   const sin_phi = Math.sin((phi * TAU) / 360);
   const cos_phi = Math.cos((phi * TAU) / 360);

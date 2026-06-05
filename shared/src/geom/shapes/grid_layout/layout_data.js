@@ -7,22 +7,40 @@ import * as ctl from '../../../types/shape/layout.js';
 let childMinWidthFn = null;
 let childMinHeightFn = null;
 
+/**
+ *
+ */
 export function setChildMinWidthFn(fn) { childMinWidthFn = fn; }
+/**
+ *
+ */
 export function setChildMinHeightFn(fn) { childMinHeightFn = fn; }
 
+/**
+ *
+ */
 function layoutChildMinWidth(child, childBounds, bounds, objects) {
   return ctl.childWidthMargin(child) + (childMinWidthFn ? childMinWidthFn(child, childBounds, bounds, objects, true) : gpo.widthPoints(childBounds));
 }
 
+/**
+ *
+ */
 function layoutChildMinHeight(child, childBounds, bounds, objects) {
   return ctl.childHeightMargin(child) + (childMinHeightFn ? childMinHeightFn(child, childBounds, bounds, objects, true) : gpo.heightPoints(childBounds));
 }
 
+/**
+ *
+ */
 export function layoutBounds(parent, shapeBounds) {
   const [padTop, padRight, padBottom, padLeft] = ctl.paddings(parent);
   return gpo.padPoints(shapeBounds, -padTop, -padRight, -padBottom, -padLeft);
 }
 
+/**
+ *
+ */
 function calculateInitialTrackSize(totalValue, track) {
   const { type, value } = track;
   let size, maxSize;
@@ -42,6 +60,9 @@ function calculateInitialTrackSize(totalValue, track) {
   return { ...track, size, maxSize };
 }
 
+/**
+ *
+ */
 function setAutoBaseSize(trackList, children, shapeCells, bounds, objects, type) {
   const prop = type === 'column' ? 'column' : 'row';
   const propSpan = type === 'column' ? 'column-span' : 'row-span';
@@ -65,10 +86,16 @@ function setAutoBaseSize(trackList, children, shapeCells, bounds, objects, type)
   return trackList;
 }
 
+/**
+ *
+ */
 function tracksTotalSize(trackList) {
   return trackList.reduce((acc, track) => acc + track.size, 0);
 }
 
+/**
+ *
+ */
 function tracksTotalFrs(trackList) {
   return trackList.reduce((acc, track) => {
     const value = Math.max(track.value, 1);
@@ -76,13 +103,22 @@ function tracksTotalFrs(trackList) {
   }, 0);
 }
 
+/**
+ *
+ */
 function tracksTotalAutos(trackList) {
   return trackList.reduce((acc, track) => track.type === 'auto' ? acc + 1 : acc, 0);
 }
 
+/**
+ *
+ */
 function setFrValue(trackList, frValue, autoQ) {
   const flexTracks = d.enumerate(trackList).filter(([_idx, track]) => track.type === 'flex');
 
+  /**
+   *
+   */
   function assignFn([assignFr, pending, freeFrs], [trackIdx, t]) {
     const fr = t.value;
     const current = assignFr[trackIdx] ?? (frValue * fr);
@@ -95,6 +131,9 @@ function setFrValue(trackList, frValue, autoQ) {
     ];
   }
 
+  /**
+   *
+   */
   function changeFn(delta) {
     return (assignFr, [trackIdx, t]) => {
       const fr = t.value;
@@ -129,6 +168,9 @@ function setFrValue(trackList, frValue, autoQ) {
   return trackList;
 }
 
+/**
+ *
+ */
 function stretchTracks(trackList, addSize) {
   return trackList.map(track => {
     if (track.type === 'auto') {
@@ -138,6 +180,9 @@ function stretchTracks(trackList, addSize) {
   });
 }
 
+/**
+ *
+ */
 function hasFlexTrack(type, trackList, cell) {
   const [prop, propSpan] = type === 'column' ? ['column', 'column-span'] : ['row', 'row-span'];
   const fromIdx = Math.max(0, Math.min(cell[prop] - 1, trackList.length - 1));
@@ -146,6 +191,9 @@ function hasFlexTrack(type, trackList, cell) {
   return tracks.some(t => t.type === 'flex');
 }
 
+/**
+ *
+ */
 function sizeToAllocate(type, parent, childBounds, cell, bounds, objects) {
   const [rowGap, columnGap] = ctl.gaps(parent);
   const [sfn, gap, propSpan] = type === 'column'
@@ -155,6 +203,9 @@ function sizeToAllocate(type, parent, childBounds, cell, bounds, objects) {
   return sfn(childBounds[1], childBounds[0], bounds, objects) - gap * (span - 1);
 }
 
+/**
+ *
+ */
 function allocateAutoTracks(allocations, indexedTracks, toAllocate) {
   if (indexedTracks.length === 0) return [allocations, toAllocate];
 
@@ -170,6 +221,9 @@ function allocateAutoTracks(allocations, indexedTracks, toAllocate) {
   return allocateAutoTracks(newAllocations, indexedTracks.slice(1), toAllocate - allocated);
 }
 
+/**
+ *
+ */
 function allocateFlexTracks(allocations, indexedTracks, toAllocate, frValue) {
   if (indexedTracks.length === 0) return allocations;
 
@@ -188,6 +242,9 @@ function allocateFlexTracks(allocations, indexedTracks, toAllocate, frValue) {
   return allocateFlexTracks(newAllocations, indexedTracks.slice(1), toAllocate - allocated, frValue);
 }
 
+/**
+ *
+ */
 function setAutoMultiSpan(parent, trackList, childrenMap, shapeCells, bounds, objects, type) {
   const [prop, propSpan] = type === 'column' ? ['column', 'column-span'] : ['row', 'row-span'];
 
@@ -233,6 +290,9 @@ function setAutoMultiSpan(parent, trackList, childrenMap, shapeCells, bounds, ob
   return trackList;
 }
 
+/**
+ *
+ */
 function setFlexMultiSpan(parent, trackList, childrenMap, shapeCells, bounds, objects, type) {
   const [prop, propSpan] = type === 'column' ? ['column', 'column-span'] : ['row', 'row-span'];
 
@@ -273,6 +333,9 @@ function setFlexMultiSpan(parent, trackList, childrenMap, shapeCells, bounds, ob
   return trackList;
 }
 
+/**
+ *
+ */
 function minFrValue(tracks) {
   let minFr = 0.01;
   for (const track of tracks) {
@@ -283,6 +346,9 @@ function minFrValue(tracks) {
   return minFr;
 }
 
+/**
+ *
+ */
 export function calcLayoutData(parent, transformedParentBounds, children, bounds, objects, autoQ) {
   if (autoQ === undefined) autoQ = false;
 
@@ -446,6 +512,9 @@ export function calcLayoutData(parent, transformedParentBounds, children, bounds
   };
 }
 
+/**
+ *
+ */
 export function getCellData(layoutData, _transformedParentBounds, childBoundsAndShape) {
   const [_childBounds, child] = childBoundsAndShape;
   const { origin, rowTracks, columnTracks, shapeCells } = layoutData;

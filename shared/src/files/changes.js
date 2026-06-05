@@ -9,6 +9,9 @@ import { addShape, deleteShape } from '../types/shape_tree.js';
 import { ensureTokensLib, tokenSetAddToken, tokenSetDeleteToken, addSet, makeTokenSet, deleteSet, getSet, getTheme, addTheme, makeTokenTheme, deleteTheme, makeToken } from '../types/tokens_lib.js';
 import { addTypography, updateTypography, deleteTypography as deleteTypographyLib } from '../types/typographies_list.js';
 
+/**
+ *
+ */
 export function processChanges(data, items, verify = false) {
   let result = data;
   for (const change of items) {
@@ -17,6 +20,9 @@ export function processChanges(data, items, verify = false) {
   return result;
 }
 
+/**
+ *
+ */
 export function processChange(data, change) {
   switch (change.type) {
     case 'add-obj': return processAddObj(data, change);
@@ -62,6 +68,9 @@ export function processChange(data, change) {
   }
 }
 
+/**
+ *
+ */
 export function processOperation(shape, op) {
   switch (op.type) {
     case 'set': return setShapeAttr(shape, op.attr, op.val, op);
@@ -74,6 +83,9 @@ export function processOperation(shape, op) {
 
 // --- Shape/Object changes ---
 
+/**
+ *
+ */
 function processAddObj(data, change) {
   const id = change.id;
   const obj = change.obj;
@@ -99,6 +111,9 @@ function processAddObj(data, change) {
   return data;
 }
 
+/**
+ *
+ */
 function processModObj(data, change) {
   const pageId = change['page-id'];
   const componentId = change['component-id'];
@@ -112,6 +127,9 @@ function processModObj(data, change) {
   return data;
 }
 
+/**
+ *
+ */
 function processDelObj(data, change) {
   const id = change.id;
   const pageId = change['page-id'];
@@ -133,6 +151,9 @@ function processDelObj(data, change) {
   return data;
 }
 
+/**
+ *
+ */
 function processMovObjects(data, change) {
   const parentId = change['parent-id'];
   const shapeIds = change.shapes ?? [];
@@ -142,11 +163,14 @@ function processMovObjects(data, change) {
   const afterShape = change['after-shape'];
   const allowAlteringCopies = change['allow-altering-copies'];
 
+  /**
+   *
+   */
   function moveObjects(objects) {
     const parent = objects[parentId];
     if (!parent || shapeIds.length === 0) return objects;
 
-    let newObjects = { ...objects };
+    const newObjects = { ...objects };
 
     for (const shapeId of shapeIds) {
       const shape = newObjects[shapeId];
@@ -185,12 +209,18 @@ function processMovObjects(data, change) {
   return data;
 }
 
+/**
+ *
+ */
 function processReorderChildren(data, change) {
   const parentId = change['parent-id'];
   const newChildren = change.shapes;
   const pageId = change['page-id'];
   const componentId = change['component-id'];
 
+  /**
+   *
+   */
   function reorder(objects) {
     const parent = objects[parentId];
     if (!parent) return objects;
@@ -206,16 +236,25 @@ function processReorderChildren(data, change) {
   return data;
 }
 
+/**
+ *
+ */
 function processRegObjects(data, change) {
   return data;
 }
 
+/**
+ *
+ */
 function processFixObj(data, change) {
   return data;
 }
 
 // --- Page changes ---
 
+/**
+ *
+ */
 function processAddPage(data, change) {
   const { id, name, page } = change;
   if (page) {
@@ -225,10 +264,13 @@ function processAddPage(data, change) {
   return addPage(data, newPage);
 }
 
+/**
+ *
+ */
 function processModPage(data, change) {
   const { id } = change;
   return updateInWhen(data, ['pages-index', id], (page) => {
-    let result = { ...page };
+    const result = { ...page };
     if (change.name != null) result.name = change.name;
 
     if ('background' in change) {
@@ -259,10 +301,16 @@ function processModPage(data, change) {
   });
 }
 
+/**
+ *
+ */
 function processDelPage(data, change) {
   return deletePage(data, change.id);
 }
 
+/**
+ *
+ */
 function processMovPage(data, change) {
   const { id, index } = change;
   const pages = data.pages ?? [];
@@ -275,15 +323,24 @@ function processMovPage(data, change) {
 
 // --- Color changes ---
 
+/**
+ *
+ */
 function processAddColor(data, change) {
   return addColorLib(data, change.color);
 }
 
+/**
+ *
+ */
 function processModColor(data, change) {
   const colors = { ...(data.colors ?? {}), [change.color.id]: change.color };
   return { ...data, colors };
 }
 
+/**
+ *
+ */
 function processDelColor(data, change) {
   const { [change.id]: _, ...rest } = data.colors ?? {};
   return { ...data, colors: rest };
@@ -291,16 +348,25 @@ function processDelColor(data, change) {
 
 // --- Media changes ---
 
+/**
+ *
+ */
 function processAddMedia(data, change) {
   const media = { ...(data.media ?? {}), [change.object.id]: change.object };
   return { ...data, media };
 }
 
+/**
+ *
+ */
 function processModMedia(data, change) {
   const media = { ...(data.media ?? {}), [change.object.id]: { ...(data.media?.[change.object.id] ?? {}), ...change.object } };
   return { ...data, media };
 }
 
+/**
+ *
+ */
 function processDelMedia(data, change) {
   const { [change.id]: _, ...rest } = data.media ?? {};
   return { ...data, media: rest };
@@ -308,26 +374,41 @@ function processDelMedia(data, change) {
 
 // --- Component changes ---
 
+/**
+ *
+ */
 function processAddComponent(data, change) {
   return addComponent(data, { id: change.id, name: change.name, path: change.path, 'main-instance-id': change['main-instance-id'], 'main-instance-page': change['main-instance-page'], annotation: change.annotation, 'variant-id': change['variant-id'], 'variant-properties': change['variant-properties'] });
 }
 
+/**
+ *
+ */
 function processModComponent(data, change) {
   return modComponent(data, { id: change.id, name: change.name, path: change.path, 'main-instance-id': change['main-instance-id'], 'main-instance-page': change['main-instance-page'], annotation: change.annotation, objects: change.objects, 'variant-id': change['variant-id'], 'variant-properties': change['variant-properties'], 'modified-at': change['modified-at'] });
 }
 
+/**
+ *
+ */
 function processDelComponent(data, change) {
   const comps = data.components ?? {};
   const { [change.id]: _, ...rest } = comps;
   return { ...data, components: rest };
 }
 
+/**
+ *
+ */
 function processRestoreComponent(data, change) {
   const comp = data.components?.[change.id];
   if (!comp) return data;
   return { ...data, components: { ...data.components, [change.id]: { ...comp, deleted: false } } };
 }
 
+/**
+ *
+ */
 function processPurgeComponent(data, change) {
   const comps = data.components ?? {};
   const { [change.id]: _, ...rest } = comps;
@@ -336,22 +417,34 @@ function processPurgeComponent(data, change) {
 
 // --- Typography changes ---
 
+/**
+ *
+ */
 function processAddTypography(data, change) {
   return addTypography(data, change.typography);
 }
 
+/**
+ *
+ */
 function processModTypography(data, change) {
   const typo = change.typography;
   const typographies = { ...(data.typographies ?? {}), [typo.id]: { ...(data.typographies?.[typo.id] ?? {}), ...typo } };
   return { ...data, typographies };
 }
 
+/**
+ *
+ */
 function processDelTypography(data, change) {
   return deleteTypographyLib(data, change.id);
 }
 
 // --- Guide/Flow/Grid changes ---
 
+/**
+ *
+ */
 function processSetGuide(data, change) {
   const pageId = change['page-id'];
   const id = change.id;
@@ -375,6 +468,9 @@ function processSetGuide(data, change) {
   });
 }
 
+/**
+ *
+ */
 function processSetFlow(data, change) {
   const pageId = change['page-id'];
   const id = change.id;
@@ -398,6 +494,9 @@ function processSetFlow(data, change) {
   });
 }
 
+/**
+ *
+ */
 function processSetDefaultGrid(data, change) {
   const pageId = change['page-id'];
   const gridType = change['grid-type'];
@@ -421,6 +520,9 @@ function processSetDefaultGrid(data, change) {
   });
 }
 
+/**
+ *
+ */
 function processSetCommentThreadPosition(data, change) {
   const pageId = change['page-id'];
   const commentThreadId = change['comment-thread-id'];
@@ -439,6 +541,9 @@ function processSetCommentThreadPosition(data, change) {
   });
 }
 
+/**
+ *
+ */
 function processSetPluginData(data, change) {
   const objectType = change['object-type'];
   const objectId = change['object-id'];
@@ -447,6 +552,9 @@ function processSetPluginData(data, change) {
   const key = change.key;
   const value = change.value;
 
+  /**
+   *
+   */
   function updatePluginData(obj) {
     const pluginData = { ...(obj['plugin-data'] ?? {}) };
     const ns = { ...(pluginData[namespace] ?? {}) };
@@ -472,10 +580,16 @@ function processSetPluginData(data, change) {
 
 // --- Design Token changes ---
 
+/**
+ *
+ */
 function processSetTokensLib(data, change) {
   return { ...data, 'tokens-lib': change['tokens-lib'] };
 }
 
+/**
+ *
+ */
 function processSetToken(data, change) {
   const { 'set-id': setId, 'token-id': tokenId, attrs } = change;
   let lib = ensureTokensLib(data['tokens-lib']);
@@ -489,6 +603,9 @@ function processSetToken(data, change) {
   return { ...data, 'tokens-lib': lib };
 }
 
+/**
+ *
+ */
 function processSetTokenSet(data, change) {
   const { id, attrs } = change;
   let lib = ensureTokensLib(data['tokens-lib']);
@@ -502,6 +619,9 @@ function processSetTokenSet(data, change) {
   return { ...data, 'tokens-lib': lib };
 }
 
+/**
+ *
+ */
 function processSetTokenTheme(data, change) {
   const { id, attrs } = change;
   let lib = ensureTokensLib(data['tokens-lib']);
@@ -515,12 +635,18 @@ function processSetTokenTheme(data, change) {
   return { ...data, 'tokens-lib': lib };
 }
 
+/**
+ *
+ */
 function removeThemeFromLib(lib, id) {
   const themes = { ...(lib.themes ?? {}) };
   delete themes[id];
   return { ...lib, themes };
 }
 
+/**
+ *
+ */
 function processSetActiveTokenThemes(data, change) {
   const { 'theme-paths': themePaths } = change;
   let lib = ensureTokensLib(data['tokens-lib']);
@@ -528,10 +654,16 @@ function processSetActiveTokenThemes(data, change) {
   return { ...data, 'tokens-lib': lib };
 }
 
+/**
+ *
+ */
 function setThemePaths(lib, themePaths) {
   return { ...lib, 'active-theme-paths': themePaths instanceof Set ? themePaths : new Set(themePaths) };
 }
 
+/**
+ *
+ */
 function processRenameTokenSetGroup(data, change) {
   let lib = ensureTokensLib(data['tokens-lib']);
   const undoPath = replaceLastPathName(change['set-group-path'], change['set-group-fname']);
@@ -550,24 +682,39 @@ function processRenameTokenSetGroup(data, change) {
   return { ...data, 'tokens-lib': lib };
 }
 
+/**
+ *
+ */
 function replaceLastPathName(path, name) {
   return [...path.slice(0, -1), name];
 }
 
+/**
+ *
+ */
 function processMoveTokenSet(data, change) {
   return data;
 }
 
+/**
+ *
+ */
 function processMoveTokenSetGroup(data, change) {
   return data;
 }
 
+/**
+ *
+ */
 function processSetBaseFontSize(data, change) {
   return setBaseFontSize(data, change['base-font-size']);
 }
 
 // --- Operation helpers ---
 
+/**
+ *
+ */
 function processOperations(objects, change) {
   const { id, operations, pageId, componentId } = change;
   const shape = objects[id];
@@ -582,12 +729,18 @@ function processOperations(objects, change) {
   return { ...objects, [id]: newShape };
 }
 
+/**
+ *
+ */
 function setShapeAttr(shape, attr, val, op = {}) {
   const ignoreTouched = op['ignore-touched'] ?? false;
   const ignoreGeometry = op['ignore-geometry'] ?? false;
   return { ...shape, [attr]: val };
 }
 
+/**
+ *
+ */
 function processAssign(shape, op) {
   const value = op.value ?? {};
   let newShape = { ...shape };
@@ -600,6 +753,9 @@ function processAssign(shape, op) {
   return newShape;
 }
 
+/**
+ *
+ */
 function processSetTouched(shape, op) {
   const touched = op.touched;
   const inCopy = inComponentCopyQ(shape);
@@ -610,6 +766,9 @@ function processSetTouched(shape, op) {
   return { ...shape, touched };
 }
 
+/**
+ *
+ */
 function processSetRemoteSynced(shape, op) {
   const remoteSynced = op['remote-synced'];
   const inCopy = inComponentCopyQ(shape);
@@ -624,6 +783,9 @@ function processSetRemoteSynced(shape, op) {
 
 // --- Component change detection ---
 
+/**
+ *
+ */
 export function componentsChanged(fileData, change) {
   switch (change.type) {
     case 'mod-obj': return detectModObjComponent(fileData, change);
@@ -634,6 +796,9 @@ export function componentsChanged(fileData, change) {
   }
 }
 
+/**
+ *
+ */
 function detectModObjComponent(fileData, change) {
   const { id, pageId, operations } = change;
   if (!pageId) return change['component-id'] ? new Set([change['component-id']]) : null;
@@ -651,20 +816,32 @@ function detectModObjComponent(fileData, change) {
   return null;
 }
 
+/**
+ *
+ */
 function detectMovObjectsComponent(fileData, change) {
   return null;
 }
 
+/**
+ *
+ */
 function detectAddObjComponent(fileData, change) {
   return null;
 }
 
+/**
+ *
+ */
 function detectDelObjComponent(fileData, change) {
   return null;
 }
 
 // --- Frame change detection ---
 
+/**
+ *
+ */
 export function framesChanged(fileData, change) {
   switch (change.type) {
     case 'mod-obj': return detectModObjFrame(fileData, change);
@@ -675,18 +852,30 @@ export function framesChanged(fileData, change) {
   }
 }
 
+/**
+ *
+ */
 function detectModObjFrame(fileData, change) {
   return null;
 }
 
+/**
+ *
+ */
 function detectMovObjectsFrame(fileData, change) {
   return null;
 }
 
+/**
+ *
+ */
 function detectAddObjFrame(fileData, change) {
   return null;
 }
 
+/**
+ *
+ */
 function detectDelObjFrame(fileData, change) {
   return null;
 }

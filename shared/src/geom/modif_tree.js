@@ -1,5 +1,8 @@
 import * as ctm from '../modifiers.js';
 
+/**
+ *
+ */
 export function addModifiersToTree(modifTree, id, modifiers) {
   if (ctm.isEmpty(modifiers)) return modifTree;
   const oldModifiers = modifTree?.[id]?.modifiers;
@@ -11,6 +14,9 @@ export function addModifiersToTree(modifTree, id, modifiers) {
   return { ...modifTree, [id]: { modifiers: newModifiers } };
 }
 
+/**
+ *
+ */
 export function mergeModifTree(modifTree, otherTree) {
   let result = modifTree ?? {};
   for (const [id, { modifiers }] of Object.entries(otherTree ?? {})) {
@@ -19,8 +25,11 @@ export function mergeModifTree(modifTree, otherTree) {
   return result;
 }
 
+/**
+ *
+ */
 export function applyStructureModifiersToObjects(objects, modifTree) {
-  let result = { ...objects };
+  const result = { ...objects };
   for (const [id, { modifiers }] of Object.entries(modifTree)) {
     if (ctm.hasStructure(modifiers)) {
       if (result[id]) {

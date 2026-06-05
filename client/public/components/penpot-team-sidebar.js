@@ -76,7 +76,7 @@ export class PenpotTeamSidebar extends PenpotElement {
           team.memberCount = stats?.memberCount ?? stats?.members ?? team.memberCount;
           team.projectCount = stats?.projectCount ?? stats?.projects ?? team.projectCount;
           team.fileCount = stats?.fileCount ?? stats?.files ?? team.fileCount;
-        } catch (_) {}
+        } catch (err) { console.warn('[team-sidebar] get-team-stats failed for', team.id, err.hint || err.message); }
       }
 
       this.renderTeams();
@@ -115,13 +115,103 @@ export class PenpotTeamSidebar extends PenpotElement {
     scroll.innerHTML = html;
 
     scroll.querySelectorAll('.penpot-team__team-item').forEach(el => {
-      el.addEventListener('click', () => {
+      el.addEventListener('click', (e) => {
+        if (e.target.closest('.penpot-team__team-options')) return;
         this.#currentTeamId = el.dataset.teamId;
         appStore.set('currentTeamId', this.#currentTeamId);
         this.renderTeams();
         this.emit('penpot-team-selected', { teamId: this.#currentTeamId });
       });
     });
+
+    scroll.querySelectorAll('.penpot-team__team-options').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const teamId = btn.dataset.teamOptions;
+        this.showTeamOptionsMenu(btn, teamId);
+      });
+    });
+  }
+
+  showTeamOptionsMenu(anchorEl, teamId) {
+    this.querySelectorAll('.penpot-team__options-menu').forEach(m => m.remove());
+    const team = this.#teams.find(t => t.id === teamId);
+    if (!team) return;
+
+    const menu = document.createElement('div');
+    menu.className = 'penpot-team__options-menu';
+    menu.style.cssText = 'position:fixed;background:var(--penpot-surface-high,#333);border:1px solid var(--penpot-border,#444);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,0.5);padding:4px 0;z-index:10000;min-width:160px;';
+
+    const makeItem = (label, action, danger = false) => {
+      const item = document.createElement('button');
+      item.textContent = label;
+      item.style.cssText = `display:block;width:100%;padding:6px 14px;background:none;border:none;color:${danger ? 'var(--penpot-danger,#f44)' : 'var(--penpot-text,#e6e6e6)'};font-size:12px;cursor:pointer;text-align:left;font-family:inherit;`;
+      item.addEventListener('mouseenter', () => item.style.background = 'var(--penpot-surface-highest,#3c3c3c)');
+      item.addEventListener('mouseleave', () => item.style.background = 'none');
+      item.addEventListener('click', (e) => { e.stopPropagation(); menu.remove(); action(); });
+      return item;
+    };
+
+    const renameItem = makeItem('Rename team', () => this.renameTeam(team));
+    const isDefault = team.isDefault === '1' || team.is_default === '1';
+    const canDelete = !isDefault;
+    const deleteItem = makeItem('Delete team', () => this.deleteTeam(team), true);
+    if (!canDelete) deleteItem.disabled = true;
+    if (!canDelete) deleteItem.style.opacity = '0.4';
+    if (!canDelete) deleteItem.style.cursor = 'not-allowed';
+
+    menu.appendChild(renameItem);
+    menu.appendChild(deleteItem);
+
+    const rect = anchorEl.getBoundingClientRect();
+    menu.style.top = `${rect.bottom + 4}px`;
+    menu.style.left = `${Math.max(8, rect.right - 160)}px`;
+    document.body.appendChild(menu);
+
+    const closeOnClick = (e) => {
+      if (menu.contains(e.target)) return;
+      menu.remove();
+      document.removeEventListener('click', closeOnClick, true);
+    };
+    setTimeout(() => document.addEventListener('click', closeOnClick, true), 0);
+  }
+
+  async renameTeam(team) {
+    const newName = prompt(`Rename team "${team.name}":`, team.name);
+    if (!newName || newName.trim() === '' || newName === team.name) return;
+    try {
+      const updated = await cmd('update-team', { id: team.id, name: newName.trim() });
+      const idx = this.#teams.findIndex(t => t.id === team.id);
+      if (idx >= 0) this.#teams[idx] = { ...this.#teams[idx], name: updated.name || newName.trim() };
+      appStore.set('teams', this.#teams);
+      this.renderTeams();
+    } catch (err) {
+      this.emit('penpot-error', { source: 'rename-team', error: err });
+      console.warn('[team-sidebar] rename failed:', err?.message || err);
+    }
+  }
+
+  async deleteTeam(team) {
+    const isDefault = team.isDefault === '1' || team.is_default === '1';
+    if (isDefault) {
+      this.emit('penpot-error', { source: 'delete-team', error: new Error('Cannot delete the default team') });
+      return;
+    }
+    if (!confirm(`Delete team "${team.name}"? This action cannot be undone.`)) return;
+    try {
+      await cmd('delete-team', { id: team.id });
+      this.#teams = this.#teams.filter(t => t.id !== team.id);
+      appStore.set('teams', this.#teams);
+      if (this.#currentTeamId === team.id && this.#teams.length > 0) {
+        this.#currentTeamId = this.#teams[0].id;
+        appStore.set('currentTeamId', this.#currentTeamId);
+        this.emit('penpot-team-selected', { teamId: this.#currentTeamId });
+      }
+      this.renderTeams();
+    } catch (err) {
+      this.emit('penpot-error', { source: 'delete-team', error: err });
+      console.warn('[team-sidebar] delete failed:', err?.message || err);
+    }
   }
 
   async createTeam() {

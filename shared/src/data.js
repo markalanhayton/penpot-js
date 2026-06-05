@@ -1,5 +1,8 @@
 const SENTINEL = Symbol('sentinel');
 
+/**
+ *
+ */
 export function pick(obj, keys) {
   const result = {};
   for (const key of keys) {
@@ -10,6 +13,9 @@ export function pick(obj, keys) {
   return result;
 }
 
+/**
+ *
+ */
 export function selectKeys(obj, keys) {
   if (!obj) return {};
   const result = {};
@@ -21,6 +27,9 @@ export function selectKeys(obj, keys) {
   return result;
 }
 
+/**
+ *
+ */
 export function equal(a, b) {
   if (a === b) return true;
   if (a == null || b == null) return a === b;
@@ -35,6 +44,9 @@ export function equal(a, b) {
   return true;
 }
 
+/**
+ *
+ */
 export function getIn(obj, path, defaultValue) {
   let current = obj;
   for (const key of path) {
@@ -45,6 +57,9 @@ export function getIn(obj, path, defaultValue) {
   return current;
 }
 
+/**
+ *
+ */
 export function setIn(obj, path, value) {
   if (path.length === 0) return value;
 
@@ -59,10 +74,16 @@ export function setIn(obj, path, value) {
   return { ...obj, [key]: setIn(current ?? {}, rest, value) };
 }
 
+/**
+ *
+ */
 export function nilv(v, fallback) {
   return v == null ? fallback : v;
 }
 
+/**
+ *
+ */
 export function parseDouble(v, fallback) {
   if (v == null) return fallback;
   if (typeof v === 'number') return v;
@@ -70,11 +91,17 @@ export function parseDouble(v, fallback) {
   return isNaN(n) ? (fallback ?? v) : n;
 }
 
+/**
+ *
+ */
 export function formatNumber(num, precision) {
   const factor = Math.pow(10, precision);
   return Math.round(num * factor) / factor;
 }
 
+/**
+ *
+ */
 export function dissocIn(m, path) {
   const [key, ...ks] = path;
   if (ks.length > 0) {
@@ -91,6 +118,9 @@ export function dissocIn(m, path) {
   return rest;
 }
 
+/**
+ *
+ */
 export function deepMerge(a, b) {
   if (a == null) return b;
   if (b == null) return a;
@@ -104,6 +134,9 @@ export function deepMerge(a, b) {
   return b;
 }
 
+/**
+ *
+ */
 export function withoutNils(data) {
   if (data == null) return data;
   const result = {};
@@ -115,9 +148,12 @@ export function withoutNils(data) {
   return result;
 }
 
+/**
+ *
+ */
 export function patchObject(object, changes) {
   if (object == null) return withoutNils(changes);
-  let result = { ...object };
+  const result = { ...object };
   for (const [key, value] of Object.entries(changes)) {
     if (value != null && typeof value === 'object' && !Array.isArray(value) && typeof result[key] === 'object' && result[key] !== null) {
       result[key] = patchObject(result[key], value);
@@ -130,6 +166,9 @@ export function patchObject(object, changes) {
   return result;
 }
 
+/**
+ *
+ */
 export function indexBy(coll, keyFn, valueFn) {
   const result = {};
   for (const item of coll) {
@@ -138,6 +177,9 @@ export function indexBy(coll, keyFn, valueFn) {
   return result;
 }
 
+/**
+ *
+ */
 export function groupBy(coll, keyFn, valueFn) {
   const result = {};
   for (const item of coll) {
@@ -148,6 +190,9 @@ export function groupBy(coll, keyFn, valueFn) {
   return result;
 }
 
+/**
+ *
+ */
 export function seek(pred, coll, defaultValue = null) {
   for (const item of coll) {
     if (pred(item)) return item;
@@ -155,6 +200,9 @@ export function seek(pred, coll, defaultValue = null) {
   return defaultValue;
 }
 
+/**
+ *
+ */
 export function indexOf(coll, v) {
   for (let i = 0; i < coll.length; i++) {
     if (coll[i] === v) return i;
@@ -162,6 +210,9 @@ export function indexOf(coll, v) {
   return -1;
 }
 
+/**
+ *
+ */
 export function indexOfPred(coll, pred) {
   for (let i = 0; i < coll.length; i++) {
     if (pred(coll[i])) return i;
@@ -169,20 +220,32 @@ export function indexOfPred(coll, pred) {
   return -1;
 }
 
+/**
+ *
+ */
 export function removeAtIndex(arr, index) {
   return [...arr.slice(0, index), ...arr.slice(index + 1)];
 }
 
+/**
+ *
+ */
 export function replaceById(coll, item) {
   return coll.map((existing) =>
     existing.id === item.id ? item : existing
   );
 }
 
+/**
+ *
+ */
 export function withoutObj(coll, obj) {
   return coll.filter((item) => item !== obj);
 }
 
+/**
+ *
+ */
 export function enumerate(items, start = 0) {
   const result = [];
   for (let i = 0; i < items.length; i++) {
@@ -191,6 +254,9 @@ export function enumerate(items, start = 0) {
   return result;
 }
 
+/**
+ *
+ */
 export function concatVec(...colls) {
   const result = [];
   for (const coll of colls) {
@@ -203,6 +269,9 @@ export function concatVec(...colls) {
   return result;
 }
 
+/**
+ *
+ */
 export function concatSet(...colls) {
   const result = new Set();
   for (const coll of colls) {
@@ -215,6 +284,9 @@ export function concatSet(...colls) {
   return result;
 }
 
+/**
+ *
+ */
 export function zip(col1, col2) {
   const len = Math.min(col1.length, col2.length);
   const result = [];
@@ -224,6 +296,9 @@ export function zip(col1, col2) {
   return result;
 }
 
+/**
+ *
+ */
 export function zipAll(col1, col2) {
   const len = Math.max(col1.length, col2.length);
   const result = [];
@@ -233,6 +308,9 @@ export function zipAll(col1, col2) {
   return result;
 }
 
+/**
+ *
+ */
 export function mapMap(mfn, coll) {
   if (coll == null) return coll;
   const result = {};
@@ -242,6 +320,9 @@ export function mapMap(mfn, coll) {
   return result;
 }
 
+/**
+ *
+ */
 export function filterMap(pred, coll) {
   const result = {};
   for (const [k, v] of Object.entries(coll)) {
@@ -250,6 +331,9 @@ export function filterMap(pred, coll) {
   return result;
 }
 
+/**
+ *
+ */
 export function removeMap(pred, coll) {
   const result = {};
   for (const [k, v] of Object.entries(coll)) {
@@ -258,6 +342,9 @@ export function removeMap(pred, coll) {
   return result;
 }
 
+/**
+ *
+ */
 export function updateVals(m, f) {
   const result = {};
   for (const [k, v] of Object.entries(m)) {
@@ -266,28 +353,43 @@ export function updateVals(m, f) {
   return result;
 }
 
+/**
+ *
+ */
 export function updateWhen(m, key, f, ...args) {
   const found = m[key];
   if (found === undefined) return m;
   return { ...m, [key]: f(found, ...args) };
 }
 
+/**
+ *
+ */
 export function assocWhen(m, key, value) {
   const found = m[key];
   if (found === undefined) return m;
   return { ...m, [key]: value };
 }
 
+/**
+ *
+ */
 export function updateInWhen(m, keySeq, f, ...args) {
   const found = getIn(m, keySeq);
   if (found === undefined) return m;
   return setIn(m, keySeq, f(found, ...args));
 }
 
+/**
+ *
+ */
 export function inRange(size, i) {
   return i >= 0 && i < size;
 }
 
+/**
+ *
+ */
 export function notEmpty(coll) {
   if (Array.isArray(coll)) return coll.length > 0;
   if (coll instanceof Set || coll instanceof Map) return coll.size > 0;
@@ -295,10 +397,16 @@ export function notEmpty(coll) {
   return false;
 }
 
+/**
+ *
+ */
 export function vecWithoutNils(coll) {
   return coll.filter((x) => x != null);
 }
 
+/**
+ *
+ */
 export function withNext(coll) {
   const result = [];
   for (let i = 0; i < coll.length; i++) {
@@ -307,6 +415,9 @@ export function withNext(coll) {
   return result;
 }
 
+/**
+ *
+ */
 export function withPrev(coll) {
   const result = [];
   for (let i = 0; i < coll.length; i++) {
@@ -315,6 +426,9 @@ export function withPrev(coll) {
   return result;
 }
 
+/**
+ *
+ */
 export function withPrevNext(coll) {
   const result = [];
   for (let i = 0; i < coll.length; i++) {
@@ -323,6 +437,9 @@ export function withPrevNext(coll) {
   return result;
 }
 
+/**
+ *
+ */
 export function distinctBy(f) {
   const seen = new Set();
   return (item) => {
@@ -333,23 +450,35 @@ export function distinctBy(f) {
   };
 }
 
+/**
+ *
+ */
 export function truncate(s, maxLength) {
   if (typeof s !== 'string') return s;
   return s.slice(0, Math.min(maxLength, s.length));
 }
 
+/**
+ *
+ */
 export function obfuscateString(s, enabled = true) {
   if (!enabled || typeof s !== 'string') return s;
   if (s.length <= 2) return '*'.repeat(s.length);
   return s[0] + '*'.repeat(s.length - 2) + s[s.length - 1];
 }
 
+/**
+ *
+ */
 export function assert(hint, fn) {
   if (!fn()) {
     throw new Error(hint || 'assertion failed');
   }
 }
 
+/**
+ *
+ */
 export function withoutQualified(data) {
   if (data == null) return data;
   const result = {};
@@ -360,6 +489,9 @@ export function withoutQualified(data) {
   return result;
 }
 
+/**
+ *
+ */
 export function withoutKeys(obj, keys) {
   const keySet = new Set(keys);
   const result = { ...obj };
@@ -367,18 +499,30 @@ export function withoutKeys(obj, keys) {
   return result;
 }
 
+/**
+ *
+ */
 export function getf(objects) {
   return (id) => objects[id];
 }
 
+/**
+ *
+ */
 export function insertAtIndex(arr, index, items) {
   return [...arr.slice(0, index), ...items, ...arr.slice(index)];
 }
 
+/**
+ *
+ */
 export function unstableSort(comp, items) {
   return [...items].sort(comp);
 }
 
+/**
+ *
+ */
 export function uniqueName(basename, used, prefixFirst = false) {
   if (typeof basename !== 'string') return basename;
   if (basename.length > 1000) return basename;

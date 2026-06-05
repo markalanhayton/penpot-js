@@ -6,34 +6,58 @@
 
 import * as uuid from "./uuid.js";
 
+/**
+ *
+ */
 export function readByte(target, offset) {
   return target.getInt8(offset, true);
 }
 
+/**
+ *
+ */
 export function readUnsignedByte(target, offset) {
   return target.getUint8(offset, true);
 }
 
+/**
+ *
+ */
 export function readBool(target, offset) {
   return readByte(target, offset) === 1;
 }
 
+/**
+ *
+ */
 export function readShort(target, offset) {
   return target.getInt16(offset, true);
 }
 
+/**
+ *
+ */
 export function readInt(target, offset) {
   return target.getInt32(offset, true);
 }
 
+/**
+ *
+ */
 export function readLong(target, offset) {
   return target.getBigInt64(offset, true);
 }
 
+/**
+ *
+ */
 export function readFloat(target, offset) {
   return target.getFloat32(offset, true);
 }
 
+/**
+ *
+ */
 export function readUuid(target, offset) {
   const a = target.getUint32(offset, true);
   const b = target.getUint32(offset + 4, true);
@@ -42,46 +66,79 @@ export function readUuid(target, offset) {
   return uuid.fromUnsignedParts(a, b, c, d);
 }
 
+/**
+ *
+ */
 export function readBytes(target, offset, size) {
   return new Uint8Array(target.buffer, target.byteOffset + offset, size);
 }
 
+/**
+ *
+ */
 export function writeByte(target, offset, value) {
   target.setInt8(offset, value, true);
 }
 
+/**
+ *
+ */
 export function writeU8(target, offset, value) {
   target.setUint8(offset, value, true);
 }
 
+/**
+ *
+ */
 export function writeBool(target, offset, value) {
   target.setInt8(offset, value ? 0x01 : 0x00, true);
 }
 
+/**
+ *
+ */
 export function writeShort(target, offset, value) {
   target.setInt16(offset, value, true);
 }
 
+/**
+ *
+ */
 export function writeInt(target, offset, value) {
   target.setInt32(offset, value, true);
 }
 
+/**
+ *
+ */
 export function writeU32(target, offset, value) {
   target.setUint32(offset, value, true);
 }
 
+/**
+ *
+ */
 export function writeI32(target, offset, value) {
   return writeInt(target, offset, value);
 }
 
+/**
+ *
+ */
 export function writeFloat(target, offset, value) {
   target.setFloat32(offset, value, true);
 }
 
+/**
+ *
+ */
 export function writeF32(target, offset, value) {
   return writeFloat(target, offset, value);
 }
 
+/**
+ *
+ */
 export function writeUuid(target, offset, value) {
   const barray = uuid.getUnsignedParts(value);
   target.setUint32(offset, barray[0], true);
@@ -90,6 +147,9 @@ export function writeUuid(target, offset, value) {
   target.setUint32(offset + 12, barray[3], true);
 }
 
+/**
+ *
+ */
 export function wrap(data) {
   if (data instanceof DataView) {
     return data;
@@ -97,10 +157,16 @@ export function wrap(data) {
   return new DataView(data.buffer, data.byteOffset, data.byteLength);
 }
 
+/**
+ *
+ */
 export function allocate(size) {
   return new DataView(new ArrayBuffer(size));
 }
 
+/**
+ *
+ */
 export function clone(buffer) {
   const srcOff = buffer.byteOffset;
   const srcLen = buffer.byteLength;
@@ -111,6 +177,9 @@ export function clone(buffer) {
   return new DataView(dstBuffer);
 }
 
+/**
+ *
+ */
 export function equals(bufferA, bufferB) {
   const lenA = bufferA.byteLength;
   const lenB = bufferB.byteLength;
@@ -127,15 +196,24 @@ export function equals(bufferA, bufferB) {
   return true;
 }
 
+/**
+ *
+ */
 export function isBuffer(o) {
   return o instanceof DataView;
 }
 
+/**
+ *
+ */
 export function slice(buffer, offset, size) {
   const newOffset = buffer.byteOffset + offset;
   return new DataView(buffer.buffer, newOffset, size);
 }
 
+/**
+ *
+ */
 export function size(o) {
   return o.byteLength;
 }

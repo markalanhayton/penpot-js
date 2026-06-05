@@ -69,13 +69,14 @@ export default function registerViewerCommands(register, pool) {
       if (fileData && fileData.data) {
         try {
           data = await decode(fileData.data);
-        } catch {
-          try { data = JSON.parse(typeof fileData.data === 'string' ? fileData.data : fileData.data.toString()); } catch { data = null; }
+        } catch (err) {
+          console.warn('[viewer] file data decode failed, trying JSON parse:', err.message);
+          try { data = JSON.parse(typeof fileData.data === 'string' ? fileData.data : fileData.data.toString()); } catch (err2) { console.warn('[viewer] JSON parse also failed:', err2.message); data = null; }
         }
       } else if (file.data) {
         try {
           data = typeof file.data === 'string' ? JSON.parse(file.data) : file.data;
-        } catch { data = null; }
+        } catch (err) { console.warn('[viewer] inline data JSON parse failed:', err.message); data = null; }
       }
 
       if (!data) {

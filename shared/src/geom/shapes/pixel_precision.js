@@ -7,10 +7,16 @@ import * as gtr from './transforms.js';
 import * as mth from '../../math.js';
 import * as ctm from '../../modifiers.js';
 
+/**
+ *
+ */
 function pathShapeQ(shape) {
   return shape?.type === 'path';
 }
 
+/**
+ *
+ */
 export function sizePixelPrecision(modifiers, shape, points, precision) {
   const origin = gpo.origin(points);
   const currWidth = gpo.widthPoints(points);
@@ -36,6 +42,9 @@ export function sizePixelPrecision(modifiers, shape, points, precision) {
   return ctm.resize(modifiers, scalev, origin, transform, transformInverse, { precise: true });
 }
 
+/**
+ *
+ */
 export function positionPixelPrecision(modifiers, _shape, points, precision, ignoreAxis) {
   const bounds = grc.boundsToRect(points);
   const corner = gpt.point(bounds);
@@ -51,6 +60,9 @@ export function positionPixelPrecision(modifiers, _shape, points, precision, ign
   return ctm.move(modifiers, deltav);
 }
 
+/**
+ *
+ */
 export function setPixelPrecision(modifiers, shape, precision, ignoreAxis) {
   let points = gco.transformPoints(gco.shapeToPoints(shape), ctm.modifiersToTransform(modifiers));
   const hasResizeQ = !ctm.onlyMove(modifiers);
@@ -63,7 +75,13 @@ export function setPixelPrecision(modifiers, shape, precision, ignoreAxis) {
   return positionPixelPrecision(modifiers, shape, points, precision, ignoreAxis);
 }
 
+/**
+ *
+ */
 export function adjustPixelPrecision(modifTree, objects, precision, ignoreAxis) {
+  /**
+   *
+   */
   function updateModifiers(tree, shape) {
     const entry = tree[shape?.id];
     const mods = entry?.modifiers;

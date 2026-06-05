@@ -1,11 +1,20 @@
+/**
+ *
+ */
 export class Observable {
   #observers = new Set();
 
+  /**
+   *
+   */
   subscribe(callback) {
     this.#observers.add(callback);
     return () => this.#observers.delete(callback);
   }
 
+  /**
+   *
+   */
   notify(data) {
     for (const observer of this.#observers) {
       try {
@@ -16,15 +25,24 @@ export class Observable {
     }
   }
 
+  /**
+   *
+   */
   get size() {
     return this.#observers.size;
   }
 
+  /**
+   *
+   */
   clear() {
     this.#observers.clear();
   }
 }
 
+/**
+ *
+ */
 export function filter(observable, predicate) {
   const filtered = new Observable();
   observable.subscribe((data) => {
@@ -33,6 +51,9 @@ export function filter(observable, predicate) {
   return filtered;
 }
 
+/**
+ *
+ */
 export function map(observable, fn) {
   const mapped = new Observable();
   observable.subscribe((data) => {
@@ -41,6 +62,9 @@ export function map(observable, fn) {
   return mapped;
 }
 
+/**
+ *
+ */
 export function debounce(observable, ms) {
   const debounced = new Observable();
   let timer;
@@ -51,6 +75,9 @@ export function debounce(observable, ms) {
   return debounced;
 }
 
+/**
+ *
+ */
 export function sample(observable, sampler) {
   const sampled = new Observable();
   let latestData;
@@ -68,23 +95,38 @@ export function sample(observable, sampler) {
   return sampled;
 }
 
+/**
+ *
+ */
 export class BehaviorSubject extends Observable {
   #value;
 
+  /**
+   *
+   */
   constructor(initialValue) {
     super();
     this.#value = initialValue;
   }
 
+  /**
+   *
+   */
   getValue() {
     return this.#value;
   }
 
+  /**
+   *
+   */
   next(newValue) {
     this.#value = newValue;
     this.notify(newValue);
   }
 
+  /**
+   *
+   */
   subscribe(callback) {
     callback(this.#value);
     return super.subscribe(callback);

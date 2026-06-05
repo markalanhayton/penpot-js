@@ -3,34 +3,58 @@ import * as gpt from '../point.js';
 import * as mth from '../../math.js';
 import * as gsi from './intersect.js';
 
+/**
+ *
+ */
 export function origin(points) {
   return points[0];
 }
 
+/**
+ *
+ */
 export function hv([p0, p1]) {
   return gpt.toVec(p0, p1);
 }
 
+/**
+ *
+ */
 export function vv([p0, , , p3]) {
   return gpt.toVec(p0, p3);
 }
 
+/**
+ *
+ */
 export function startHv([p0, p1], val) {
   return gpt.scale(gpt.unit(gpt.toVec(p0, p1)), val);
 }
 
+/**
+ *
+ */
 export function endHv([p0, p1], val) {
   return gpt.scale(gpt.unit(gpt.toVec(p1, p0)), val);
 }
 
+/**
+ *
+ */
 export function startVv([p0, , , p3], val) {
   return gpt.scale(gpt.unit(gpt.toVec(p0, p3)), val);
 }
 
+/**
+ *
+ */
 export function endVv([p0, , , p3], val) {
   return gpt.scale(gpt.unit(gpt.toVec(p3, p0)), val);
 }
 
+/**
+ *
+ */
 export function widthPoints([p0, p1]) {
   if (p0 != null && p1 != null) {
     return Math.max(0.01, gpt.length(gpt.toVec(p0, p1)));
@@ -38,6 +62,9 @@ export function widthPoints([p0, p1]) {
   return undefined;
 }
 
+/**
+ *
+ */
 export function heightPoints([p0, , , p3]) {
   if (p0 != null && p3 != null) {
     return Math.max(0.01, gpt.length(gpt.toVec(p0, p3)));
@@ -45,6 +72,9 @@ export function heightPoints([p0, , , p3]) {
   return undefined;
 }
 
+/**
+ *
+ */
 export function padPoints(pts, padTop, padRight, padBottom, padLeft) {
   if (pts == null) return undefined;
   const [p0, p1, p2, p3] = pts;
@@ -61,6 +91,9 @@ export function padPoints(pts, padTop, padRight, padBottom, padLeft) {
   ];
 }
 
+/**
+ *
+ */
 export function projectT(point, [start, end], otherAxisVec) {
   const lineVec = gpt.toVec(start, end);
   const prPoint = gsi.lineLineIntersect(
@@ -75,6 +108,9 @@ export function projectT(point, [start, end], otherAxisVec) {
   return 0;
 }
 
+/**
+ *
+ */
 export function projectPoint([p0, p1, , p3], axis, point) {
   if (axis === 'h') {
     const otherVec = gpt.toVec(p0, p3);
@@ -84,6 +120,9 @@ export function projectPoint([p0, p1, , p3], axis, point) {
   return gsi.lineLineIntersect(point, gpt.add(point, otherVec), p0, p3);
 }
 
+/**
+ *
+ */
 export function axisAlignedQ([p1, p2, , p4]) {
   if (arguments[0].length !== 4) return false;
   const hVec = gpt.toVec(p1, p2);
@@ -92,6 +131,9 @@ export function axisAlignedQ([p1, p2, , p4]) {
          hVec.x > 0 && vVec.y > 0;
 }
 
+/**
+ *
+ */
 export function parentCoordsBounds(childBounds, parentBounds) {
   if (!childBounds || childBounds.length === 0) return parentBounds;
 
@@ -109,6 +151,9 @@ export function parentCoordsBounds(childBounds, parentBounds) {
   const ph = (t) => gpt.add(p1, gpt.scale(hv, t));
   const pv = (t) => gpt.add(p1, gpt.scale(vv, t));
 
+  /**
+   *
+   */
   function findBoundaryTs([thMin, thMax, tvMin, tvMax], currentPoint) {
     const cth = projectT(currentPoint, rh, vv);
     const ctv = projectT(currentPoint, rv, hv);
@@ -145,14 +190,23 @@ export function parentCoordsBounds(childBounds, parentBounds) {
   return [i1, i2, i3, i4];
 }
 
+/**
+ *
+ */
 export function mergeParentCoordsBounds(bounds, parentBounds) {
   return parentCoordsBounds(bounds.flat(), parentBounds);
 }
 
+/**
+ *
+ */
 export function movePoints(bounds, vector) {
   return bounds.map((p) => gpt.add(p, vector));
 }
 
+/**
+ *
+ */
 export function centerBounds(bounds) {
   const w = widthPoints(bounds);
   const h = heightPoints(bounds);

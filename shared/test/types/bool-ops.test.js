@@ -6,22 +6,37 @@ import * as grc from '../../src/geom/rect.js';
 import * as helpers from '../../src/types/path/helpers.js';
 import * as segment from '../../src/types/path/segment.js';
 
+/**
+ *
+ */
 function makeMoveTo(x, y) {
   return { command: 'move-to', params: { x, y } };
 }
 
+/**
+ *
+ */
 function makeLineTo(x, y, prev) {
   return { command: 'line-to', params: { x, y }, prev: prev ? gpt.point(prev.x, prev.y) : undefined };
 }
 
+/**
+ *
+ */
 function makeCurveTo(c1x, c1y, c2x, c2y, x, y, prev) {
   return { command: 'curve-to', params: { c1x, c1y, c2x, c2y, x, y }, prev: prev ? gpt.point(prev.x, prev.y) : undefined };
 }
 
+/**
+ *
+ */
 function makeClosePath() {
   return { command: 'close-path', params: {} };
 }
 
+/**
+ *
+ */
 function makeContentRect(x, y, w, h) {
   return [
     makeMoveTo(x, y),
@@ -31,6 +46,9 @@ function makeContentRect(x, y, w, h) {
   ];
 }
 
+/**
+ *
+ */
 function prepareContent(raw) {
   const closed = bool.closePaths(raw);
   const withPrev = bool.addPrevious(closed);
@@ -382,6 +400,9 @@ describe('types/path/bool — boolean operations', () => {
   });
 
   describe('contentIntersectSplit', () => {
+    /**
+     *
+     */
     function prepareForSplit(raw) {
       const withPrev = bool.addPrevious(bool.closePaths(raw));
       const sr = segment.contentToSelrect(withPrev);

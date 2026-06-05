@@ -1,3 +1,6 @@
+/**
+ *
+ */
 export function updateShadowScale(shadow, scale) {
   return {
     ...shadow,
@@ -8,11 +11,17 @@ export function updateShadowScale(shadow, scale) {
   };
 }
 
+/**
+ *
+ */
 export function updateShadowsScale(shape, scale) {
   if (!shape.shadow) return shape;
   return { ...shape, shadow: shape.shadow.map(s => updateShadowScale(s, scale)) };
 }
 
+/**
+ *
+ */
 export function updateBlurScale(shape, scale) {
   if (!shape.blur) return shape;
   return { ...shape, blur: { ...shape.blur, value: shape.blur.value * scale } };

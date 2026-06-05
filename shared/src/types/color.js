@@ -3,6 +3,9 @@ import * as d from '../data.js';
 
 const REQUIRED_COLOR_ATTRS = new Set(['image', 'gradient', 'color']);
 
+/**
+ *
+ */
 export function hasValidColorAttrs(color) {
   const keys = new Set(Object.keys(color));
   const intersection = [...keys].filter(k => REQUIRED_COLOR_ATTRS.has(k));
@@ -11,6 +14,9 @@ export function hasValidColorAttrs(color) {
 
 const HEX_COLOR_RX = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 
+/**
+ *
+ */
 export function hexColorString(o) {
   return typeof o === 'string' && HEX_COLOR_RX.test(o);
 }
@@ -25,10 +31,16 @@ export const COLOR_ATTRS = new Set([...REQUIRED_COLOR_ATTRS, 'opacity', 'ref-id'
 
 export const LIBRARY_COLOR_ATTRS = new Set([...REQUIRED_COLOR_ATTRS, 'id', 'name', 'path', 'opacity', 'modified-at', 'plugin-data']);
 
+/**
+ *
+ */
 export function validColor(color) {
   return hasValidColorAttrs(color);
 }
 
+/**
+ *
+ */
 export function validLibraryColor(lcolor) {
   return hasValidColorAttrs(lcolor);
 }
@@ -103,6 +115,9 @@ export const names = {
   whitesmoke: '#f5f5f5', yellow: '#ffff00', yellowgreen: '#9acd32'
 };
 
+/**
+ *
+ */
 export function libraryColorToColor(lcolor, fileId) {
   const result = {};
   for (const k of ['image', 'gradient', 'color', 'opacity']) {
@@ -113,6 +128,9 @@ export function libraryColorToColor(lcolor, fileId) {
   return result;
 }
 
+/**
+ *
+ */
 export function strokeToColor(stroke) {
   return d.withoutNils({
     color: stroke['stroke-color']?.toLowerCase(),
@@ -124,10 +142,16 @@ export function strokeToColor(stroke) {
   });
 }
 
+/**
+ *
+ */
 export function shadowToColor(shadow) {
   return shadow.color;
 }
 
+/**
+ *
+ */
 export function gridToColor(grid) {
   const color = grid.params?.color;
   return d.withoutNils({
@@ -142,10 +166,16 @@ export function gridToColor(grid) {
 const HEX_COLOR_RE = /#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})/;
 const RGB_COLOR_RE = /(?:|rgb)\((\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\)/;
 
+/**
+ *
+ */
 export function validHexColor(color) {
   return typeof color === 'string' && HEX_COLOR_RE.test(color);
 }
 
+/**
+ *
+ */
 export function parseRgb(color) {
   const match = color.match(RGB_COLOR_RE);
   if (!match) return undefined;
@@ -158,11 +188,17 @@ export function parseRgb(color) {
   return undefined;
 }
 
+/**
+ *
+ */
 export function validRgbColor(color) {
   if (typeof color !== 'string') return false;
   return parseRgb(color) != null;
 }
 
+/**
+ *
+ */
 function normalizeHex(color) {
   if (color.length === 4) {
     const expanded = `#${color[1]}${color[1]}${color[2]}${color[2]}${color[3]}${color[3]}`;
@@ -171,11 +207,17 @@ function normalizeHex(color) {
   return color.toLowerCase();
 }
 
+/**
+ *
+ */
 export function rgbToStr([r, g, b, a]) {
   if (a != null) return `rgba(${r},${g},${b},${a})`;
   return `rgb(${r},${g},${b})`;
 }
 
+/**
+ *
+ */
 export function rgbToHsv([red, green, blue]) {
   const max = Math.max(red, green, blue);
   const min = Math.min(red, green, blue);
@@ -197,6 +239,9 @@ export function rgbToHsv([red, green, blue]) {
   return [hue, sat, val];
 }
 
+/**
+ *
+ */
 export function hsvToRgb([h, s, brightness]) {
   if (s === 0) return [brightness, brightness, brightness];
   brightness = brightness ?? 0;
@@ -216,6 +261,9 @@ export function hsvToRgb([h, s, brightness]) {
   }
 }
 
+/**
+ *
+ */
 export function hexToRgb(color) {
   try {
     const rgb = parseInt(color.slice(1), 16);
@@ -228,15 +276,24 @@ export function hexToRgb(color) {
   }
 }
 
+/**
+ *
+ */
 export function hexToLum(color) {
   const [r, g, b] = hexToRgb(color);
   return mth.sqrt(0.241 * r + 0.691 * g + 0.068 * b);
 }
 
+/**
+ *
+ */
 function intToHex(v) {
   return v.toString(16);
 }
 
+/**
+ *
+ */
 export function rgbToHex([r, g, b]) {
   r = Math.floor(r);
   g = Math.floor(g);
@@ -251,6 +308,9 @@ export function rgbToHex([r, g, b]) {
   return `#${intToHex(rgb)}`;
 }
 
+/**
+ *
+ */
 export function rgbToHsl([r, g, b]) {
   const normR = r / 255.0;
   const normG = g / 255.0;
@@ -275,14 +335,23 @@ export function rgbToHsl([r, g, b]) {
   return [((h + 360) % 360), s, l];
 }
 
+/**
+ *
+ */
 export function hexToHsv(v) {
   return rgbToHsv(hexToRgb(v));
 }
 
+/**
+ *
+ */
 export function hexToRgba(data, opacity) {
   return [...hexToRgb(data), opacity];
 }
 
+/**
+ *
+ */
 export function hexToHsl(hex) {
   try {
     return rgbToHsl(hexToRgb(hex));
@@ -291,10 +360,16 @@ export function hexToHsl(hex) {
   }
 }
 
+/**
+ *
+ */
 export function hexToHsla(data, opacity) {
   return [...hexToHsl(data), opacity];
 }
 
+/**
+ *
+ */
 export function formatHsla([h, s, l, a]) {
   const roundedH = Math.floor(h);
   const roundedS = (s * 100).toFixed(2);
@@ -303,11 +378,17 @@ export function formatHsla([h, s, l, a]) {
   return `${roundedH}, ${roundedS}%, ${roundedL}%, ${roundedA}`;
 }
 
+/**
+ *
+ */
 export function formatRgba([r, g, b, a]) {
   const roundedA = a.toFixed(2);
   return `${r}, ${g}, ${b}, ${roundedA}`;
 }
 
+/**
+ *
+ */
 function hueToRgb(v1, v2, vh) {
   let h = vh;
   if (h < 0) h += 1;
@@ -318,6 +399,9 @@ function hueToRgb(v1, v2, vh) {
   return v1;
 }
 
+/**
+ *
+ */
 export function hslToRgb([h, s, l]) {
   if (s === 0) {
     const o = l * 255;
@@ -333,47 +417,80 @@ export function hslToRgb([h, s, l]) {
   ];
 }
 
+/**
+ *
+ */
 export function hslToHex(v) {
   return rgbToHex(hslToRgb(v));
 }
 
+/**
+ *
+ */
 export function hslToHsv(hsl) {
   return rgbToHsv(hslToRgb(hsl));
 }
 
+/**
+ *
+ */
 export function hsvToHex(hsv) {
   return rgbToHex(hsvToRgb(hsv));
 }
 
+/**
+ *
+ */
 export function hsvToHsl(hsv) {
   return hexToHsl(hsvToHex(hsv));
 }
 
+/**
+ *
+ */
 export function rgbToHsb(rgb) {
   const [h, s, v] = rgbToHsv(rgb);
   return [h, s, (v / 255.0) * 100.0];
 }
 
+/**
+ *
+ */
 export function hsbToRgb([h, s, b]) {
   return hsvToRgb([h, s, Math.floor((b / 100.0) * 255.0)]);
 }
 
+/**
+ *
+ */
 export function hexToHsb(v) {
   return rgbToHsb(hexToRgb(v));
 }
 
+/**
+ *
+ */
 export function hsbToHex(hsb) {
   return rgbToHex(hsbToRgb(hsb));
 }
 
+/**
+ *
+ */
 export function hsvToHsb([h, s, v]) {
   return [h, s, (v / 255.0) * 100.0];
 }
 
+/**
+ *
+ */
 export function hsbToHsv([h, s, b]) {
   return [h, s, Math.floor((b / 100.0) * 255.0)];
 }
 
+/**
+ *
+ */
 export function expandHex(v) {
   if (/^[0-9A-Fa-f]$/.test(v)) return v + v + v + v + v + v;
   if (/^[0-9A-Fa-f]{2}$/.test(v)) return v + v + v;
@@ -383,20 +500,32 @@ export function expandHex(v) {
   return v;
 }
 
+/**
+ *
+ */
 export function prependHash(color) {
   if (color.startsWith('#')) return color;
   return `#${color}`;
 }
 
+/**
+ *
+ */
 export function removeHash(color) {
   if (color.startsWith('#')) return color.slice(1);
   return color;
 }
 
+/**
+ *
+ */
 export function colorString(color) {
   return typeof color === 'string' && (validHexColor(color) || validRgbColor(color) || color in names);
 }
 
+/**
+ *
+ */
 export function parse(color) {
   if (typeof color !== 'string') return undefined;
   if (validHexColor(color) || validHexColor(`#${color}`)) {
@@ -413,6 +542,9 @@ export const colorNames = Object.keys(names);
 
 export const emptyColor = { color: null, id: null, 'file-id': null, gradient: null, opacity: null };
 
+/**
+ *
+ */
 export function nextRgb([r, g, b]) {
   if (r === 255 && g === 255 && b === 255) {
     throw new Error(`cannot get next color: r=${r}, g=${g}, b=${b}`);
@@ -422,10 +554,16 @@ export function nextRgb([r, g, b]) {
   return [r, g, b + 1];
 }
 
+/**
+ *
+ */
 export function reduceRange(value, range) {
   return Math.floor(value * range) / range;
 }
 
+/**
+ *
+ */
 export function sortColors(a, b) {
   const [ah, , av] = hexToHsv(a.color);
   const [bh, , bv] = hexToHsv(b.color);
@@ -438,6 +576,9 @@ export function sortColors(a, b) {
   return va - vb;
 }
 
+/**
+ *
+ */
 export function interpolateColor(c1, c2, offset) {
   if (offset <= c1.offset) return { ...c1, offset };
   if (offset >= c2.offset) return { ...c2, offset };
@@ -453,6 +594,9 @@ export function interpolateColor(c1, c2, offset) {
   return { color: rgbToHex([r, g, b]), opacity: a, r, g, b, alpha: a, offset };
 }
 
+/**
+ *
+ */
 function offsetSpread(from, to, num) {
   if (num <= 1) return [from];
   const result = [];
@@ -462,11 +606,17 @@ function offsetSpread(from, to, num) {
   return result;
 }
 
+/**
+ *
+ */
 export function uniformSpread(from, to, numStops) {
   const offsets = offsetSpread(from.offset, to.offset, numStops);
   return offsets.map(offset => interpolateColor(from, to, offset));
 }
 
+/**
+ *
+ */
 export function interpolateGradient(stops, offset) {
   let idx = -1;
   for (let i = 0; i < stops.length; i++) {

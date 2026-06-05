@@ -4,6 +4,9 @@ import * as sh from "../src/files/shapes_helpers.js";
 import * as pcb from "../src/files/changes_builder.js";
 import * as uuid from "../src/uuid.js";
 
+/**
+ *
+ */
 function makeTestPage(objects) {
   const pageId = uuid.next();
   return {
@@ -13,6 +16,9 @@ function makeTestPage(objects) {
   };
 }
 
+/**
+ *
+ */
 function makeTestFrame(id, parentId, frameId, shapes = []) {
   return {
     id,
@@ -32,6 +38,9 @@ function makeTestFrame(id, parentId, frameId, shapes = []) {
   };
 }
 
+/**
+ *
+ */
 function makeTestRect(id, parentId, frameId) {
   return {
     id,

@@ -1,0 +1,15 @@
+{
+  "watch": [
+    "public/",
+    "../shared/src/"
+  ],
+  "ext": "js,mjs,json,css,html,svg",
+  "ignore": [
+    "node_modules/",
+    "../shared/node_modules/",
+    "test/",
+    "nodemon.json"
+  ],
+  "delay": 200,
+  "verbose": true
+}

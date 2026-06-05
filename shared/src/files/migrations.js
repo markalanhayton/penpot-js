@@ -30,12 +30,18 @@ export const version = defaultVersion;
 
 export const availableMigrations = new Set();
 
+/**
+ *
+ */
 export function needMigrationQ(file) {
   return file.version == null
     || file.version !== defaultVersion
     || hasMissingMigrations(file);
 }
 
+/**
+ *
+ */
 function hasMissingMigrations(file) {
   const fileMigrations = file.migrations ?? new Set();
   for (const m of availableMigrations) {
@@ -44,6 +50,9 @@ function hasMissingMigrations(file) {
   return false;
 }
 
+/**
+ *
+ */
 function difference(setA, setB) {
   const result = new Set();
   for (const item of setA) {
@@ -52,12 +61,18 @@ function difference(setA, setB) {
   return result;
 }
 
+/**
+ *
+ */
 function union(setA, setB) {
   const result = new Set(setA);
   for (const item of setB) result.add(item);
   return result;
 }
 
+/**
+ *
+ */
 function updateVals(obj, fn) {
   const result = {};
   for (const [k, v] of Object.entries(obj)) {
@@ -66,6 +81,9 @@ function updateVals(obj, fn) {
   return result;
 }
 
+/**
+ *
+ */
 function updateObjectsInData(data, updateObjectFn) {
   return {
     ...data,
@@ -75,6 +93,9 @@ function updateObjectsInData(data, updateObjectFn) {
   };
 }
 
+/**
+ *
+ */
 function updateObjectsInDataAndComponents(data, updateObjectFn) {
   let result = {
     ...data,
@@ -90,6 +111,9 @@ function updateObjectsInDataAndComponents(data, updateObjectFn) {
   return result;
 }
 
+/**
+ *
+ */
 function updatePagesInData(data, updatePageFn) {
   return {
     ...data,
@@ -97,11 +121,14 @@ function updatePagesInData(data, updatePageFn) {
   };
 }
 
+/**
+ *
+ */
 function cleanEmptyGroups(objects) {
-  let deleted = new Set();
+  const deleted = new Set();
   let changed = true;
   let iterations = 0;
-  let currentObjects = { ...objects };
+  const currentObjects = { ...objects };
 
   while (changed && iterations < 1000) {
     changed = false;
@@ -138,12 +165,18 @@ function cleanEmptyGroups(objects) {
   return currentObjects;
 }
 
+/**
+ *
+ */
 function validFillQ(fill) {
   return fill != null
     && fill['fill-color'] != null
     && fill['fill-opacity'] != null;
 }
 
+/**
+ *
+ */
 function validShadowQ(shadow) {
   return shadow != null
     && typeof shadow['offset-x'] === 'number'
@@ -152,16 +185,25 @@ function validShadowQ(shadow) {
     && typeof shadow['spread'] === 'number';
 }
 
+/**
+ *
+ */
 function validInteractionQ(interaction) {
   return interaction != null
     && interaction['event-type'] != null
     && interaction['action-type'] != null;
 }
 
+/**
+ *
+ */
 function validLibraryColorQ(color) {
   return color != null && typesColor.hasValidColorAttrs(color);
 }
 
+/**
+ *
+ */
 function fixGradientType(gradient) {
   if (gradient == null) return undefined;
   if (typeof gradient.type === 'string') {
@@ -170,14 +212,23 @@ function fixGradientType(gradient) {
   return gradient;
 }
 
+/**
+ *
+ */
 function numberToString(v) {
   return typeof v === 'number' ? String(v) : v;
 }
 
+/**
+ *
+ */
 function blankOrEmptyQ(v) {
   return v == null || (typeof v === 'string' && (v === '' || v.trim() === ''));
 }
 
+/**
+ *
+ */
 function defaultTextAttrValue(attr) {
   const defaults = typesText.defaultTextAttrs;
   if (attr === 'direction') return defaults['text-direction'];
@@ -186,6 +237,9 @@ function defaultTextAttrValue(attr) {
 
 const migrationRegistry = {};
 
+/**
+ *
+ */
 export function registerMigration(id, fn) {
   migrationRegistry[id] = fn;
   availableMigrations.add(id);
@@ -193,13 +247,22 @@ export function registerMigration(id, fn) {
 
 // --- Migration definitions ---
 
+/**
+ *
+ */
 function migrateLegacy2(data) {
+  /**
+   *
+   */
   function updateObject(object) {
     return d.updateWhen(object, 'shapes', (shapes) =>
       Array.isArray(shapes) ? shapes : Array.from(shapes)
     );
   }
 
+  /**
+   *
+   */
   function updatePage(page) {
     return d.updateWhen(page, 'objects', (objects) => updateVals(objects, updateObject));
   }
@@ -207,7 +270,13 @@ function migrateLegacy2(data) {
   return d.updateWhen(data, 'pagesIndex', (pi) => updateVals(pi, updatePage));
 }
 
+/**
+ *
+ */
 function migrateLegacy3(data) {
+  /**
+   *
+   */
   function migratePath(shape) {
     if (shape.content == null && shape.segments != null) {
       const content = pathSegment.pointsToContent(shape.segments, { close: shape.close });
@@ -224,12 +293,18 @@ function migrateLegacy3(data) {
     return shape;
   }
 
+  /**
+   *
+   */
   function fixFramesSelrects(frame) {
     if (frame.id === uuid.zero) return frame;
     const selrect = gsh.shapeToRect(frame);
     return { ...frame, selrect, points: grc.rectToPoints(selrect) };
   }
 
+  /**
+   *
+   */
   function fixEmptyPoints(shape) {
     if (shape.points && shape.points.length === 0 && shape.id !== uuid.zero) {
       const selrect = shape.selrect && typeof shape.selrect === 'object'
@@ -240,6 +315,9 @@ function migrateLegacy3(data) {
     return shape;
   }
 
+  /**
+   *
+   */
   function updateObject(object) {
     let result = object;
     if (result.type === 'curve') {
@@ -257,6 +335,9 @@ function migrateLegacy3(data) {
     return result;
   }
 
+  /**
+   *
+   */
   function updatePage(page) {
     return d.updateWhen(page, 'objects', (objects) => updateVals(objects, updateObject));
   }
@@ -264,7 +345,13 @@ function migrateLegacy3(data) {
   return d.updateWhen(data, 'pagesIndex', (pi) => updateVals(pi, updatePage));
 }
 
+/**
+ *
+ */
 function migrateLegacy5(data) {
+  /**
+   *
+   */
   function updateObject(object) {
     if (object['component-id'] != null && object['component-file'] == null) {
       return { ...object, 'component-file': data.id };
@@ -272,6 +359,9 @@ function migrateLegacy5(data) {
     return object;
   }
 
+  /**
+   *
+   */
   function updatePage(page) {
     return d.updateWhen(page, 'objects', (objects) => updateVals(objects, updateObject));
   }
@@ -279,7 +369,13 @@ function migrateLegacy5(data) {
   return d.updateWhen(data, 'pagesIndex', (pi) => updateVals(pi, updatePage));
 }
 
+/**
+ *
+ */
 function migrateLegacy6(data) {
+  /**
+   *
+   */
   function fixLinePaths(shape) {
     if (shape.type !== 'path') return shape;
     const rect = grc.pointsToRect(shape.points);
@@ -297,6 +393,9 @@ function migrateLegacy6(data) {
     return shape;
   }
 
+  /**
+   *
+   */
   function updateContainer(container) {
     return d.updateWhen(container, 'objects', (objects) => updateVals(objects, fixLinePaths));
   }
@@ -306,7 +405,13 @@ function migrateLegacy6(data) {
   return result;
 }
 
+/**
+ *
+ */
 function migrateLegacy7(data) {
+  /**
+   *
+   */
   function updateObject(page, object) {
     if (object.interactions) {
       const filtered = object.interactions.filter((interaction) => {
@@ -319,6 +424,9 @@ function migrateLegacy7(data) {
     return object;
   }
 
+  /**
+   *
+   */
   function updatePage(page) {
     return d.updateWhen(page, 'objects', (objects) => {
       const result = {};
@@ -332,12 +440,21 @@ function migrateLegacy7(data) {
   return d.updateWhen(data, 'pagesIndex', (pi) => updateVals(pi, updatePage));
 }
 
+/**
+ *
+ */
 function migrateLegacy8(data) {
+  /**
+   *
+   */
   function objIsEmpty(obj) {
     return obj.type === 'group' &&
       (obj.shapes == null || obj.shapes.length === 0 || obj.selrect == null);
   }
 
+  /**
+   *
+   */
   function updateContainer(container) {
     const objects = cleanEmptyGroups(container.objects ?? {});
     return { ...container, objects: d.withoutNils(objects) };
@@ -348,7 +465,13 @@ function migrateLegacy8(data) {
   return result;
 }
 
+/**
+ *
+ */
 function migrateLegacy9(data) {
+  /**
+   *
+   */
   function findEmptyGroups(objects) {
     return Object.values(objects).filter((shape) =>
       shape.type === 'group' &&
@@ -357,6 +480,9 @@ function migrateLegacy9(data) {
     ).map((s) => s.id);
   }
 
+  /**
+   *
+   */
   function calculateChanges(pagesIndex) {
     const changes = [];
     for (const [pageId, page] of Object.entries(pagesIndex)) {
@@ -377,7 +503,13 @@ function migrateLegacy9(data) {
   return current;
 }
 
+/**
+ *
+ */
 function migrateLegacy10(data) {
+  /**
+   *
+   */
   function updatePage(page) {
     return d.updateInWhen(page, ['objects', uuid.zero], (root) => {
       const result = { ...root };
@@ -390,7 +522,13 @@ function migrateLegacy10(data) {
   return d.updateWhen(data, 'pagesIndex', (pi) => updateVals(pi, updatePage));
 }
 
+/**
+ *
+ */
 function migrateLegacy11(data) {
+  /**
+   *
+   */
   function updateObject(objects, shape) {
     if (cfh.frameShapeQ(shape) && shape.shapes) {
       const filtered = shape.shapes.filter((id) => objects[id] != null);
@@ -401,6 +539,9 @@ function migrateLegacy11(data) {
     return shape;
   }
 
+  /**
+   *
+   */
   function updatePage(page) {
     const objects = page.objects;
     return {
@@ -412,7 +553,13 @@ function migrateLegacy11(data) {
   return d.updateWhen(data, 'pagesIndex', (pi) => updateVals(pi, updatePage));
 }
 
+/**
+ *
+ */
 function migrateLegacy12(data) {
+  /**
+   *
+   */
   function updateGrid(grid) {
     if (grid.size === 'auto' || grid.size == null) {
       const result = { ...grid };
@@ -422,6 +569,9 @@ function migrateLegacy12(data) {
     return grid;
   }
 
+  /**
+   *
+   */
   function updatePage(page) {
     return d.updateInWhen(page, ['options', 'saved-grids'], (grids) =>
       grids.map(updateGrid)
@@ -431,7 +581,13 @@ function migrateLegacy12(data) {
   return d.updateWhen(data, 'pagesIndex', (pi) => updateVals(pi, updatePage));
 }
 
+/**
+ *
+ */
 function migrateLegacy13(data) {
+  /**
+   *
+   */
   function fixRadius(shape) {
     if (shape.rx == null && shape.r1 == null && cfh.imageShapeQ(shape)) {
       return { ...shape, rx: 0, ry: 0 };
@@ -442,7 +598,13 @@ function migrateLegacy13(data) {
   return updateObjectsInDataAndComponents(data, fixRadius);
 }
 
+/**
+ *
+ */
 function migrateLegacy14(data) {
+  /**
+   *
+   */
   function processShape(shape) {
     if (!cfh.imageShapeQ(shape)) return shape;
     const fillColor = (shape['fill-color'] ?? '').toUpperCase();
@@ -461,8 +623,11 @@ function migrateLegacy14(data) {
     return shape;
   }
 
+  /**
+   *
+   */
   function updateContainer(container) {
-    let objects = { ...container.objects };
+    const objects = { ...container.objects };
     const shapes = Object.values(objects).filter(cfh.imageShapeQ);
     for (const shape of shapes) {
       const processed = processShape(shape);
@@ -482,7 +647,13 @@ function migrateLegacy14(data) {
   return result;
 }
 
+/**
+ *
+ */
 function migrateLegacy16(data) {
+  /**
+   *
+   */
   function assignFills(shape) {
     const attrs = {
       'fill-color': shape['fill-color'],
@@ -498,6 +669,9 @@ function migrateLegacy16(data) {
     return shape;
   }
 
+  /**
+   *
+   */
   function assignStrokes(shape) {
     const attrs = {
       'stroke-style': shape['stroke-style'],
@@ -518,6 +692,9 @@ function migrateLegacy16(data) {
     return shape;
   }
 
+  /**
+   *
+   */
   function updateObject(object) {
     let result = object;
     if (!cfh.textShapeQ(result) && !('strokes' in result)) {
@@ -532,7 +709,13 @@ function migrateLegacy16(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrateLegacy17(data) {
+  /**
+   *
+   */
   function affectedObjectQ(object) {
     if (!cfh.imageShapeQ(object)) return false;
     if (object.fills == null || object.fills.length !== 1) return false;
@@ -545,6 +728,9 @@ function migrateLegacy17(data) {
       object['fill-opacity'] === 1 && fill['fill-opacity'] === 1;
   }
 
+  /**
+   *
+   */
   function updateObject(object) {
     if (affectedObjectQ(object)) {
       return { ...object, fills: [] };
@@ -555,7 +741,13 @@ function migrateLegacy17(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrateLegacy18(data) {
+  /**
+   *
+   */
   function updateObject(object) {
     if (cfh.textShapeQ(object)) {
       const result = { ...object };
@@ -568,7 +760,13 @@ function migrateLegacy18(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrateLegacy19(data) {
+  /**
+   *
+   */
   function updateObject(object) {
     if (cfh.textShapeQ(object) &&
         d.notEmpty(object['position-data']) &&
@@ -583,7 +781,13 @@ function migrateLegacy19(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrateLegacy25(data) {
+  /**
+   *
+   */
   function updateObject(object) {
     if (cfh.rootQ(object)) return object;
     return cts.setupShape({ ...object, selrect: grc.makeRect(object.selrect) });
@@ -592,7 +796,13 @@ function migrateLegacy25(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrateLegacy26(data) {
+  /**
+   *
+   */
   function updateObject(object) {
     let result = object;
     if (result.transform == null) {
@@ -607,7 +817,13 @@ function migrateLegacy26(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrateLegacy27(data) {
+  /**
+   *
+   */
   function updateObject(object) {
     let result = object;
     if ('main-instance?' in result) {
@@ -636,7 +852,13 @@ function migrateLegacy27(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrateLegacy28(data) {
+  /**
+   *
+   */
   function updateObject(objects, object) {
     const frameId = object['frame-id'];
     const parentIds = cfh.getParentIds(objects, object.id);
@@ -653,6 +875,9 @@ function migrateLegacy28(data) {
     return object;
   }
 
+  /**
+   *
+   */
   function updateContainer(container) {
     const objects = container.objects;
     return d.updateWhen(container, 'objects', (objs) =>
@@ -665,15 +890,27 @@ function migrateLegacy28(data) {
   return result;
 }
 
+/**
+ *
+ */
 function migrateLegacy29(data) {
+  /**
+   *
+   */
   function validRefQ(ref) {
     return typeof ref === 'string' && ref.length > 0;
   }
 
+  /**
+   *
+   */
   function fixRef(ref) {
     return validRefQ(ref) ? ref : null;
   }
 
+  /**
+   *
+   */
   function fixNode(node) {
     let result = node;
     result = d.updateWhen(result, 'typography-ref-file', fixRef);
@@ -683,6 +920,9 @@ function migrateLegacy29(data) {
     return result;
   }
 
+  /**
+   *
+   */
   function updateObject(object) {
     if (cfh.textShapeQ(object)) {
       return {
@@ -700,10 +940,16 @@ function migrateLegacy29(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrateLegacy31(data) {
+  /**
+   *
+   */
   function updateObject(object) {
     if ('use-for-thumbnail?' in object) {
-      let result = { ...object, 'use-for-thumbnail': object['use-for-thumbnail?'] };
+      const result = { ...object, 'use-for-thumbnail': object['use-for-thumbnail?'] };
       delete result['use-for-thumbnail?'];
       return result;
     }
@@ -713,7 +959,13 @@ function migrateLegacy31(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrateLegacy32(data) {
+  /**
+   *
+   */
   function updateObject(object) {
     let result = object;
     if (result['svg-attrs'] != null) {
@@ -728,10 +980,16 @@ function migrateLegacy32(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrateLegacy33(data) {
+  /**
+   *
+   */
   function updateObject(object) {
     if (object.id === uuid.zero) {
-      let result = { ...object };
+      const result = { ...object };
       result['parent-id'] = uuid.zero;
       result['frame-id'] = uuid.zero;
       delete result.selrect;
@@ -741,15 +999,24 @@ function migrateLegacy33(data) {
     return object;
   }
 
+  /**
+   *
+   */
   function updateContainer(container) {
     return d.updateWhen(container, 'objects', (objects) => updateVals(objects, updateObject));
   }
 
-  let result = d.updateWhen(data, 'pagesIndex', (pi) => updateVals(pi, updateContainer));
+  const result = d.updateWhen(data, 'pagesIndex', (pi) => updateVals(pi, updateContainer));
   return result;
 }
 
+/**
+ *
+ */
 function migrateLegacy34(data) {
+  /**
+   *
+   */
   function updateObject(object) {
     if (cfh.pathShapeQ(object) || cfh.boolShapeQ(object)) {
       const result = { ...object };
@@ -765,7 +1032,13 @@ function migrateLegacy34(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrateLegacy36(data) {
+  /**
+   *
+   */
   function updateContainer(container) {
     return d.updateWhen(container, 'objects', (objects) => {
       if (objects && typeof objects === 'object' && null in objects) {
@@ -782,11 +1055,20 @@ function migrateLegacy36(data) {
   return result;
 }
 
+/**
+ *
+ */
 function migrateLegacy37(data) {
   return d.withoutNils(data);
 }
 
+/**
+ *
+ */
 function migrateLegacy38(data) {
+  /**
+   *
+   */
   function fixGradient(gradient) {
     if (gradient == null) return undefined;
     if (typeof gradient.type === 'string') {
@@ -795,10 +1077,16 @@ function migrateLegacy38(data) {
     return gradient;
   }
 
+  /**
+   *
+   */
   function updateFill(fill) {
     return d.updateWhen(fill, 'fill-color-gradient', fixGradient);
   }
 
+  /**
+   *
+   */
   function updateObject(object) {
     let result = d.updateWhen(object, 'fills', (fills) => fills.map(updateFill));
     if (cfh.textShapeQ(result)) {
@@ -814,7 +1102,13 @@ function migrateLegacy38(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrateLegacy39(data) {
+  /**
+   *
+   */
   function updateShape(shape) {
     if (cfh.boolShapeQ(shape) && shape['bool-content'] == null && !('content' in shape)) {
       return { ...shape, 'bool-content': [] };
@@ -828,7 +1122,13 @@ function migrateLegacy39(data) {
   return updateObjectsInDataAndComponents(data, updateShape);
 }
 
+/**
+ *
+ */
 function migrateLegacy40(data) {
+  /**
+   *
+   */
   function updateShape(shape) {
     if (cfh.frameShapeQ(shape) &&
         shape.selrect != null &&
@@ -850,7 +1150,13 @@ function migrateLegacy40(data) {
   return updateObjectsInDataAndComponents(data, updateShape);
 }
 
+/**
+ *
+ */
 function migrateLegacy41(data) {
+  /**
+   *
+   */
   function updateShape(shape) {
     if (cfh.boolShapeQ(shape) || cfh.pathShapeQ(shape)) return shape;
 
@@ -871,7 +1177,13 @@ function migrateLegacy41(data) {
   return updateObjectsInDataAndComponents(data, updateShape);
 }
 
+/**
+ *
+ */
 function migrateLegacy42(data) {
+  /**
+   *
+   */
   function updateObject(object) {
     if ((cfh.frameShapeQ(object) || cfh.groupShapeQ(object) || cfh.boolShapeQ(object)) &&
         object.shapes == null) {
@@ -883,7 +1195,13 @@ function migrateLegacy42(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrateLegacy43(data) {
+  /**
+   *
+   */
   function updateTextNode(node) {
     let result = d.updateWhen(node, 'fills', (fills) => fills.filter(validFillQ));
     result = d.updateWhen(result, 'font-size', numberToString);
@@ -892,6 +1210,9 @@ function migrateLegacy43(data) {
     return result;
   }
 
+  /**
+   *
+   */
   function updateObject(object) {
     if (cfh.textShapeQ(object)) {
       return {
@@ -905,7 +1226,13 @@ function migrateLegacy43(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrateLegacy44(data) {
+  /**
+   *
+   */
   function fixShadow(shadow) {
     if (shadow == null) return null;
     const color = typeof shadow.color === 'string'
@@ -914,6 +1241,9 @@ function migrateLegacy44(data) {
     return { ...shadow, color };
   }
 
+  /**
+   *
+   */
   function updateObject(object) {
     if (object.shadow == null) return object;
     const fixed = object.shadow.map(fixShadow).filter(validShadowQ);
@@ -923,13 +1253,22 @@ function migrateLegacy44(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrateLegacy45(data) {
+  /**
+   *
+   */
   function fixShape(shape) {
     const frameId = shape['frame-id'] || uuid.zero;
     const parentId = shape['parent-id'] || frameId;
     return { ...shape, 'frame-id': frameId, 'parent-id': parentId };
   }
 
+  /**
+   *
+   */
   function updateContainer(container) {
     return d.updateWhen(container, 'objects', (objects) => updateVals(objects, fixShape));
   }
@@ -937,7 +1276,13 @@ function migrateLegacy45(data) {
   return d.updateWhen(data, 'pagesIndex', (pi) => updateVals(pi, updateContainer));
 }
 
+/**
+ *
+ */
 function migrateLegacy46(data) {
+  /**
+   *
+   */
   function updateObject(object) {
     if ('thumbnail' in object) {
       const result = { ...object };
@@ -950,9 +1295,15 @@ function migrateLegacy46(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrateLegacy47(data) {
   // Note: This migration depends on ctf/findRefShape which is currently a stub in the JS port.
   // The migration still applies structural changes; swap-slot detection will be a no-op.
+  /**
+   *
+   */
   function fixShape(page, shape) {
     const swapSlot = ctk.getSwapSlot(shape);
     if (swapSlot != null) {
@@ -961,6 +1312,9 @@ function migrateLegacy47(data) {
     return shape;
   }
 
+  /**
+   *
+   */
   function updatePage(page) {
     const objects = page.objects;
     return d.updateWhen(page, 'objects', (objs) =>
@@ -971,7 +1325,13 @@ function migrateLegacy47(data) {
   return d.updateWhen(data, 'pagesIndex', (pi) => updateVals(pi, updatePage));
 }
 
+/**
+ *
+ */
 function migrateLegacy48(data) {
+  /**
+   *
+   */
   function fixShape(shape) {
     const swapSlot = ctk.getSwapSlot(shape);
     if (swapSlot != null && !ctk.subcopyHeadQ(shape)) {
@@ -980,6 +1340,9 @@ function migrateLegacy48(data) {
     return shape;
   }
 
+  /**
+   *
+   */
   function updatePage(page) {
     return d.updateWhen(page, 'objects', (objects) => updateVals(objects, fixShape));
   }
@@ -987,7 +1350,13 @@ function migrateLegacy48(data) {
   return d.updateWhen(data, 'pagesIndex', (pi) => updateVals(pi, updatePage));
 }
 
+/**
+ *
+ */
 function migrateLegacy49(data) {
+  /**
+   *
+   */
   function updateObject(destinations, object) {
     if (object.interactions || destinations.has(object.id)) {
       if ('hide-in-viewer' in object) {
@@ -999,6 +1368,9 @@ function migrateLegacy49(data) {
     return object;
   }
 
+  /**
+   *
+   */
   function updatePage(page) {
     const destinations = new Set(
       Object.values(page.objects)
@@ -1015,7 +1387,13 @@ function migrateLegacy49(data) {
   return d.updateWhen(data, 'pagesIndex', (pi) => updateVals(pi, updatePage));
 }
 
+/**
+ *
+ */
 function migrateLegacy50(data) {
+  /**
+   *
+   */
   function updateSegment(segment) {
     if (segment.params == null || typeof segment.params !== 'object') return segment;
     const params = { ...segment.params };
@@ -1030,6 +1408,9 @@ function migrateLegacy50(data) {
     return { ...segment, params };
   }
 
+  /**
+   *
+   */
   function updateShape(shape) {
     if (!cfh.pathShapeQ(shape)) return shape;
     return d.updateWhen(shape, 'content', (content) =>
@@ -1037,6 +1418,9 @@ function migrateLegacy50(data) {
     );
   }
 
+  /**
+   *
+   */
   function updateContainer(container) {
     return d.updateWhen(container, 'objects', (objects) => updateVals(objects, updateShape));
   }
@@ -1046,7 +1430,13 @@ function migrateLegacy50(data) {
   return result;
 }
 
+/**
+ *
+ */
 function migrateLegacy51(data) {
+  /**
+   *
+   */
   function updateColors(colors) {
     const result = {};
     for (const [id, color] of Object.entries(colors)) {
@@ -1060,7 +1450,13 @@ function migrateLegacy51(data) {
   return d.updateWhen(data, 'colors', updateColors);
 }
 
+/**
+ *
+ */
 function migrateLegacy52(data) {
+  /**
+   *
+   */
   function updateShape(shape) {
     if (shape['layout-wrap-type'] === 'no-wrap') {
       return { ...shape, 'layout-wrap-type': 'nowrap' };
@@ -1073,16 +1469,28 @@ function migrateLegacy52(data) {
   );
 }
 
+/**
+ *
+ */
 function migrateLegacy53(data) {
   return migrateLegacy26(data);
 }
 
+/**
+ *
+ */
 function migrateLegacy54(data) {
+  /**
+   *
+   */
   function fixShadow(shadow) {
     if (shadow == null) return null;
     return { ...shadow, color: d.withoutNils(shadow.color) };
   }
 
+  /**
+   *
+   */
   function updateShape(shape) {
     if (shape.shadow == null) return shape;
     const fixed = shape.shadow.map(fixShadow).filter(validShadowQ);
@@ -1092,7 +1500,13 @@ function migrateLegacy54(data) {
   return updateObjectsInDataAndComponents(data, updateShape);
 }
 
+/**
+ *
+ */
 function migrateLegacy55(data) {
+  /**
+   *
+   */
   function updatePage(page) {
     let result = page;
     const options = result.options;
@@ -1119,11 +1533,20 @@ function migrateLegacy55(data) {
   return d.updateWhen(data, 'pagesIndex', (pi) => updateVals(pi, updatePage));
 }
 
+/**
+ *
+ */
 function migrateLegacy56(data) {
+  /**
+   *
+   */
   function fixFills(object) {
     return d.updateWhen(object, 'fills', (fills) => fills.filter(validFillQ));
   }
 
+  /**
+   *
+   */
   function updateObject(object) {
     let result = fixFills(object);
 
@@ -1145,7 +1568,13 @@ function migrateLegacy56(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrateLegacy57(data) {
+  /**
+   *
+   */
   function fixThreadPositions(positions) {
     if (positions == null) return positions;
     const result = {};
@@ -1165,6 +1594,9 @@ function migrateLegacy57(data) {
     return result;
   }
 
+  /**
+   *
+   */
   function updatePage(page) {
     return d.updateWhen(page, 'comment-thread-positions', fixThreadPositions);
   }
@@ -1181,12 +1613,21 @@ function migrateLegacy57(data) {
   return result;
 }
 
+/**
+ *
+ */
 function migrateLegacy59(data) {
+  /**
+   *
+   */
   function fixTouched(elem) {
     if (typeof elem === 'string') return elem;
     return elem;
   }
 
+  /**
+   *
+   */
   function updateShape(shape) {
     return d.updateWhen(shape, 'touched', (touched) => {
       if (touched instanceof Set) {
@@ -1202,7 +1643,13 @@ function migrateLegacy59(data) {
   return updateObjectsInDataAndComponents(data, updateShape);
 }
 
+/**
+ *
+ */
 function migrateLegacy62(data) {
+  /**
+   *
+   */
   function removeCycles(objects) {
     const cycleIds = new Set(
       Object.values(objects)
@@ -1241,11 +1688,20 @@ function migrateLegacy62(data) {
   );
 }
 
+/**
+ *
+ */
 function migrateLegacy65(data) {
+  /**
+   *
+   */
   function updateObject(object) {
     return d.updateWhen(object, 'plugin-data', (pd) => d.withoutNils(pd));
   }
 
+  /**
+   *
+   */
   function updatePage(page) {
     return updateObject(d.updateWhen(page, 'objects', (objects) => updateVals(objects, updateObject)));
   }
@@ -1258,7 +1714,13 @@ function migrateLegacy65(data) {
   return result;
 }
 
+/**
+ *
+ */
 function migrateLegacy66(data) {
+  /**
+   *
+   */
   function updateObject(object) {
     if (object.rx != null) {
       return {
@@ -1275,7 +1737,13 @@ function migrateLegacy66(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrateLegacy67(data) {
+  /**
+   *
+   */
   function updateObject(object) {
     return d.updateWhen(object, 'shadow', (shadow) =>
       Array.isArray(shadow) ? [...shadow].reverse() : shadow
@@ -1287,7 +1755,13 @@ function migrateLegacy67(data) {
 
 // Named format migrations (not legacy-NN)
 
+/**
+ *
+ */
 function migrate0001(data) {
+  /**
+   *
+   */
   function updateObject(object) {
     let result = object;
     if (object.type === 'group' && object['applied-tokens']?.fill != null) {
@@ -1305,7 +1779,13 @@ function migrate0001(data) {
   );
 }
 
+/**
+ *
+ */
 function migrate0002Clean(data) {
+  /**
+   *
+   */
   function updateObject(object) {
     return d.updateWhen(object, 'interactions', (interactions) =>
       interactions.filter(validInteractionQ)
@@ -1315,7 +1795,13 @@ function migrate0002Clean(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrate0002NormalizeBool(data) {
+  /**
+   *
+   */
   function updateObject(object) {
     if (!cfh.boolShapeQ(object)) {
       const result = { ...object };
@@ -1337,10 +1823,16 @@ function migrate0002NormalizeBool(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrate0003FixRoot(data) {
+  /**
+   *
+   */
   function updateObject(shape) {
     if (shape.id === uuid.zero) {
-      let result = { ...shape };
+      const result = { ...shape };
       result['parent-id'] = uuid.zero;
       result['frame-id'] = uuid.zero;
       delete result.selrect;
@@ -1363,7 +1855,13 @@ function migrate0003FixRoot(data) {
   return d.withoutNils(result);
 }
 
+/**
+ *
+ */
 function migrate0003ConvertPath(data) {
+  /**
+   *
+   */
   function updateObject(object) {
     if (cfh.boolShapeQ(object) || cfh.pathShapeQ(object)) {
       let content = object.content;
@@ -1382,12 +1880,18 @@ function migrate0003ConvertPath(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrate0005DeprecateImage(data) {
+  /**
+   *
+   */
   function updateObject(object) {
     if (!cfh.imageShapeQ(object)) return object;
     const metadata = object.metadata;
     const fills = [{ 'fill-image': { ...metadata, 'keep-aspect-ratio': false }, opacity: 1 }, ...(object.fills ?? [])];
-    let result = { ...object, fills, type: 'rect' };
+    const result = { ...object, fills, type: 'rect' };
     delete result.metadata;
     return result;
   }
@@ -1395,7 +1899,13 @@ function migrate0005DeprecateImage(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrate0006(data) {
+  /**
+   *
+   */
   function fixFills(node) {
     const sanitizeUUID = (o) => (typeof o === 'string' && o.length > 0) ? o : null;
     if ((node.fills == null || node.fills.length === 0) &&
@@ -1407,7 +1917,7 @@ function migrate0006(data) {
         'fill-color-ref-id': sanitizeUUID(node['fill-color-ref-id']),
         'fill-opacity': node['fill-opacity'],
       });
-      let result = { ...node, fills: [fill] };
+      const result = { ...node, fills: [fill] };
       for (const attr of typesFills.FILL_ATTRS) {
         delete result[attr];
       }
@@ -1416,6 +1926,9 @@ function migrate0006(data) {
     return node;
   }
 
+  /**
+   *
+   */
   function updateObject(object) {
     if (cfh.textShapeQ(object)) {
       return {
@@ -1429,7 +1942,13 @@ function migrate0006(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrate0008(data) {
+  /**
+   *
+   */
   function clearColorOpacity(color) {
     if ('opacity' in color && color.opacity == null) {
       return { ...color, opacity: 1 };
@@ -1437,6 +1956,9 @@ function migrate0008(data) {
     return color;
   }
 
+  /**
+   *
+   */
   function clearColor(color) {
     let result = d.selectKeys(color, [...typesColor.LIBRARY_COLOR_ATTRS]);
     result = clearColorOpacity(result);
@@ -1447,6 +1969,9 @@ function migrate0008(data) {
   return d.updateWhen(data, 'colors', (colors) => updateVals(colors, clearColor));
 }
 
+/**
+ *
+ */
 function migrate0009Clean(data) {
   return d.updateWhen(data, 'colors', (colors) => {
     const result = {};
@@ -1459,8 +1984,14 @@ function migrate0009Clean(data) {
   });
 }
 
+/**
+ *
+ */
 function migrate0009Touched(data) {
   // Note: depends on ctf/findRefShape which is a stub. Partial implementation.
+  /**
+   *
+   */
   function updateObject(page, object) {
     if (!cfh.textShapeQ(object) || !ctk.inComponentCopyQ(object)) return object;
     // Full implementation requires findRefShape — skip if unavailable
@@ -1478,7 +2009,13 @@ function migrate0009Touched(data) {
   );
 }
 
+/**
+ *
+ */
 function migrate0010(data) {
+  /**
+   *
+   */
   function fixShape(page, shape) {
     const swapSlot = ctk.getSwapSlot(shape);
     if (swapSlot != null) {
@@ -1493,7 +2030,13 @@ function migrate0010(data) {
   );
 }
 
+/**
+ *
+ */
 function migrate0011(data) {
+  /**
+   *
+   */
   function fixShape(shape) {
     const touchedGroups = ctk.normalTouchedGroups(shape);
     if (touchedGroups == null) return shape;
@@ -1512,7 +2055,13 @@ function migrate0011(data) {
   );
 }
 
+/**
+ *
+ */
 function migrate0012(data) {
+  /**
+   *
+   */
   function updateObject(object) {
     if (cfh.textShapeQ(object) && object['position-data']) {
       // Decode position-data to ensure proper format
@@ -1525,6 +2074,9 @@ function migrate0012(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrate0013FixPath(data) {
   return d.updateWhen(data, 'components', (components) =>
     updateVals(components, (component) =>
@@ -1533,15 +2085,27 @@ function migrate0013FixPath(data) {
   );
 }
 
+/**
+ *
+ */
 function migrate0013ClearStrokesAndFills(data) {
+  /**
+   *
+   */
   function clearColorImage(image) {
     return d.selectKeys(image, [...typesColor.IMAGE_ATTRS]);
   }
 
+  /**
+   *
+   */
   function clearColorGradient(gradient) {
     return d.selectKeys(gradient, [...typesColor.GRADIENT_ATTRS]);
   }
 
+  /**
+   *
+   */
   function clearStroke(stroke) {
     let result = d.selectKeys(stroke, [...cts.STROKE_ATTRS]);
     result = d.updateWhen(result, 'stroke-color-gradient', clearColorGradient);
@@ -1552,10 +2116,16 @@ function migrate0013ClearStrokesAndFills(data) {
     return result;
   }
 
+  /**
+   *
+   */
   function fixStrokes(strokes) {
     return strokes.map(clearStroke).filter((s) => s != null);
   }
 
+  /**
+   *
+   */
   function removeNestedFills(fills) {
     if (fills.length === 1 && fills[0].fills != null) {
       return fills[0].fills;
@@ -1563,6 +2133,9 @@ function migrate0013ClearStrokesAndFills(data) {
     return fills;
   }
 
+  /**
+   *
+   */
   function clearFill(fill) {
     let result = d.selectKeys(fill, [...typesFills.FILL_ATTRS]);
     result = d.updateWhen(result, 'fill-image', clearColorImage);
@@ -1570,17 +2143,26 @@ function migrate0013ClearStrokesAndFills(data) {
     return result;
   }
 
+  /**
+   *
+   */
   function fixFills(fills) {
     const unnested = removeNestedFills(fills);
     return unnested.map(clearFill).filter(validFillQ);
   }
 
+  /**
+   *
+   */
   function fixObject(object) {
     let result = d.updateWhen(object, 'strokes', fixStrokes);
     result = d.updateWhen(result, 'fills', fixFills);
     return result;
   }
 
+  /**
+   *
+   */
   function fixTextContent(content) {
     content = typesText.transformNodes(typesText.isContentNodeQ, fixObject, content);
     content = typesText.transformNodes(typesText.isParagraphSetNodeQ, (node) => {
@@ -1590,6 +2172,9 @@ function migrate0013ClearStrokesAndFills(data) {
     return content;
   }
 
+  /**
+   *
+   */
   function updateShape(object) {
     let result = fixObject(object);
     result = d.updateWhen(result, 'position-data', (pd) =>
@@ -1606,6 +2191,9 @@ function migrate0013ClearStrokesAndFills(data) {
   return updateObjectsInDataAndComponents(data, updateShape);
 }
 
+/**
+ *
+ */
 function migrate0014FixTokens(data) {
   if (ctob.fixDuplicateTokenSetIds) {
     return d.updateWhen(data, 'tokens-lib', ctob.fixDuplicateTokenSetIds);
@@ -1613,15 +2201,24 @@ function migrate0014FixTokens(data) {
   return data;
 }
 
+/**
+ *
+ */
 function migrate0014ClearComponents(data) {
   return d.updateWhen(data, 'components', (components) =>
     updateVals(components, (component) => d.withoutNils(component))
   );
 }
 
+/**
+ *
+ */
 function migrate0015FixTextAttrs(data) {
   const textAttrs = ['font-family', 'font-size', 'font-style', 'font-weight', 'direction', 'text-decoration', 'text-transform'];
 
+  /**
+   *
+   */
   function fixTextAttrs(node) {
     let result = node;
     for (const attr of textAttrs) {
@@ -1638,6 +2235,9 @@ function migrate0015FixTextAttrs(data) {
     return result;
   }
 
+  /**
+   *
+   */
   function updateShape(object) {
     if (cfh.textShapeQ(object)) {
       let result = d.updateWhen(object, 'content', (content) =>
@@ -1654,7 +2254,13 @@ function migrate0015FixTextAttrs(data) {
   return updateObjectsInDataAndComponents(data, updateShape);
 }
 
+/**
+ *
+ */
 function migrate0015CleanShadow(data) {
+  /**
+   *
+   */
   function cleanShadowColor(color) {
     if (color == null) return null;
     const refId = color.id;
@@ -1667,11 +2273,17 @@ function migrate0015CleanShadow(data) {
     return result;
   }
 
+  /**
+   *
+   */
   function cleanShadow(shadow) {
     if (shadow == null) return null;
     return { ...shadow, color: cleanShadowColor(shadow.color) };
   }
 
+  /**
+   *
+   */
   function updateObject(object) {
     if (object.shadow == null) return object;
     const fixed = object.shadow.map(cleanShadow).filter(validShadowQ);
@@ -1681,7 +2293,13 @@ function migrate0015CleanShadow(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrate0016(data) {
+  /**
+   *
+   */
   function getTextNodes(content) {
     if (content == null) return null;
     const nodes = [];
@@ -1689,6 +2307,9 @@ function migrate0016(data) {
     return nodes.length > 0 ? nodes : null;
   }
 
+  /**
+   *
+   */
   function updateObject(object) {
     if (!cfh.textShapeQ(object)) return object;
     const content = object.content;
@@ -1720,11 +2341,20 @@ function migrate0016(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrate0017(data) {
+  /**
+   *
+   */
   function fixLayoutFlexDir(value) {
     return value === 'reverse-row' ? 'row-reverse' : value;
   }
 
+  /**
+   *
+   */
   function updateObject(object) {
     return d.updateWhen(object, 'layout-flex-dir', fixLayoutFlexDir);
   }
@@ -1732,20 +2362,32 @@ function migrate0017(data) {
   return updateObjectsInDataAndComponents(data, updateObject);
 }
 
+/**
+ *
+ */
 function migrate0018(data) {
   return cfcp.removeUnneededObjectsInComponents(data);
 }
 
+/**
+ *
+ */
 function migrate0019(data) {
   const libraries = data.libs ? data.libs : {};
   return cfcp.fixMissingSwapSlots(data, libraries);
 }
 
+/**
+ *
+ */
 function migrate0020(data) {
   const libraries = data.libs ? data.libs : {};
   return cfcp.syncComponentIdWithRefShape(data, libraries);
 }
 
+/**
+ *
+ */
 function migrate0021(data) {
   let result = data;
   if (ctob.fixConflictingTokenNames) {
@@ -1837,6 +2479,9 @@ registerMigration('0019-fix-missing-swap-slots', migrate0019);
 registerMigration('0020-sync-component-id-with-near-main', migrate0020);
 registerMigration('0021-repair-bad-tokens', migrate0021);
 
+/**
+ *
+ */
 function collectNewFeatures(diff) {
   const features = new Set();
   if (diff.has('legacy-25') || diff.has('0003-fix-root-shape')) {
@@ -1848,6 +2493,9 @@ function collectNewFeatures(diff) {
   return features;
 }
 
+/**
+ *
+ */
 export function migrate(file, libs, options = {}) {
   const skipFormatMigrations = options.skipFormatMigrations ?? false;
   const diff = difference(availableMigrations, new Set(file.migrations ?? []));
@@ -1874,6 +2522,9 @@ export function migrate(file, libs, options = {}) {
   };
 }
 
+/**
+ *
+ */
 export function migrateFile(file, libs, options = {}) {
   const version = file.version ?? file.data?.version;
   const skipFormatMigrations = options.skipFormatMigrations ?? false;
@@ -1897,6 +2548,9 @@ export function migrateFile(file, libs, options = {}) {
   return result;
 }
 
+/**
+ *
+ */
 export function generateMigrationsFromVersion(v) {
   const result = new Set();
   for (let i = 1; i <= defaultVersion; i++) {

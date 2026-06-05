@@ -4,6 +4,9 @@ const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}
 
 const TIME_REF = 1640995200000; // ms since 2022-01-01T00:00:00
 
+/**
+ *
+ */
 function fillRandom(buf) {
   if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues !== 'undefined') {
     crypto.getRandomValues(buf);
@@ -19,6 +22,9 @@ function fillRandom(buf) {
   return buf;
 }
 
+/**
+ *
+ */
 function getBigUint64(view, byteOffset, le) {
   const a = view.getUint32(byteOffset, le);
   const b = view.getUint32(byteOffset + 4, le);
@@ -27,6 +33,9 @@ function getBigUint64(view, byteOffset, le) {
   return (BigInt(a * beMask + b * leMask) << 32n) | BigInt(a * leMask + b * beMask);
 }
 
+/**
+ *
+ */
 function setBigUint64(view, byteOffset, value, le) {
   const hi = Number(value >> 32n);
   const lo = Number(value & 0xffffffffn);
@@ -39,6 +48,9 @@ function setBigUint64(view, byteOffset, value, le) {
   }
 }
 
+/**
+ *
+ */
 function currentTimestamp() {
   return BigInt.asUintN(64, '' + (Date.now() - TIME_REF));
 }
@@ -47,11 +59,17 @@ const tmpBuff = new ArrayBuffer(8);
 const tmpView = new DataView(tmpBuff);
 const tmpInt8 = new Uint8Array(tmpBuff);
 
+/**
+ *
+ */
 function nextLong() {
   fillRandom(tmpInt8);
   return getBigUint64(tmpView, 0, false);
 }
 
+/**
+ *
+ */
 export function parse(s) {
   if (typeof s === 'string' && UUID_REGEX.test(s)) {
     return s.toLowerCase();
@@ -59,6 +77,9 @@ export function parse(s) {
   throw new Error(`invalid string '${s}' for uuid`);
 }
 
+/**
+ *
+ */
 export function parseSafe(s) {
   try {
     return parse(s);
@@ -67,6 +88,9 @@ export function parseSafe(s) {
   }
 }
 
+/**
+ *
+ */
 export function uuid(s) {
   return s.toLowerCase();
 }
@@ -75,6 +99,9 @@ export function uuid(s) {
 
 const v4Arr = new Uint8Array(16);
 
+/**
+ *
+ */
 export function random() {
   fillRandom(v4Arr);
   v4Arr[6] = (v4Arr[6] & 0x0f) | 0x40;
@@ -97,6 +124,9 @@ let lastRd = nextLong() & 0xffff_ffff_ffff_f0ffn;
 let lastCs = nextLong() & maxCs;
 let lastTs = 0n;
 
+/**
+ *
+ */
 function v8Create(ts, lastRd, lastCs) {
   const msb = baseMsb | (lastRd & 0xffff_ffff_ffff_0fffn);
   const lsb = baseLsb | ((ts << 14n) & 0x3fff_ffff_ffff_c000n) | lastCs;
@@ -105,6 +135,9 @@ function v8Create(ts, lastRd, lastCs) {
   return bufferToHex(v8Int8, true);
 }
 
+/**
+ *
+ */
 function v8Factory() {
   while (true) {
     const ts = currentTimestamp();
@@ -134,12 +167,18 @@ function v8Factory() {
   }
 }
 
+/**
+ *
+ */
 export function next() {
   return v8Factory();
 }
 
 // --- custom ---
 
+/**
+ *
+ */
 export function custom(low, high) {
   if (high === undefined) {
     return v8FromPair(0n, BigInt(low));
@@ -151,21 +190,33 @@ export function custom(low, high) {
 
 export const zero = '00000000-0000-0000-0000-000000000000';
 
+/**
+ *
+ */
 export function isZero(v) {
   return v === zero;
 }
 
+/**
+ *
+ */
 export function isValid(v) {
   return typeof v === 'string' && UUID_REGEX.test(v);
 }
 
 // --- bytes ---
 
+/**
+ *
+ */
 export function getBytes(uuidStr) {
   fillBytes(uuidStr);
   return Int8Array.from(v8Int8);
 }
 
+/**
+ *
+ */
 export function fromBytes(data) {
   v8Int8.set(data);
   return bufferToHex(v8Int8, true);
@@ -173,11 +224,17 @@ export function fromBytes(data) {
 
 // --- hi/lo ---
 
+/**
+ *
+ */
 export function getWordHigh(uuidStr) {
   fillBytes(uuidStr);
   return v8View.getBigInt64(0);
 }
 
+/**
+ *
+ */
 export function getWordLow(uuidStr) {
   fillBytes(uuidStr);
   return v8View.getBigInt64(8);
@@ -185,6 +242,9 @@ export function getWordLow(uuidStr) {
 
 // --- unsigned parts (for WASM interop) ---
 
+/**
+ *
+ */
 export function getUnsignedParts(uuidStr) {
   fillBytes(uuidStr);
   const result = new Uint32Array(4);
@@ -195,6 +255,9 @@ export function getUnsignedParts(uuidStr) {
   return result;
 }
 
+/**
+ *
+ */
 export function fromUnsignedParts(a, b, c, d) {
   v8View.setUint32(0, a);
   v8View.setUint32(4, b);
@@ -205,6 +268,9 @@ export function fromUnsignedParts(a, b, c, d) {
 
 // --- short id ---
 
+/**
+ *
+ */
 export function shortId(uuidStr) {
   const buff = hexToBuffer(uuidStr);
   const short = new Uint8Array(buff, 4);
@@ -213,6 +279,9 @@ export function shortId(uuidStr) {
 
 // --- set tag ---
 
+/**
+ *
+ */
 export function setTag(tag) {
   tag = BigInt.asUintN(64, '' + tag);
   if (tag > 0x0000_0000_0000_000fn) {
@@ -226,6 +295,9 @@ export function setTag(tag) {
 
 // --- internal helpers ---
 
+/**
+ *
+ */
 function fillBytes(uuid) {
   let rest;
   v8Int8[0] = (rest = parseInt(uuid.slice(0, 8), 16)) >>> 24;
@@ -251,6 +323,9 @@ function fillBytes(uuid) {
   v8Int8[15] = rest & 0xff;
 }
 
+/**
+ *
+ */
 function v8FromPair(hi, lo) {
   v8View.setBigInt64(0, hi);
   v8View.setBigInt64(8, lo);
@@ -261,10 +336,16 @@ function v8FromPair(hi, lo) {
 
 let fakeIds = 0;
 
+/**
+ *
+ */
 export function resetFake() {
   fakeIds = 0;
 }
 
+/**
+ *
+ */
 export function nextFake() {
   fakeIds++;
   return custom(fakeIds);

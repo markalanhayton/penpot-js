@@ -12,10 +12,16 @@ export { WeakEqMap, WeakValueMap };
 const state = new WeakMap();
 let globalCounter = 0;
 
+/**
+ *
+ */
 export function weakValueMap() {
   return new WeakValueMap();
 }
 
+/**
+ *
+ */
 export function weakMap() {
   return new WeakEqMap({ hash: (v) => {
     if (typeof v === "string") return v;
@@ -24,6 +30,9 @@ export function weakMap() {
   }, equals: (a, b) => a === b });
 }
 
+/**
+ *
+ */
 export function weakKey(o) {
   let key = state.get(o);
   if (key !== undefined) {
@@ -34,6 +43,9 @@ export function weakKey(o) {
   return key;
 }
 
+/**
+ *
+ */
 export function memoize(fn) {
   const mem = weakMap();
   return function (...args) {

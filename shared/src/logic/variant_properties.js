@@ -5,6 +5,9 @@ import { isVariantQ, isVariantContainerQ } from '../types/component.js';
 import { getComponent } from '../types/components_list.js';
 import { findVariantComponents } from '../files/variant.js';
 
+/**
+ *
+ */
 export function generateUpdatePropertyName(changes, variantId, pos, newName) {
   const data = changes['library-data'] ?? changes?.data;
   const objects = changes['objects'] ?? data?.objects ?? {};
@@ -31,6 +34,9 @@ export function generateUpdatePropertyName(changes, variantId, pos, newName) {
   return result;
 }
 
+/**
+ *
+ */
 export function generateRemoveProperty(changes, variantId, pos) {
   const data = changes['library-data'] ?? changes?.data;
   const objects = changes['objects'] ?? data?.objects ?? {};
@@ -62,6 +68,9 @@ export function generateRemoveProperty(changes, variantId, pos) {
   return result;
 }
 
+/**
+ *
+ */
 export function generateUpdatePropertyValue(changes, componentId, pos, value) {
   const data = changes['library-data'] ?? changes?.data;
   const component = getComponent(data, componentId, true);
@@ -88,6 +97,9 @@ export function generateUpdatePropertyValue(changes, componentId, pos, value) {
   return result;
 }
 
+/**
+ *
+ */
 export function generateSetVariantError(changes, componentId, value) {
   const data = changes['library-data'] ?? changes?.data;
   const component = getComponent(data, componentId, true);
@@ -108,6 +120,9 @@ export function generateSetVariantError(changes, componentId, value) {
   return result;
 }
 
+/**
+ *
+ */
 export function generateReorderVariantProperties(changes, variantId, fromPos, toPos) {
   const data = changes['library-data'] ?? changes?.data;
   const objects = changes['objects'] ?? data?.objects ?? {};
@@ -136,6 +151,9 @@ export function generateReorderVariantProperties(changes, variantId, fromPos, to
   return result;
 }
 
+/**
+ *
+ */
 export function generateAddNewProperty(changes, variantId, options = {}) {
   const { fillValues = false, editing = false, propertyName, propertyValue } = options;
   const data = changes['library-data'] ?? changes?.data;
@@ -188,6 +206,9 @@ export function generateAddNewProperty(changes, variantId, options = {}) {
   return result;
 }
 
+/**
+ *
+ */
 export function generateMakeShapesNoVariant(changes, shapes) {
   let result = { ...changes };
   for (const shape of shapes) {
@@ -196,6 +217,9 @@ export function generateMakeShapesNoVariant(changes, shapes) {
   return result;
 }
 
+/**
+ *
+ */
 function generateMakeShapeNoVariant(changes, shape) {
   const name = variantNameToName(shape);
   const [cpath, cname] = splitGroupName(name);
@@ -216,11 +240,17 @@ function generateMakeShapeNoVariant(changes, shape) {
   return result;
 }
 
+/**
+ *
+ */
 function variantNameToName(shape) {
   const variantName = shape['variant-name'] ?? '';
   return variantName.replace(/, /g, ' / ');
 }
 
+/**
+ *
+ */
 function createNewPropertiesFromVariant(shape, minProps, data, containerName, baseProperties) {
   const component = getComponent(data, shape['component-id'], true);
   const componentFullName = mergePathItem(component.path, component.name);
@@ -234,11 +264,17 @@ function createNewPropertiesFromVariant(shape, minProps, data, containerName, ba
   return props;
 }
 
+/**
+ *
+ */
 function createNewPropertiesFromNonVariant(shape, minProps, containerName, baseProperties) {
   const shapeName = removePrefix(shape.name, containerName);
   return pathToProperties(shapeName, baseProperties, minProps);
 }
 
+/**
+ *
+ */
 export function generateMakeShapesVariant(changes, shapes, variantContainer) {
   const data = changes['library-data'] ?? changes?.data;
   const objects = changes['objects'] ?? data?.objects ?? {};
@@ -307,6 +343,9 @@ export function generateMakeShapesVariant(changes, shapes, variantContainer) {
   return currentChanges;
 }
 
+/**
+ *
+ */
 function updateShapes(changes, shapeIds, f) {
   if (!changes['shapes']) return { ...changes, shapes: [] };
   const shapeIdSet = new Set(shapeIds);
@@ -318,6 +357,9 @@ function updateShapes(changes, shapeIds, f) {
   };
 }
 
+/**
+ *
+ */
 function updateComponent(changes, componentId, f) {
   const data = changes['library-data'] ?? changes?.data;
   if (!data) return changes;

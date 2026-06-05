@@ -11,23 +11,38 @@ import { move as shapeMove } from '../geom/shapes/shapes.js';
 
 export const VALID_CONTAINER_TYPES = new Set(['page', 'component']);
 
+/**
+ *
+ */
 export function makeContainer(pageOrComponent, type) {
   return { ...pageOrComponent, type };
 }
 
+/**
+ *
+ */
 export function unmakeContainer(container) {
   const { type, ...rest } = container;
   return rest;
 }
 
+/**
+ *
+ */
 export function pageQ(container) {
   return container?.type === 'page';
 }
 
+/**
+ *
+ */
 export function componentQ(container) {
   return container?.type === 'component';
 }
 
+/**
+ *
+ */
 export function getContainer(file, type, id) {
   if (type === 'page') {
     const page = getPage(file.data ?? file, id);
@@ -40,14 +55,23 @@ export function getContainer(file, type, id) {
   return undefined;
 }
 
+/**
+ *
+ */
 export function getShape(container, shapeId) {
   return container.objects?.[shapeId];
 }
 
+/**
+ *
+ */
 export function shapesSeq(container) {
   return Object.values(container.objects ?? {});
 }
 
+/**
+ *
+ */
 export function updateShape(container, shapeId, f) {
   const objects = container.objects ?? {};
   if (!(shapeId in objects)) return container;
@@ -57,6 +81,9 @@ export function updateShape(container, shapeId, f) {
   };
 }
 
+/**
+ *
+ */
 export function getContainerRoot(container) {
   return seek(
     (s) => s['parent-id'] == null || s['parent-id'] === zero,
@@ -64,11 +91,20 @@ export function getContainerRoot(container) {
   );
 }
 
+/**
+ *
+ */
 export function getDirectChildren(container, shape) {
   return (shape.shapes ?? []).map((id) => getShape(container, id)).filter(Boolean);
 }
 
+/**
+ *
+ */
 export function getChildrenInInstance(objects, id) {
+  /**
+   *
+   */
   function getChildrenRec(children, currentId) {
     const shape = objects[currentId];
     if (!shape) return children;
@@ -84,6 +120,9 @@ export function getChildrenInInstance(objects, id) {
   return getChildrenRec([], id);
 }
 
+/**
+ *
+ */
 export function getComponentShape(objects, shape, options) {
   const { allowMain = false } = options ?? {};
   const parent = objects[shape?.['parent-id']];
@@ -97,6 +136,9 @@ export function getComponentShape(objects, shape, options) {
   return undefined;
 }
 
+/**
+ *
+ */
 export function getHeadShape(objects, shape, options) {
   const { allowMain = false } = options ?? {};
 
@@ -109,6 +151,9 @@ export function getHeadShape(objects, shape, options) {
   return undefined;
 }
 
+/**
+ *
+ */
 export function getChildHeads(objects, shapeId) {
   const shape = objects[shapeId];
   if (!shape) return [];
@@ -116,6 +161,9 @@ export function getChildHeads(objects, shapeId) {
   return (shape.shapes ?? []).flatMap((id) => getChildHeads(objects, id));
 }
 
+/**
+ *
+ */
 export function getParentHeads(objects, shape) {
   const result = [];
   let current = shape;
@@ -126,6 +174,9 @@ export function getParentHeads(objects, shape) {
   return result;
 }
 
+/**
+ *
+ */
 export function getParentCopyHeads(objects, shape) {
   const result = [];
   let current = shape;
@@ -136,6 +187,9 @@ export function getParentCopyHeads(objects, shape) {
   return result;
 }
 
+/**
+ *
+ */
 export function getInstanceRoot(objects, shape) {
   if (shape == null) return undefined;
   if (shape['parent-id'] == null || shape['parent-id'] === zero) return undefined;
@@ -145,6 +199,9 @@ export function getInstanceRoot(objects, shape) {
   return undefined;
 }
 
+/**
+ *
+ */
 export function findComponentMain(objects, shape, onlyDirectChild = true) {
   let current = shape;
   const visited = new Set();
@@ -164,14 +221,23 @@ export function findComponentMain(objects, shape, onlyDirectChild = true) {
   return undefined;
 }
 
+/**
+ *
+ */
 export function insideComponentMainQ(objects, shape, onlyDirectChild = true) {
   return findComponentMain(objects, shape, onlyDirectChild) != null;
 }
 
+/**
+ *
+ */
 export function inAnyComponentQ(objects, shape) {
   return inComponentCopyQ(shape) || instanceHeadQ(shape) || insideComponentMainQ(objects, shape);
 }
 
+/**
+ *
+ */
 export function getFirstValidParent(objects, id) {
   const shape = objects[id];
   if (!shape) return undefined;
@@ -181,6 +247,9 @@ export function getFirstValidParent(objects, id) {
   return shape;
 }
 
+/**
+ *
+ */
 export function hasAnyCopyParentQ(objects, shape) {
   const parent = objects[shape?.['parent-id']];
   if (!parent) return false;
@@ -188,6 +257,9 @@ export function hasAnyCopyParentQ(objects, shape) {
   return hasAnyCopyParentQ(objects, parent);
 }
 
+/**
+ *
+ */
 export function detachShape(shape) {
   const result = { ...shape };
   delete result['component-id'];
@@ -200,10 +272,16 @@ export function detachShape(shape) {
   return result;
 }
 
+/**
+ *
+ */
 export function validShapeForComponentQ(objects, shape) {
   return !hasAnyMainQ(objects, shape) && !hasAnyCopyParentQ(objects, shape);
 }
 
+/**
+ *
+ */
 export function getNestingLevelDelta(objects, shape, newParent) {
   const origHeads = getParentCopyHeads(objects, shape)
     .filter((h) => h.id !== shape.id);
@@ -222,10 +300,13 @@ export function getNestingLevelDelta(objects, shape, newParent) {
   return origHeads.length - commonCount;
 }
 
+/**
+ *
+ */
 export function convertShapeInComponent(root, objects, fileId) {
   const newId = next();
   const insideComponent = getInstanceRoot(objects, root) != null;
-  let newRoot = {
+  const newRoot = {
     ...root,
     'component-id': newId,
     'component-file': fileId,
@@ -251,6 +332,9 @@ export function convertShapeInComponent(root, objects, fileId) {
   return [newRootWithId, allNewShapes];
 }
 
+/**
+ *
+ */
 export function removeSwapKeepAttrs(shape) {
   const layoutItemHSizing = (anyLayoutQ(shape) && autoWidthQ(shape)) ? 'auto' : undefined;
   const layoutItemVSizing = (anyLayoutQ(shape) && autoHeightQ(shape)) ? 'auto' : undefined;
@@ -265,6 +349,9 @@ export function removeSwapKeepAttrs(shape) {
   return result;
 }
 
+/**
+ *
+ */
 export function makeComponentInstance(page, component, libraryData, position, options) {
   const {
     mainInstance = false,
@@ -301,6 +388,9 @@ export function makeComponentInstance(page, component, libraryData, position, op
 
   const idsMap = {};
 
+  /**
+   *
+   */
   function updateNewShape(newShape, originalShape) {
     const newShapeName = newShape.name;
     const originalIsRoot = instanceRootQ(originalShape);
@@ -352,6 +442,9 @@ export function makeComponentInstance(page, component, libraryData, position, op
     destObjects: objects,
   });
 
+  /**
+   *
+   */
   function remapIds(shape) {
     let result = { ...shape };
     result['parent-id'] = result['parent-id'] ?? result['frame-id'];
@@ -372,6 +465,9 @@ export function makeComponentInstance(page, component, libraryData, position, op
 // Differs from shape_tree.cloneShape: no updateOriginalShape callback,
 // no _oldId tracking, no bool-content/grid-cell-ids remapping (handled
 // separately in makeComponentInstance via remapIds).
+/**
+ *
+ */
 function cloneShapeHelper(shape, parentId, objects, options) {
   const { updateNewShape, forceId, keepIds, frameId, destObjects } = options;
   const effectiveNewShapeFn = typeof updateNewShape === 'function' ? updateNewShape : (s) => s;
@@ -421,6 +517,9 @@ function cloneShapeHelper(shape, parentId, objects, options) {
   return [newShape, allShapes];
 }
 
+/**
+ *
+ */
 export function collectMainShapes(shape, objects) {
   if (mainInstanceQ(shape)) return [shape];
   const children = (shape.shapes ?? []).map((id) => objects[id]).filter(Boolean);
@@ -428,18 +527,27 @@ export function collectMainShapes(shape, objects) {
   return children.flatMap((child) => collectMainShapes(child, objects));
 }
 
+/**
+ *
+ */
 export function getComponentFromShape(shape, libraries) {
   const library = libraries[shape['component-file']];
   if (!library) return undefined;
   return library?.data?.components?.[shape['component-id']];
 }
 
+/**
+ *
+ */
 export function invalidStructureForComponentQ(objects, parent, children, pasting, libraries) {
   const mergedObjects = {
     ...objects,
     ...Object.fromEntries(children.map((c) => [c.id, c])),
   };
 
+  /**
+   *
+   */
   function removeQ(shape) {
     const component = getComponentFromShape(shape, libraries);
     return component && !component.deleted;
@@ -464,6 +572,9 @@ export function invalidStructureForComponentQ(objects, parent, children, pasting
   );
 }
 
+/**
+ *
+ */
 function collectMainShapesHelper(children, objects) {
   const result = [];
   for (const child of children) {
@@ -477,11 +588,17 @@ function collectMainShapesHelper(children, objects) {
   return result;
 }
 
+/**
+ *
+ */
 export function parentValidationCache(objects, children, libraries) {
   const childrenIds = new Set(children.map((c) => c.id));
   const topChildren = children.filter((c) => !childrenIds.has(c['parent-id']));
   const allMainQ = topChildren.every((c) => mainInstanceQ(c));
 
+  /**
+   *
+   */
   function getVariantId(shape) {
     if (!shape['component-id']) return undefined;
     const component = getComponentFromShape(shape, libraries);
@@ -509,9 +626,15 @@ export function parentValidationCache(objects, children, libraries) {
   };
 }
 
+/**
+ *
+ */
 export function findValidParentAndFrameIds(parentId, objects, children, pasting, libraries, cache) {
   const effectiveCache = cache ?? parentValidationCache(objects, children, libraries);
 
+  /**
+   *
+   */
   function getFrame(pid) {
     if (frameShapeQ(objects, pid)) return pid;
     return objects[pid]?.['frame-id'];
@@ -553,6 +676,9 @@ export function findValidParentAndFrameIds(parentId, objects, children, pasting,
   return [null, null];
 }
 
+/**
+ *
+ */
 export function hasAnyMainQ(objects, shape) {
   const children = getChildrenIdsWithSelf(objects, shape.id)
     .map((id) => objects[id])
@@ -561,12 +687,18 @@ export function hasAnyMainQ(objects, shape) {
   return children.some(mainInstanceQ) || parents.some(mainInstanceQ);
 }
 
+/**
+ *
+ */
 export function containersSeq(fileData) {
   const pages = pagesSeq(fileData).map((p) => makeContainer(p, 'page'));
   const comps = componentsSeq(fileData).map((c) => makeContainer(c, 'component'));
   return [...pages, ...comps];
 }
 
+/**
+ *
+ */
 export function objectContainersSeq(fileData) {
   const pages = pagesSeq(fileData).map((p) => makeContainer(p, 'page'));
   const deletedComps = deletedComponentsSeq(fileData).map((c) => makeContainer(c, 'component'));

@@ -27,7 +27,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const pathname = url.pathname;
 
-  if (pathname.startsWith('/api/') || pathname.startsWith('/ws/') || pathname.startsWith('/internal/')) {
+  if (pathname.startsWith('/api/') || pathname.startsWith('/ws/') || pathname.startsWith('/internal/') || pathname.startsWith('/assets/')) {
     return proxy(req, res, url);
   }
 
@@ -37,7 +37,7 @@ const server = http.createServer(async (req, res) => {
       const s = await stat(sharedPath);
       if (s.isFile()) {
         const data = await readFile(sharedPath);
-        res.writeHead(200, { 'Content-Type': MIME[extname(sharedPath)] || 'application/octet-stream' });
+        res.writeHead(200, { 'Content-Type': MIME[extname(sharedPath)] || 'application/octet-stream', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
         return res.end(data);
       }
     } catch {}
@@ -49,8 +49,8 @@ const server = http.createServer(async (req, res) => {
     const s = await stat(filePath);
     if (s.isDirectory()) filePath = join(filePath, 'index.html');
     const data = await readFile(filePath);
-    res.writeHead(200, { 'Content-Type': MIME[extname(filePath)] || 'application/octet-stream' });
-    return res.end(data);
+      res.writeHead(200, { 'Content-Type': MIME[extname(filePath)] || 'application/octet-stream', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      return res.end(data);
   } catch {
     const ext = extname(pathname);
     if (ext && ext !== '.html') {

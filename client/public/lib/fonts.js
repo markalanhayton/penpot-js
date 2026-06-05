@@ -117,7 +117,7 @@ function parseFontMetadata(arrayBuffer) {
           break;
         }
       }
-    } catch { /* parse failed, use defaults */ }
+    } catch (err) { console.warn('[fonts] font metadata parse failed, using defaults:', err.message); }
   }
 
   return { fontFamily, fontWeight, fontStyle, mtype };

@@ -60,10 +60,16 @@ export const names = {
 const HEX_COLOR_RE = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/;
 const RGB_COLOR_RE = /^(?:rgb)?\((\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\)$/;
 
+/**
+ *
+ */
 export function validHexColorQ(color) {
   return typeof color === 'string' && HEX_COLOR_RE.test(color);
 }
 
+/**
+ *
+ */
 export function parseRgb(color) {
   const match = color.match(RGB_COLOR_RE);
   if (!match) return undefined;
@@ -76,11 +82,17 @@ export function parseRgb(color) {
   return undefined;
 }
 
+/**
+ *
+ */
 export function validRgbColorQ(color) {
   if (typeof color !== 'string') return false;
   return parseRgb(color) != null;
 }
 
+/**
+ *
+ */
 function normalizeHex(color) {
   if (color.length === 4) {
     return `#${color[1]}${color[1]}${color[2]}${color[2]}${color[3]}${color[3]}`.toLowerCase();
@@ -88,11 +100,17 @@ function normalizeHex(color) {
   return color.toLowerCase();
 }
 
+/**
+ *
+ */
 export function rgbToStr([r, g, b, a]) {
   if (a != null) return `rgba(${r},${g},${b},${a})`;
   return `rgb(${r},${g},${b})`;
 }
 
+/**
+ *
+ */
 export function rgbToHsv([red, green, blue]) {
   const max = Math.max(red, green, blue);
   const min = Math.min(red, green, blue);
@@ -114,6 +132,9 @@ export function rgbToHsv([red, green, blue]) {
   return [hue, sat, val];
 }
 
+/**
+ *
+ */
 export function hsvToRgb([h, s, brightness]) {
   if (s === 0) return [brightness, brightness, brightness];
   const sextant = Math.floor(h / 60);
@@ -133,6 +154,9 @@ export function hsvToRgb([h, s, brightness]) {
   }
 }
 
+/**
+ *
+ */
 export function hexToRgb(color) {
   try {
     const rgb = parseInt(color.slice(1), 16);
@@ -145,15 +169,24 @@ export function hexToRgb(color) {
   }
 }
 
+/**
+ *
+ */
 export function hexToLum(color) {
   const [r, g, b] = hexToRgb(color);
   return Math.sqrt(0.241 * r + 0.691 * g + 0.068 * b);
 }
 
+/**
+ *
+ */
 function intToHex(v) {
   return v.toString(16);
 }
 
+/**
+ *
+ */
 export function rgbToHex([r, g, b]) {
   r = Math.round(r);
   g = Math.round(g);
@@ -165,6 +198,9 @@ export function rgbToHex([r, g, b]) {
   return r < 16 ? `#${intToHex(0x1000000 | rgb).slice(1)}` : `#${intToHex(rgb)}`;
 }
 
+/**
+ *
+ */
 export function rgbToHsl([r, g, b]) {
   const normR = r / 255;
   const normG = g / 255;
@@ -188,22 +224,37 @@ export function rgbToHsl([r, g, b]) {
   return [((h + 360) % 360), s, l];
 }
 
+/**
+ *
+ */
 export function hexToHsv(v) {
   return rgbToHsv(hexToRgb(v));
 }
 
+/**
+ *
+ */
 export function hexToRgba(data, opacity) {
   return [...hexToRgb(data), opacity];
 }
 
+/**
+ *
+ */
 export function hexToHsl(hex) {
   return rgbToHsl(hexToRgb(hex));
 }
 
+/**
+ *
+ */
 export function hexToHsla(data, opacity) {
   return [...hexToHsl(data), opacity];
 }
 
+/**
+ *
+ */
 export function formatHsla([h, s, l, a]) {
   const precision = 2;
   const roundedH = Math.round(h);
@@ -213,11 +264,17 @@ export function formatHsla([h, s, l, a]) {
   return `${roundedH} ${roundedS}% ${roundedL}% / ${roundedA}`;
 }
 
+/**
+ *
+ */
 export function formatRgba([r, g, b, a]) {
   const roundedA = d.formatNumber(a, 2);
   return `${r}, ${g}, ${b}, ${roundedA}`;
 }
 
+/**
+ *
+ */
 function hueToRgb(v1, v2, vh) {
   if (vh < 0) vh += 1;
   else if (vh > 1) vh -= 1;
@@ -227,6 +284,9 @@ function hueToRgb(v1, v2, vh) {
   return v1;
 }
 
+/**
+ *
+ */
 export function hslToRgb([h, s, l]) {
   if (s === 0) {
     const o = l * 255;
@@ -242,22 +302,37 @@ export function hslToRgb([h, s, l]) {
   ];
 }
 
+/**
+ *
+ */
 export function hslToHex(v) {
   return rgbToHex(hslToRgb(v));
 }
 
+/**
+ *
+ */
 export function hslToHsv(hsl) {
   return rgbToHsv(hslToRgb(hsl));
 }
 
+/**
+ *
+ */
 export function hsvToHex(hsv) {
   return rgbToHex(hsvToRgb(hsv));
 }
 
+/**
+ *
+ */
 export function hsvToHsl(hsv) {
   return hexToHsl(hsvToHex(hsv));
 }
 
+/**
+ *
+ */
 export function expandHex(v) {
   if (/^[0-9A-Fa-f]$/.test(v)) return v + v + v + v + v + v;
   if (/^[0-9A-Fa-f]{2}$/.test(v)) return v + v + v;
@@ -265,18 +340,30 @@ export function expandHex(v) {
   return v;
 }
 
+/**
+ *
+ */
 export function prependHash(color) {
   return color.startsWith('#') ? color : `#${color}`;
 }
 
+/**
+ *
+ */
 export function removeHash(color) {
   return color.startsWith('#') ? color.slice(1) : color;
 }
 
+/**
+ *
+ */
 export function colorStringQ(color) {
   return typeof color === 'string' && (validHexColorQ(color) || validRgbColorQ(color) || color.toLowerCase() in names);
 }
 
+/**
+ *
+ */
 export function parse(color) {
   if (typeof color !== 'string') return undefined;
   if (validHexColorQ(color) || validHexColorQ(`#${color}`)) {
@@ -291,6 +378,9 @@ export const colorNames = Object.keys(names);
 
 export const emptyColor = { color: undefined, id: undefined, fileId: undefined, gradient: undefined, opacity: undefined };
 
+/**
+ *
+ */
 export function nextRgb([r, g, b]) {
   if (r === 255 && g === 255 && b === 255) throw new Error(`cannot get next color: r=${r} g=${g} b=${b}`);
   if (g === 255 && b === 255) return [r + 1, 0, 0];
@@ -298,10 +388,16 @@ export function nextRgb([r, g, b]) {
   return [r, g, b + 1];
 }
 
+/**
+ *
+ */
 export function reduceRange(value, range) {
   return Math.floor(value * range) / range;
 }
 
+/**
+ *
+ */
 export function sortColors(a, b) {
   const [ah, , av] = hexToHsv(a.color);
   const [bh, , bv] = hexToHsv(b.color);

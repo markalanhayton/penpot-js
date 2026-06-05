@@ -7,12 +7,18 @@ import * as mth from '../../../math.js';
 const defaultTrackValue = { type: 'flex', value: 1 };
 const gridCellDefaults = { 'row-span': 1, 'column-span': 1, position: 'auto', 'align-self': 'auto', 'justify-self': 'auto', shapes: [] };
 
+/**
+ *
+ */
 function rectToRange(axis, rect) {
   const start = axis === 'x' ? rect.x : rect.y;
   const end = start + (axis === 'x' ? rect.width : rect.height);
   return [start, end];
 }
 
+/**
+ *
+ */
 function overlapsRangeQ(axis, range, rect) {
   const [startB, endB] = rectToRange(axis, rect);
   const [startA, endA] = range;
@@ -22,6 +28,9 @@ function overlapsRangeQ(axis, range, rect) {
          mth.close(endA, endB);
 }
 
+/**
+ *
+ */
 function joinRange(axis, range, rect) {
   if (!range) return rectToRange(axis, rect);
   const [startA, endA] = range;
@@ -29,10 +38,16 @@ function joinRange(axis, range, rect) {
   return [Math.min(startA, startB), Math.max(endA, endB)];
 }
 
+/**
+ *
+ */
 function sizeRange(range) {
   return range[1] - range[0];
 }
 
+/**
+ *
+ */
 function calculateTracks(axis, shapesByAxis) {
   const result = [];
   let index = 1;
@@ -58,6 +73,9 @@ function calculateTracks(axis, shapesByAxis) {
   return result;
 }
 
+/**
+ *
+ */
 function createCells(parent, [column, row, columnSpan, rowSpan]) {
   let result = { ...parent };
 
@@ -84,6 +102,9 @@ function createCells(parent, [column, row, columnSpan, rowSpan]) {
   return result;
 }
 
+/**
+ *
+ */
 export function calculateGridParams(objects, shapes, parent) {
   if (!shapes || shapes.length === 0) {
     return createCells(

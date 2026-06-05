@@ -9,12 +9,18 @@
 import * as mth from "./math.js";
 import * as uuid from "./uuid.js";
 
+/**
+ *
+ */
 export function timestamp() {
   return performance.now();
 }
 
 const measures = new Map();
 
+/**
+ *
+ */
 export function start(key) {
   if (key === undefined) {
     key = uuid.next();
@@ -23,10 +29,16 @@ export function start(key) {
   return key;
 }
 
+/**
+ *
+ */
 export function measure(key) {
   return timestamp() - (measures.get(key) || 0);
 }
 
+/**
+ *
+ */
 export function scaleTime(measurementMs) {
   if (measurementMs > 60000) return [1 / 60000, "min"];
   if (measurementMs < 0.001) return [1e6, "ns"];
@@ -35,11 +47,17 @@ export function scaleTime(measurementMs) {
   return [1 / 1000, "sec"];
 }
 
+/**
+ *
+ */
 export function formatTime(value) {
   const [scale, unit] = scaleTime(value);
   return `${mth.precision(scale * value, 2)}${unit}`;
 }
 
+/**
+ *
+ */
 export function benchmark({ f, name = "unnamed", samples = 10, target = 1, maxIterations = 100000 } = {}) {
   const execAndMeasure = () => {
     const t0 = performance.now();

@@ -3,6 +3,9 @@ import { next as uuidNext, zero as uuidZero } from '../uuid.js';
 
 export const ROOT_ID = uuidZero;
 
+/**
+ *
+ */
 export function makeEmptyPage(opts = {}) {
   return {
     id: opts.id || uuidNext(),
@@ -14,6 +17,9 @@ export function makeEmptyPage(opts = {}) {
   };
 }
 
+/**
+ *
+ */
 function setupRootFrame() {
   return {
     id: ROOT_ID,
@@ -26,6 +32,9 @@ function setupRootFrame() {
   };
 }
 
+/**
+ *
+ */
 export function getFrameFlow(flows, frameId) {
   if (!flows) return undefined;
   for (const flow of Object.values(flows)) {
@@ -34,6 +43,9 @@ export function getFrameFlow(flows, frameId) {
   return undefined;
 }
 
+/**
+ *
+ */
 export function isPageEmpty(page) {
   const objects = page.objects || {};
   return Object.keys(objects).length <= 1;

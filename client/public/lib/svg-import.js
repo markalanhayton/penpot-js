@@ -1,4 +1,5 @@
 'use strict';
+import { parse as parseColorShared } from '@penpot/shared/colors.js';
 export function parseSVG(svgText) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(svgText, 'image/svg+xml');
@@ -81,12 +82,8 @@ export function parseSVG(svgText) {
 
   function parseColor(val) {
     if (!val || val === 'none') return null;
-    return val;
-  }
-
-  function parseColor(val) {
-    if (!val || val === 'none') return null;
-    return val;
+    const result = parseColorShared(val);
+    return result || val;
   }
 
   function processNode(node, parentX = 0, parentY = 0) {

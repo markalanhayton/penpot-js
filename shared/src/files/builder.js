@@ -30,10 +30,16 @@ builderMigrations.delete('003-convert-path-content');
 builderMigrations.delete('0002-clean-shape-interactions');
 builderMigrations.delete('0003-fix-root-shape');
 
+/**
+ *
+ */
 function defaultUuid(v) {
   return v ?? uuid.next();
 }
 
+/**
+ *
+ */
 function trackUsedName(state, name) {
   const containerId = state['::current-page-id'];
   const unames = state['::unames']?.[containerId] ?? new Set();
@@ -48,14 +54,20 @@ function trackUsedName(state, name) {
   };
 }
 
+/**
+ *
+ */
 function uniqueName(name, state) {
   const containerId = state['::current-page-id'];
   const unames = state['::unames']?.[containerId] ?? new Set();
   return d.uniqueName(name, unames);
 }
 
+/**
+ *
+ */
 function assignShapeName(shape, state) {
-  let result = { ...shape };
+  const result = { ...shape };
   if (result.name == null) {
     const type = result.type;
     result.name = type === 'frame'
@@ -66,11 +78,14 @@ function assignShapeName(shape, state) {
   return result;
 }
 
+/**
+ *
+ */
 function commitChange(state, change, { addContainer = false } = {}) {
   const fileId = state['::current-file-id'];
   if (fileId == null) throw new Error('no current file id');
 
-  let finalChange = { ...change };
+  const finalChange = { ...change };
   if (addContainer) {
     finalChange['page-id'] = state['::current-page-id'];
     finalChange['frame-id'] = state['::current-frame-id'];
@@ -84,6 +99,9 @@ function commitChange(state, change, { addContainer = false } = {}) {
   return { ...state, '::files': files };
 }
 
+/**
+ *
+ */
 function commitShape(state, shape) {
   const parentId = state['::parent-stack']?.[state['::parent-stack'].length - 1];
   const frameId = state['::current-frame-id'];
@@ -104,12 +122,18 @@ function commitShape(state, shape) {
   return newState;
 }
 
+/**
+ *
+ */
 function clearNames(file) {
   const result = { ...file };
   delete result['::unames'];
   return result;
 }
 
+/**
+ *
+ */
 export function createEmptyFile(name = 'New File') {
   const fileId = uuid.next();
   const pageId = uuid.next();
@@ -129,6 +153,9 @@ export function createEmptyFile(name = 'New File') {
   };
 }
 
+/**
+ *
+ */
 export function buildFile(options = {}) {
   const {
     name = 'New File',
@@ -164,10 +191,16 @@ export function buildFile(options = {}) {
   return file;
 }
 
+/**
+ *
+ */
 export function createState() {
   return {};
 }
 
+/**
+ *
+ */
 export function getCurrentPage(state) {
   const fileId = state['::current-file-id'];
   const pageId = state['::current-page-id'];
@@ -176,16 +209,25 @@ export function getCurrentPage(state) {
   return state['::files']?.[fileId]?.data?.['pages-index']?.[pageId];
 }
 
+/**
+ *
+ */
 export function getCurrentObjects(state) {
   const page = getCurrentPage(state);
   return page?.objects;
 }
 
+/**
+ *
+ */
 export function getShape(state, shapeId) {
   const objects = getCurrentObjects(state);
   return objects?.[shapeId];
 }
 
+/**
+ *
+ */
 export function addFile(state, params = {}) {
   const id = defaultUuid(params.id);
   const fileParams = {
@@ -206,6 +248,9 @@ export function addFile(state, params = {}) {
   };
 }
 
+/**
+ *
+ */
 export function closeFile(state) {
   state = closePage(state);
   const result = { ...state };
@@ -213,6 +258,9 @@ export function closeFile(state) {
   return result;
 }
 
+/**
+ *
+ */
 export function addPage(state, params = {}) {
   const page = typesPage.makeEmptyPage(params);
   const change = { type: 'add-page', page };
@@ -228,6 +276,9 @@ export function addPage(state, params = {}) {
   return newState;
 }
 
+/**
+ *
+ */
 export function closePage(state) {
   const result = { ...state };
   delete result['::current-page-id'];
@@ -236,6 +287,9 @@ export function closePage(state) {
   return clearNames(result);
 }
 
+/**
+ *
+ */
 export function addBoard(state, params = {}) {
   const shape = typesShape.setupShape(assignShapeName({
     ...params,
@@ -253,6 +307,9 @@ export function addBoard(state, params = {}) {
   return newState;
 }
 
+/**
+ *
+ */
 export function closeBoard(state) {
   const parentStack = state['::parent-stack'] ?? [];
   const parentId = parentStack[parentStack.length - 1];
@@ -268,6 +325,9 @@ export function closeBoard(state) {
   };
 }
 
+/**
+ *
+ */
 export function addGroup(state, params = {}) {
   const shape = typesShape.setupShape(assignShapeName({
     ...params,
@@ -284,6 +344,9 @@ export function addGroup(state, params = {}) {
   return newState;
 }
 
+/**
+ *
+ */
 export function closeGroup(state) {
   const parentStack = state['::parent-stack'] ?? [];
   const groupId = parentStack[parentStack.length - 1];
@@ -339,6 +402,9 @@ export function closeGroup(state) {
   }
 }
 
+/**
+ *
+ */
 export function addBool(state, params) {
   const { 'group-id': groupId, type: boolType } = params;
   const group = getShape(state, groupId);
@@ -392,6 +458,9 @@ export function addBool(state, params) {
   return newState;
 }
 
+/**
+ *
+ */
 export function addShape(state, params = {}) {
   let obj = { ...params };
   if (obj['svg-attrs']) {
@@ -405,6 +474,9 @@ export function addShape(state, params = {}) {
   return newState;
 }
 
+/**
+ *
+ */
 export function addLibraryColor(state, color) {
   const newColor = {
     ...color,
@@ -418,6 +490,9 @@ export function addLibraryColor(state, color) {
   return newState;
 }
 
+/**
+ *
+ */
 export function addLibraryTypography(state, typography) {
   const newTypo = {
     ...typography,
@@ -436,6 +511,9 @@ export function addLibraryTypography(state, typography) {
   return newState;
 }
 
+/**
+ *
+ */
 export function addComponent(state, params) {
   const componentId = defaultUuid(params['component-id']);
   const fileId = params['file-id'] ?? state['::current-file-id'];
@@ -474,10 +552,16 @@ export function addComponent(state, params) {
   return newState;
 }
 
+/**
+ *
+ */
 export function addTokensLib(state, tokensLib) {
   return commitChange(state, { type: 'set-tokens-lib', 'tokens-lib': tokensLib });
 }
 
+/**
+ *
+ */
 export function deleteShape(state, id) {
   return commitChange(state, {
     type: 'del-obj',
@@ -487,6 +571,9 @@ export function deleteShape(state, id) {
   });
 }
 
+/**
+ *
+ */
 export function updateShape(state, shapeId, f) {
   const pageId = state['::current-page-id'];
   const objects = getCurrentObjects(state);
@@ -513,6 +600,9 @@ export function updateShape(state, shapeId, f) {
   });
 }
 
+/**
+ *
+ */
 export function addGuide(state, guide) {
   const newGuide = { ...guide };
   if (newGuide.id == null) {
@@ -529,6 +619,9 @@ export function addGuide(state, guide) {
   return newState;
 }
 
+/**
+ *
+ */
 export function deleteGuide(state, id) {
   const pageId = state['::current-page-id'];
   return commitChange(state, {
@@ -539,6 +632,9 @@ export function deleteGuide(state, id) {
   });
 }
 
+/**
+ *
+ */
 export function updateGuide(state, guide) {
   const pageId = state['::current-page-id'];
   return commitChange(state, {
@@ -549,6 +645,9 @@ export function updateGuide(state, guide) {
   });
 }
 
+/**
+ *
+ */
 export function addFileMedia(state, params, { mtype, size, blob } = {}) {
   const mediaId = uuid.next();
   const fileId = state['::current-file-id'];

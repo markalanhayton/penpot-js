@@ -37,7 +37,7 @@ describe('exceptions', () => {
   });
 
   it('ignoring() swallows exceptions', () => {
-    let result = ignoring(() => { throw new Error('boom'); });
+    const result = ignoring(() => { throw new Error('boom'); });
     assert.equal(result, undefined);
   });
 

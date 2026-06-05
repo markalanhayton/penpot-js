@@ -6,6 +6,9 @@ import * as gsh from '../geom/shapes/common.js';
 import { getf, patchObject } from '../data.js';
 import { zero as uuidZero } from '../uuid.js';
 
+/**
+ *
+ */
 export function prepareAddShape(changes, shape, objects) {
   const meta = shape.__meta || {};
   const index = meta.index;
@@ -36,6 +39,9 @@ export function prepareAddShape(changes, shape, objects) {
   return [shape, changes];
 }
 
+/**
+ *
+ */
 export function prepareMoveShapesIntoFrame(changes, frameId, shapes, objects, removeLayoutDataQ) {
   const parentId = objects?.[frameId]?.['parent-id'];
   const filteredShapes = shapes.filter((id) => id !== parentId);
@@ -61,6 +67,9 @@ export function prepareMoveShapesIntoFrame(changes, frameId, shapes, objects, re
   return changes;
 }
 
+/**
+ *
+ */
 export function prepareCreateArtboardFromSelection(changes, id, parentId, objects, selected, index, frameName, withoutFillQ, targetCellId, delta) {
   const selectedObjs = selected.map(getf(objects)).filter(Boolean);
   if (!selectedObjs || selectedObjs.length === 0) return [null, changes];
@@ -153,10 +162,13 @@ export function prepareCreateArtboardFromSelection(changes, id, parentId, object
   return [shape, result];
 }
 
+/**
+ *
+ */
 export function prepareCreateEmptyArtboard(changes, frameId, parentId, objects, index, frameName, withoutFillQ, targetCellId) {
   const baseParent = objects?.[parentId];
 
-  let attrs = {
+  const attrs = {
     type: 'frame',
     x: 0,
     y: 0,
@@ -185,7 +197,7 @@ export function prepareCreateEmptyArtboard(changes, frameId, parentId, objects, 
   if (ctl.gridLayoutQ(objects, shape['parent-id'])) {
     if (targetCellId != null) {
       result = pcb.updateShapes(result, [shape['parent-id']], (parent) => {
-        let p = { ...parent };
+        const p = { ...parent };
         p['layout-grid-cells'] = { ...baseParent['layout-grid-cells'] };
         p['layout-grid-cells'] = { ...p['layout-grid-cells'], [targetCellId]: { ...p['layout-grid-cells'][targetCellId], shapes: [frameId] } };
         return { ...p, position: 'auto' };

@@ -4,10 +4,16 @@
 //
 // Copyright (c) KALEIDOS INC
 
+/**
+ *
+ */
 export function tr(key, ..._args) {
   return key;
 }
 
+/**
+ *
+ */
 export function c(x) {
   return x;
 }

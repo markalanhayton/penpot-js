@@ -1,10 +1,16 @@
 import { getIn, updateInWhen, dissocIn, updateWhen } from '../data.js';
 import { diffComponents, usesLibraryComponentsQ } from './component.js';
 
+/**
+ *
+ */
 function touch(component, nowFn) {
   return { ...component, 'modified-at': (nowFn ?? Date.now)() };
 }
 
+/**
+ *
+ */
 export function components(fileData, options) {
   const comps = fileData.components ?? {};
   if (options?.includeDeleted) return comps;
@@ -15,17 +21,26 @@ export function components(fileData, options) {
   return result;
 }
 
+/**
+ *
+ */
 export function componentsSeq(fileData) {
   return Object.values(fileData.components ?? {}).filter((c) => !c.deleted);
 }
 
+/**
+ *
+ */
 export function deletedComponentsSeq(fileData) {
   return Object.values(fileData.components ?? {}).filter((c) => c.deleted);
 }
 
+/**
+ *
+ */
 export function addComponent(fData, { id, name, path, 'main-instance-id': mainInstanceId, 'main-instance-page': mainInstancePage, annotation, 'variant-id': variantId, 'variant-properties': variantProperties }) {
   const now = Date.now();
-  let comps = { ...(fData.components ?? {}) };
+  const comps = { ...(fData.components ?? {}) };
   comps[id] = touch({
     id,
     name,
@@ -41,6 +56,9 @@ export function addComponent(fData, { id, name, path, 'main-instance-id': mainIn
   return { ...fData, components: comps };
 }
 
+/**
+ *
+ */
 export function modComponent(fileData, { id, name, path, 'main-instance-id': mainInstanceId, 'main-instance-page': mainInstancePage, objects, annotation, 'variant-id': variantId, 'variant-properties': variantProperties, 'modified-at': modifiedAt }) {
   const comps = fileData.components ?? {};
   const component = comps[id];
@@ -76,6 +94,9 @@ export function modComponent(fileData, { id, name, path, 'main-instance-id': mai
   };
 }
 
+/**
+ *
+ */
 export function getComponent(fileData, componentId, includeDeleted) {
   const component = (fileData.components ?? {})[componentId];
   if (!component) return undefined;
@@ -83,12 +104,18 @@ export function getComponent(fileData, componentId, includeDeleted) {
   return undefined;
 }
 
+/**
+ *
+ */
 export function getDeletedComponent(fileData, componentId) {
   const component = (fileData.components ?? {})[componentId];
   if (component?.deleted) return component;
   return undefined;
 }
 
+/**
+ *
+ */
 export function updateComponent(fileData, componentId, f, ...args) {
   const comps = fileData.components ?? {};
   const component = comps[componentId];
@@ -100,15 +127,24 @@ export function updateComponent(fileData, componentId, f, ...args) {
   };
 }
 
+/**
+ *
+ */
 export function setComponentModified(fileData, componentId) {
   return updateComponent(fileData, componentId, (c) => c);
 }
 
+/**
+ *
+ */
 export function deleteComponent(fileData, componentId) {
   const { [componentId]: _, ...rest } = fileData.components ?? {};
   return { ...fileData, components: rest };
 }
 
+/**
+ *
+ */
 export function markComponentDeleted(fileData, componentId) {
   const comps = fileData.components ?? {};
   const component = comps[componentId];
@@ -119,6 +155,9 @@ export function markComponentDeleted(fileData, componentId) {
   };
 }
 
+/**
+ *
+ */
 export function markComponentUndeleted(fileData, componentId) {
   const comps = fileData.components ?? {};
   const component = comps[componentId];
@@ -131,6 +170,9 @@ export function markComponentUndeleted(fileData, componentId) {
   };
 }
 
+/**
+ *
+ */
 export function usedComponentsChangedSince(shape, library, sinceDate) {
   if (!usesLibraryComponentsQ(shape, library.id)) return [];
   const component = getComponent(library.data, shape['component-id']);
@@ -140,6 +182,9 @@ export function usedComponentsChangedSince(shape, library, sinceDate) {
   return [{ 'shape-id': shape.id, 'asset-id': shape['component-id'], 'asset-type': 'component' }];
 }
 
+/**
+ *
+ */
 export function getComponentAnnotation(shape, libraries) {
   const libraryData = libraries?.[shape['component-file']]?.data;
   if (!libraryData) return undefined;

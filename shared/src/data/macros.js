@@ -4,6 +4,9 @@
 //
 // Copyright (c) KALEIDOS INC
 
+/**
+ *
+ */
 export function selectKeys(target, keys) {
   const result = {};
   for (const key of keys) {
@@ -14,6 +17,9 @@ export function selectKeys(target, keys) {
   return result;
 }
 
+/**
+ *
+ */
 export function getIn(target, keys, defaultValue) {
   let current = target;
   for (let i = 0; i < keys.length; i++) {
@@ -25,6 +31,9 @@ export function getIn(target, keys, defaultValue) {
   return current === undefined ? defaultValue : current;
 }
 
+/**
+ *
+ */
 export function fmt(template, ...args) {
   let result = template;
   for (let i = 0; i < args.length; i++) {
@@ -40,10 +49,16 @@ export function fmt(template, ...args) {
   return result;
 }
 
+/**
+ *
+ */
 export function truncate(s, maxLength) {
   return s.slice(0, Math.min(maxLength, s.length));
 }
 
+/**
+ *
+ */
 export function withOpen(bindings, body) {
   const resources = [];
   try {
@@ -61,6 +76,9 @@ export function withOpen(bindings, body) {
   }
 }
 
+/**
+ *
+ */
 export function runtimeAssert(hint, fn) {
   try {
     if (!fn()) {
@@ -81,6 +99,9 @@ export function runtimeAssert(hint, fn) {
   }
 }
 
+/**
+ *
+ */
 export function export_(source, name) {
   if (typeof source === "function") return source;
   return source[name] || source;

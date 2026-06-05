@@ -10,6 +10,9 @@ import * as ctm from '../../../modifiers.js';
 import * as ctl from '../../../types/shape/layout.js';
 import * as cfh from '../../../files/helpers.js';
 
+/**
+ *
+ */
 function cellBoundsFn(layoutData, cell) {
   const { origin, columnTracks, rowTracks, layoutBounds } = layoutData;
   const columnGap = layoutData.columnGap ?? layoutData['column-gap'] ?? 0;
@@ -54,6 +57,9 @@ function cellBoundsFn(layoutData, cell) {
   return [p1, p2, p3, p4];
 }
 
+/**
+ *
+ */
 function calcFillWidthData(parent, transform, transformInverse, child, childOrigin, childWidth, cellBounds) {
   const targetWidth = Math.max(gpo.widthPoints(cellBounds) - ctl.childWidthMargin(child), 0.01);
   const maxWidth = Math.max(ctl.childMaxWidth(child), 0.01);
@@ -65,6 +71,9 @@ function calcFillWidthData(parent, transform, transformInverse, child, childOrig
   };
 }
 
+/**
+ *
+ */
 function calcFillHeightData(parent, transform, transformInverse, child, childOrigin, childHeight, cellBounds) {
   const targetHeight = Math.max(gpo.heightPoints(cellBounds) - ctl.childHeightMargin(child), 0.01);
   const maxHeight = Math.max(ctl.childMaxHeight(child), 0.01);
@@ -76,6 +85,9 @@ function calcFillHeightData(parent, transform, transformInverse, child, childOri
   };
 }
 
+/**
+ *
+ */
 function fillModifiersGrid(parent, parentBounds, child, childBounds, layoutData, cellData) {
   const childOrigin = gpo.origin(childBounds);
   const childWidth = gpo.widthPoints(childBounds);
@@ -104,6 +116,9 @@ function fillModifiersGrid(parent, parentBounds, child, childBounds, layoutData,
   return [finalWidth, finalHeight, mods];
 }
 
+/**
+ *
+ */
 function childPositionDelta(parent, child, childBounds, childWidth, childHeight, layoutData, cellData) {
   const cb = cellBoundsFn(layoutData, cellData);
   if (!cb) return gpt.point(0, 0);
@@ -165,6 +180,9 @@ function childPositionDelta(parent, child, childBounds, childWidth, childHeight,
   return gpt.add(gpt.toVec(fromH, toH), gpt.toVec(fromV, toV));
 }
 
+/**
+ *
+ */
 export function childModifiers(parent, parentBounds, child, childBounds, layoutData, cellData) {
   const [childWidth, childHeight, fillMods] = fillModifiersGrid(parent, parentBounds, child, childBounds, layoutData, cellData);
   const positionDelta = childPositionDelta(parent, child, childBounds, childWidth, childHeight, layoutData, cellData);
@@ -178,12 +196,18 @@ export function childModifiers(parent, parentBounds, child, childBounds, layoutD
   return mods;
 }
 
+/**
+ *
+ */
 function getPositionGridCoord(layoutData, position) {
   const { layoutBounds, columnTracks, rowTracks } = layoutData;
 
   const hvFn = (val) => gpo.startHv(layoutBounds, val);
   const vvFn = (val) => gpo.startVv(layoutBounds, val);
 
+  /**
+   *
+   */
   function makeIsInsideTrack(type) {
     const [vfn, ofn] = type === 'column' ? [vvFn, hvFn] : [hvFn, vvFn];
     return (track) => {
@@ -193,6 +217,9 @@ function getPositionGridCoord(layoutData, position) {
     };
   }
 
+  /**
+   *
+   */
   function makeMinDistanceTrack(type) {
     const [vfn, ofn] = type === 'column' ? [vvFn, hvFn] : [hvFn, vvFn];
     return ([selected, selectedDist], [curIdx, track]) => {
@@ -235,6 +262,9 @@ function getPositionGridCoord(layoutData, position) {
   return null;
 }
 
+/**
+ *
+ */
 export function getDropCell(frameId, objects, position) {
   const frame = objects[frameId];
   const children = cfh.getImmediateChildren(objects, frame.id)

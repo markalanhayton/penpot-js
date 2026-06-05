@@ -1,18 +1,33 @@
+/**
+ *
+ */
 export class Pointer {
+  /**
+   *
+   */
   constructor(id, metadata) {
     this.id = id;
     this.metadata = metadata || null;
   }
 
+  /**
+   *
+   */
   deref() {
     return this.id;
   }
 
+  /**
+   *
+   */
   valueOf() {
     return this.id;
   }
 }
 
+/**
+ *
+ */
 export function pointer(o) {
   if (o instanceof Pointer) return o;
   if (typeof o === 'string') return new Pointer(o);
@@ -20,6 +35,9 @@ export function pointer(o) {
   return new Pointer(o);
 }
 
+/**
+ *
+ */
 export function isPointer(o) {
   return o instanceof Pointer;
 }
@@ -27,6 +45,9 @@ export function isPointer(o) {
 const writeHandlers = new Map();
 const readHandlers = new Map();
 
+/**
+ *
+ */
 export function addHandlers(handlers) {
   for (const h of handlers) {
     if (h.write) {
@@ -69,16 +90,25 @@ addHandlers([
   },
 ]);
 
+/**
+ *
+ */
 export function encodeStr(data, opts = {}) {
   const encoded = encodeValue(data, opts, new WeakSet());
   return JSON.stringify(encoded);
 }
 
+/**
+ *
+ */
 export function decodeStr(data, opts = {}) {
   if (!data || typeof data !== 'string') return data;
   return decodeValue(JSON.parse(data));
 }
 
+/**
+ *
+ */
 export function isTransit(v) {
   try {
     if (typeof v !== 'string') return false;
@@ -89,6 +119,9 @@ export function isTransit(v) {
   }
 }
 
+/**
+ *
+ */
 function encodeValue(val, opts, seen) {
   if (val === null || val === undefined) return null;
 
@@ -156,6 +189,9 @@ function encodeValue(val, opts, seen) {
   return val;
 }
 
+/**
+ *
+ */
 function encodeKey(key) {
   if (typeof key === 'string') {
     if (/^[a-zA-Z][a-zA-Z0-9-]*$/.test(key) && key.includes('-')) {
@@ -166,6 +202,9 @@ function encodeKey(key) {
   return encodeValue(key, {}, new WeakSet());
 }
 
+/**
+ *
+ */
 function decodeValue(val) {
   if (val === null || val === undefined) return val;
 
@@ -223,6 +262,9 @@ function decodeValue(val) {
   return val;
 }
 
+/**
+ *
+ */
 function decodeTaggedMap(tag, items) {
   const obj = {};
   for (let i = 0; i < items.length; i += 2) {

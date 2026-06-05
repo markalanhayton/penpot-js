@@ -63,6 +63,9 @@ export const ERROR_CODES = new Set([
 
 let errors = null;
 
+/**
+ *
+ */
 function libraryExistsQ(file, libraries, shape) {
   return (
     shape['component-file'] === file?.id ||
@@ -70,6 +73,9 @@ function libraryExistsQ(file, libraries, shape) {
   );
 }
 
+/**
+ *
+ */
 function reportError(code, hint, shape, file, page, extraArgs) {
   const error = withoutNils({
     code,
@@ -91,6 +97,9 @@ function reportError(code, hint, shape, file, page, extraArgs) {
   return error;
 }
 
+/**
+ *
+ */
 export function validateFile(file, libraries) {
   if (!file?.features?.has?.('components/v2') && !file?.features?.['components/v2']) {
     return null;
@@ -117,6 +126,9 @@ export function validateFile(file, libraries) {
   return result;
 }
 
+/**
+ *
+ */
 export function validateShape(shapeId, file, page, libraries) {
   errors = [];
   checkShape(shapeId, file, page, libraries);
@@ -125,6 +137,9 @@ export function validateShape(shapeId, file, page, libraries) {
   return result;
 }
 
+/**
+ *
+ */
 export function validateComponent(component, file) {
   errors = [];
   checkComponent(component, file);
@@ -133,6 +148,9 @@ export function validateComponent(component, file) {
   return result;
 }
 
+/**
+ *
+ */
 function checkGeometry(shape, file, page) {
   const isPath = shape?.type === 'path';
   const isBool = shape?.type === 'bool';
@@ -150,6 +168,9 @@ function checkGeometry(shape, file, page) {
   }
 }
 
+/**
+ *
+ */
 function checkParentChildren(shape, file, page) {
   const parentId = shape?.['parent-id'];
   const parent = page?.objects?.[parentId];
@@ -182,6 +203,9 @@ function checkParentChildren(shape, file, page) {
   }
 }
 
+/**
+ *
+ */
 function checkFrame(shape, file, page) {
   const frameId = shape?.['frame-id'];
   const frame = page?.objects?.[frameId];
@@ -208,6 +232,9 @@ function checkFrame(shape, file, page) {
   }
 }
 
+/**
+ *
+ */
 function checkShape(shapeId, file, page, libraries, context = 'not-component', libraryExists = false) {
   const shape = getShape(page, shapeId);
   if (!shape) return;
@@ -270,6 +297,9 @@ function checkShape(shapeId, file, page, libraries, context = 'not-component', l
   }
 }
 
+/**
+ *
+ */
 function checkShapeMainRootTop(shape, file, page, libraries) {
   checkComponentRoot(shape, file, page);
   checkComponentNotRef(shape, file, page);
@@ -277,6 +307,9 @@ function checkShapeMainRootTop(shape, file, page, libraries) {
   checkDuplicateSwapSlot(shape, file, page);
 }
 
+/**
+ *
+ */
 function checkShapeMainRootNested(shape, file, page, libraries) {
   checkComponentMainHead(shape, file, page, libraries);
   checkComponentNotRoot(shape, file, page);
@@ -284,6 +317,9 @@ function checkShapeMainRootNested(shape, file, page, libraries) {
   checkEmptySwapSlot(shape, file, page);
 }
 
+/**
+ *
+ */
 function checkShapeCopyRootTop(shape, file, page, libraries) {
   const libExists = libraryExistsQ(file, libraries, shape);
   checkComponentNotMainHead(shape, file, page, libraries);
@@ -295,6 +331,9 @@ function checkShapeCopyRootTop(shape, file, page, libraries) {
   checkValidTouched(shape, file, page);
 }
 
+/**
+ *
+ */
 function checkShapeCopyRootNested(shape, file, page, libraries, libraryExists) {
   checkComponentNotMainHead(shape, file, page, libraries);
   checkComponentNotRoot(shape, file, page);
@@ -308,6 +347,9 @@ function checkShapeCopyRootNested(shape, file, page, libraries, libraryExists) {
   }
 }
 
+/**
+ *
+ */
 function checkShapeMainNotRoot(shape, file, page, libraries) {
   checkComponentNotMainNotHead(shape, file, page);
   checkComponentNotRoot(shape, file, page);
@@ -315,6 +357,9 @@ function checkShapeMainNotRoot(shape, file, page, libraries) {
   checkEmptySwapSlot(shape, file, page);
 }
 
+/**
+ *
+ */
 function checkShapeCopyNotRoot(shape, file, page, libraries) {
   checkComponentNotMainNotHead(shape, file, page);
   checkComponentNotRoot(shape, file, page);
@@ -324,6 +369,9 @@ function checkShapeCopyNotRoot(shape, file, page, libraries) {
   checkValidTouched(shape, file, page);
 }
 
+/**
+ *
+ */
 function checkShapeNotComponent(shape, file, page, libraries) {
   checkComponentNotMainNotHead(shape, file, page);
   checkComponentNotRoot(shape, file, page);
@@ -331,6 +379,9 @@ function checkShapeNotComponent(shape, file, page, libraries) {
   checkEmptySwapSlot(shape, file, page);
 }
 
+/**
+ *
+ */
 function checkComponentMainHead(shape, file, page, libraries) {
   if (!shape?.mainInstance) {
     reportError('component-not-main', 'Shape expected to be main instance', shape, file, page);
@@ -360,6 +411,9 @@ function checkComponentMainHead(shape, file, page, libraries) {
   }
 }
 
+/**
+ *
+ */
 function checkComponentNotMainHead(shape, file, page, libraries) {
   if (shape?.mainInstance === true) {
     reportError('component-not-main', 'Shape not expected to be main instance', shape, file, page);
@@ -379,6 +433,9 @@ function checkComponentNotMainHead(shape, file, page, libraries) {
   }
 }
 
+/**
+ *
+ */
 function checkComponentNotMainNotHead(shape, file, page) {
   if (shape?.mainInstance === true) {
     reportError('component-main', 'Shape not expected to be main instance', shape, file, page);
@@ -388,18 +445,27 @@ function checkComponentNotMainNotHead(shape, file, page) {
   }
 }
 
+/**
+ *
+ */
 function checkComponentRoot(shape, file, page) {
   if (shape?.['component-root'] == null) {
     reportError('should-be-component-root', 'Shape should be component root', shape, file, page);
   }
 }
 
+/**
+ *
+ */
 function checkComponentNotRoot(shape, file, page) {
   if (shape?.['component-root'] === true) {
     reportError('should-not-be-component-root', 'Shape should not be component root', shape, file, page);
   }
 }
 
+/**
+ *
+ */
 function checkComponentRef(shape, file, page, libraries) {
   if (!libraryExistsQ(file, libraries, shape)) return;
   const refShape = findRefShapeLocal(file, page, libraries, shape);
@@ -408,12 +474,18 @@ function checkComponentRef(shape, file, page, libraries) {
   }
 }
 
+/**
+ *
+ */
 function checkComponentNotRef(shape, file, page) {
   if (shape?.['shape-ref'] != null) {
     reportError('shape-ref-in-main', 'Shape inside main instance should not have shape-ref', shape, file, page);
   }
 }
 
+/**
+ *
+ */
 function checkRefIsNotHead(shape, file, page, libraries) {
   const refShape = findRefShapeLocal(file, page, libraries, shape);
   if (refShape && instanceHeadQ(refShape)) {
@@ -421,6 +493,9 @@ function checkRefIsNotHead(shape, file, page, libraries) {
   }
 }
 
+/**
+ *
+ */
 function checkRefIsHead(shape, file, page, libraries) {
   const refShape = findRefShapeLocal(file, page, libraries, shape);
   if (refShape && !instanceHeadQ(refShape)) {
@@ -428,6 +503,9 @@ function checkRefIsHead(shape, file, page, libraries) {
   }
 }
 
+/**
+ *
+ */
 function checkRefComponentId(shape, file, page, libraries) {
   if (getSwapSlot(shape) != null) return;
 
@@ -442,18 +520,27 @@ function checkRefComponentId(shape, file, page, libraries) {
   }
 }
 
+/**
+ *
+ */
 function checkEmptySwapSlot(shape, file, page) {
   if (getSwapSlot(shape) != null) {
     reportError('misplaced-slot', 'This shape should not have swap slot', shape, file, page);
   }
 }
 
+/**
+ *
+ */
 function checkDuplicateSwapSlot(shape, file, page) {
   if (hasDuplicateSwapSlotQ(shape, page)) {
     reportError('duplicate-slot', 'This shape has children with the same swap slot', shape, file, page);
   }
 }
 
+/**
+ *
+ */
 function checkRequiredSwapSlot(shape, file, page, libraries) {
   const nearMatch = findNearMatchLocal(file, page, libraries, shape);
   if (nearMatch && shape?.['shape-ref'] !== nearMatch?.id && getSwapSlot(shape) == null) {
@@ -461,6 +548,9 @@ function checkRequiredSwapSlot(shape, file, page, libraries) {
   }
 }
 
+/**
+ *
+ */
 function checkValidTouched(shape, file, page) {
   const touched = shape?.touched ?? {};
   const contentTouched = touched['content-group'];
@@ -471,6 +561,9 @@ function checkValidTouched(shape, file, page) {
   }
 }
 
+/**
+ *
+ */
 function checkVariantContainer(shape, file, page) {
   const shapeId = shape?.id;
   const shapes = shape?.shapes ?? [];
@@ -489,6 +582,9 @@ function checkVariantContainer(shape, file, page) {
   }
 }
 
+/**
+ *
+ */
 function checkVariant(shape, file, page) {
   const parent = page?.objects?.[shape?.['parent-id']];
   const component = getComponent(file?.data ?? file, shape?.['component-id'], true);
@@ -498,6 +594,9 @@ function checkVariant(shape, file, page) {
   }
 }
 
+/**
+ *
+ */
 function extractPropertiesNamesFromFirst(children, data) {
   if (!children.length) return [];
   const first = children[0];
@@ -505,6 +604,9 @@ function extractPropertiesNamesFromFirst(children, data) {
   return (comp?.['variant-properties'] ?? []).map((p) => p.name);
 }
 
+/**
+ *
+ */
 function hasDuplicateSwapSlotQ(shape, page) {
   const shapes = (shape?.shapes ?? []).map((id) => page?.objects?.[id]).filter(Boolean);
   const slots = shapes.map((s) => getSwapSlot(s)).filter((s) => s != null);
@@ -516,6 +618,9 @@ function hasDuplicateSwapSlotQ(shape, page) {
   return false;
 }
 
+/**
+ *
+ */
 function getOrphanShapes(page) {
   const objects = page?.objects ?? {};
   const result = [];
@@ -527,16 +632,25 @@ function getOrphanShapes(page) {
   return result;
 }
 
+/**
+ *
+ */
 function findRefShapeLocal(file, pageOrContainer, libraries, shape) {
   const container = pageOrContainer.objects ? pageOrContainer : makeContainer(pageOrContainer, 'page');
   return findRefShape(file, container, libraries, shape);
 }
 
+/**
+ *
+ */
 function findNearMatchLocal(file, pageOrContainer, libraries, shape) {
   const container = pageOrContainer.objects ? pageOrContainer : makeContainer(pageOrContainer, 'page');
   return findNearMatch(file, container, libraries, shape);
 }
 
+/**
+ *
+ */
 function checkComponent(component, file) {
   if ('objects' in component && component.objects == null) {
     reportError('component-nil-objects-not-allowed', 'Objects list cannot be nil', component, file, null);
@@ -557,6 +671,9 @@ function checkComponent(component, file) {
   }
 }
 
+/**
+ *
+ */
 function checkMainInsideMain(component, file) {
   const page = getComponentPage(file?.data ?? file, component);
   const mainInstance = page?.objects?.[component['main-instance-id']];
@@ -568,12 +685,18 @@ function checkMainInsideMain(component, file) {
   }
 }
 
+/**
+ *
+ */
 function checkNotObjects(component, file) {
   if (component?.objects != null && Object.keys(component.objects).length > 0) {
     reportError('non-deleted-component-cannot-have-objects', 'A non-deleted component cannot have shapes inside', component, file, null);
   }
 }
 
+/**
+ *
+ */
 function checkComponentDuplicateSwapSlot(component, file) {
   const shape = component?.objects?.[component['main-instance-id']];
   if (shape && hasDuplicateSwapSlotQ(shape, makeContainer(component, 'component'))) {
@@ -581,6 +704,9 @@ function checkComponentDuplicateSwapSlot(component, file) {
   }
 }
 
+/**
+ *
+ */
 function checkRefCycles(component, file) {
   const cyclesIds = Object.values(component?.objects ?? {})
     .filter((s) => s.id === s['shape-ref'])
@@ -591,6 +717,9 @@ function checkRefCycles(component, file) {
   }
 }
 
+/**
+ *
+ */
 function checkVariantComponent(component, file) {
   const page = getComponentPage(file?.data ?? file, component);
   const mainComponent = component.deleted
@@ -602,6 +731,9 @@ function checkVariantComponent(component, file) {
   }
 }
 
+/**
+ *
+ */
 function getParentIds(objects, shapeId) {
   const result = [];
   let current = objects?.[shapeId];

@@ -4,6 +4,9 @@ import * as gpt from '../point.js';
 import * as grc from '../rect.js';
 import * as mth from '../../math.js';
 
+/**
+ *
+ */
 export function shapesToRect(shapes) {
   const rects = [];
   for (const shape of shapes) {
@@ -13,6 +16,9 @@ export function shapesToRect(shapes) {
   return grc.joinRects(rects);
 }
 
+/**
+ *
+ */
 export function pointsToCenter(points) {
   const ptx = points.map((p) => p.x);
   const pty = points.map((p) => p.y);
@@ -23,10 +29,16 @@ export function pointsToCenter(points) {
   return gpt.point((minx + maxx) / 2.0, (miny + maxy) / 2.0);
 }
 
+/**
+ *
+ */
 export function shapeToCenter(shape) {
   return grc.rectToCenter(shape.selrect);
 }
 
+/**
+ *
+ */
 export function transformPoints(points, centerOrMatrix, matrix) {
   if (arguments.length === 2) {
     const mtx = centerOrMatrix;
@@ -49,6 +61,9 @@ export function transformPoints(points, centerOrMatrix, matrix) {
   return points;
 }
 
+/**
+ *
+ */
 export function transformSelrect(selrect, matrix) {
   const x1 = selrect.x1;
   const y1 = selrect.y1;
@@ -59,6 +74,9 @@ export function transformSelrect(selrect, matrix) {
   return grc.cornersToRect(p1, p2);
 }
 
+/**
+ *
+ */
 export function invalidGeometryQ(shape) {
   const { points, selrect } = shape;
   if (mth.nan(selrect?.x) || mth.nan(selrect?.y) ||
@@ -73,6 +91,9 @@ export function invalidGeometryQ(shape) {
   return false;
 }
 
+/**
+ *
+ */
 export function shapeToPoints(shape) {
   const { transform, points } = shape;
   if (gmt.isUnit(transform) || transform == null) {

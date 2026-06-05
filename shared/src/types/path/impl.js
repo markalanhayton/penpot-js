@@ -4,24 +4,39 @@ const SEGMENT_U8_SIZE = 28;
 const MAX_SAFE_INT = 2147483647;
 const MIN_SAFE_INT = -2147483648;
 
+/**
+ *
+ */
 function normalizeCoord(v) {
   if (v > MAX_SAFE_INT) return MAX_SAFE_INT;
   if (v < MIN_SAFE_INT) return MIN_SAFE_INT;
   return v;
 }
 
+/**
+ *
+ */
 export function pathDataQ(o) {
   return o instanceof PathData;
 }
 
+/**
+ *
+ */
 export function fromPlain(segments) {
   return new PathData(segments.map(normalizeSegment));
 }
 
+/**
+ *
+ */
 export function fromString(s) {
   return fromPlain(parseSvgPath(s));
 }
 
+/**
+ *
+ */
 export function fromBytes(buffer) {
   if (buffer instanceof ArrayBuffer) {
     return fromDataView(new DataView(buffer));
@@ -35,6 +50,9 @@ export function fromBytes(buffer) {
   throw new Error('invalid data provided');
 }
 
+/**
+ *
+ */
 function fromDataView(dv) {
   const size = dv.byteLength;
   const count = Math.floor(size / SEGMENT_U8_SIZE);
@@ -53,6 +71,9 @@ function fromDataView(dv) {
   return new PathData(segments.filter(s => s !== null));
 }
 
+/**
+ *
+ */
 function readSegmentFromFields(type, c1x, c1y, c2x, c2y, x, y) {
   switch (type) {
     case 1: return { command: 'move-to', params: { x, y } };
@@ -63,6 +84,9 @@ function readSegmentFromFields(type, c1x, c1y, c2x, c2y, x, y) {
   }
 }
 
+/**
+ *
+ */
 function normalizeSegment(segment) {
   const params = { ...segment.params };
   if (params.x !== undefined) params.x = normalizeCoord(params.x);
@@ -74,6 +98,9 @@ function normalizeSegment(segment) {
   return { command: segment.command, params };
 }
 
+/**
+ *
+ */
 export function pathData(data) {
   if (pathDataQ(data)) return data;
   if (data === null || data === undefined) return fromPlain([]);
@@ -81,6 +108,9 @@ export function pathData(data) {
   throw new Error('unexpected data');
 }
 
+/**
+ *
+ */
 export function checkSegment(segment) {
   const validCommands = ['move-to', 'line-to', 'curve-to', 'close-path'];
   if (!segment || !validCommands.includes(segment.command)) {
@@ -89,6 +119,9 @@ export function checkSegment(segment) {
   return segment;
 }
 
+/**
+ *
+ */
 function getSegmentTypeCode(command) {
   switch (command) {
     case 'move-to': return 1;
@@ -99,56 +132,98 @@ function getSegmentTypeCode(command) {
   }
 }
 
+/**
+ *
+ */
 class PathData {
+  /**
+   *
+   */
   constructor(segments) {
     this._segments = segments;
     this._cache = new Map();
   }
 
+  /**
+   *
+   */
   get length() {
     return this._segments.length;
   }
 
+  /**
+   *
+   */
   [Symbol.iterator]() {
     return this._segments[Symbol.iterator]();
   }
 
+  /**
+   *
+   */
   get(index) {
     return this._segments[index];
   }
 
+  /**
+   *
+   */
   slice(start, end) {
     return this._segments.slice(start, end);
   }
 
+  /**
+   *
+   */
   indexOf(segment) {
     return this._segments.indexOf(segment);
   }
 
+  /**
+   *
+   */
   map(fn) {
     return this._segments.map(fn);
   }
 
+  /**
+   *
+   */
   filter(fn) {
     return this._segments.filter(fn);
   }
 
+  /**
+   *
+   */
   reduce(fn, initial) {
     return this._segments.reduce(fn, initial);
   }
 
+  /**
+   *
+   */
   every(fn) {
     return this._segments.every(fn);
   }
 
+  /**
+   *
+   */
   some(fn) {
     return this._segments.some(fn);
   }
 
+  /**
+   *
+   */
   forEach(fn) {
     this._segments.forEach(fn);
   }
 
+  /**
+   *
+   */
   concat(other) {
     if (pathDataQ(other)) {
       return new PathData([...this._segments, ...other._segments]);
@@ -156,6 +231,9 @@ class PathData {
     return new PathData([...this._segments, ...other]);
   }
 
+  /**
+   *
+   */
   transform(m) {
     const { a, b, c, d, e, f } = m;
     const newSegments = this._segments.map(seg => {
@@ -180,8 +258,11 @@ class PathData {
     return new PathData(newSegments);
   }
 
+  /**
+   *
+   */
   walk(fn, initial) {
-    let result = [...initial];
+    const result = [...initial];
     for (let i = 0; i < this._segments.length; i++) {
       const seg = this._segments[i];
       const { command, params } = seg;
@@ -197,6 +278,9 @@ class PathData {
     return result;
   }
 
+  /**
+   *
+   */
   reduceInternal(fn, initial) {
     let result = initial;
     for (let i = 0; i < this._segments.length; i++) {
@@ -213,6 +297,9 @@ class PathData {
     return result;
   }
 
+  /**
+   *
+   */
   lookup(index, fn) {
     if (index < 0 || index >= this._segments.length) return undefined;
     const seg = this._segments[index];
@@ -226,10 +313,16 @@ class PathData {
     return fn(command, c1x, c1y, c2x, c2y, x, y);
   }
 
+  /**
+   *
+   */
   getByteSize() {
     return this._segments.length * SEGMENT_U8_SIZE;
   }
 
+  /**
+   *
+   */
   writeTo(buffer, offset) {
     const view = new DataView(buffer, offset, this._segments.length * SEGMENT_U8_SIZE);
     for (let i = 0; i < this._segments.length; i++) {
@@ -246,6 +339,9 @@ class PathData {
     }
   }
 
+  /**
+   *
+   */
   toString() {
     return this._segments.map(seg => {
       const p = seg.params;
@@ -259,10 +355,16 @@ class PathData {
     }).join('');
   }
 
+  /**
+   *
+   */
   toJSON() {
     return this.toString();
   }
 
+  /**
+   *
+   */
   equals(other) {
     if (!(other instanceof PathData)) return false;
     if (this._segments.length !== other._segments.length) return false;
@@ -273,6 +375,9 @@ class PathData {
   }
 }
 
+/**
+ *
+ */
 export function decodeSegments(segments) {
   return segments.map(seg => {
     if (typeof seg.command === 'string') return seg;

@@ -105,6 +105,11 @@ export const TOKENS = `
   --penpot-sidebar-width: 260px;
   --penpot-rulers-size: 20px;
 
+  /* Responsive breakpoints */
+  --penpot-breakpoint-mobile: 480px;
+  --penpot-breakpoint-tablet: 768px;
+  --penpot-breakpoint-desktop: 1024px;
+
   /* Interactive */
   --penpot-clickable-min: 24px;
   --penpot-focus-outline: 2px solid var(--penpot-primary);

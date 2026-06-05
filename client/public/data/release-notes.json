@@ -1,0 +1,60 @@
+{
+  "currentVersion": "2.17.0",
+  "releases": [
+    {
+      "version": "2.17.0",
+      "title": "What's new in Penpot",
+      "highlights": [
+        {
+          "icon": "\u270f\ufe0f",
+          "title": "Text v3 Per-Range Styles",
+          "description": "Rich inline text styling with per-range fonts, sizes, weights, colors, and decorations using the new content tree model."
+        },
+        {
+          "icon": "\ud83d\uddc2\ufe0f",
+          "title": "Main Menu Bar",
+          "description": "Full File/Edit/View menu bar with keyboard mnemonics, hover-to-switch, and toggle items for rulers, grid, and snap."
+        },
+        {
+          "icon": "\ud83d\udccb",
+          "title": "System Clipboard",
+          "description": "Copy, paste, and cut shapes directly to and from the system clipboard with full SVG and image support."
+        },
+        {
+          "icon": "\ud83d\udcca",
+          "title": "Multi-Select Bounding Box",
+          "description": "Group bounding box with resize and rotation handles for multiple selected shapes."
+        },
+        {
+          "icon": "\ud83c\udfa8",
+          "title": "Custom Canvas Scrollbars",
+          "description": "Interactive scrollbars with drag-to-pan that appear when content extends beyond the viewport."
+        },
+        {
+          "icon": "\ud83d\udd12",
+          "title": "Fix Deleted Fonts",
+          "description": "Automatic detection and repair of text shapes referencing fonts no longer in the team library."
+        }
+      ],
+      "features": [
+        "Server: update-file-library-sync-status and ignore-file-library-sync-status RPCs",
+        "Accessibility: ARIA roles, focus traps, and axe-core audit across 13 components",
+        "Database migration parity with 6 new SQLite migrations (0010-0015)",
+        "Wire-compatibility test suite with 34 + 112 transit roundtrip tests",
+        "Ruler guides with creation, snap, and persistence",
+        "SVG-to-shapes builder fully ported from upstream",
+        "Nested drag-drop in layer panel with reparenting",
+        "File thumbnails in dashboard with client-side generation",
+        "Real-time collaboration with operational transform",
+        "Node.js exporter service for PNG, JPEG, WebP, SVG, and PDF"
+      ],
+      "fixes": [
+        "Fixed boolean operations for concave shapes",
+        "Fixed isPointInGeomDataQ crash on line-only content",
+        "Fixed plugin API LibraryTypography.remove() UUID assertion error",
+        "Fixed MCP SSE sessions leaking memory on zombie connections",
+        "Fixed missing translation keys and i18n issues"
+      ]
+    }
+  ]
+}

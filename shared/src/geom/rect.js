@@ -1,7 +1,13 @@
 import * as gpt from './point.js';
 import * as mth from '../math.js';
 
+/**
+ *
+ */
 export class Rect {
+  /**
+   *
+   */
   constructor(x, y, width, height, x1, y1, x2, y2) {
     this.x = x;
     this.y = y;
@@ -14,10 +20,16 @@ export class Rect {
   }
 }
 
+/**
+ *
+ */
 export function isRect(o) {
   return o instanceof Rect;
 }
 
+/**
+ *
+ */
 export function makeRect(x, y, width, height) {
   if (x === undefined) return makeRect(0, 0, 0.01, 0.01);
 
@@ -56,6 +68,9 @@ export function makeRect(x, y, width, height) {
 
 export const EMPTY_RECT = makeRect(0, 0, 0.01, 0.01);
 
+/**
+ *
+ */
 export function updateRect(rect, type) {
   if (type === 'size' || type === 'position') {
     const x = rect.x, y = rect.y, w = rect.width, h = rect.height;
@@ -70,6 +85,9 @@ export function updateRect(rect, type) {
   return rect;
 }
 
+/**
+ *
+ */
 export function closeRect(rect1, rect2) {
   return mth.close(rect1.x, rect2.x) &&
          mth.close(rect1.y, rect2.y) &&
@@ -77,6 +95,9 @@ export function closeRect(rect1, rect2) {
          mth.close(rect1.height, rect2.height);
 }
 
+/**
+ *
+ */
 export function rectToPoints(rect) {
   const x = rect.x, y = rect.y;
   let w = rect.width, h = rect.height;
@@ -90,10 +111,16 @@ export function rectToPoints(rect) {
   ];
 }
 
+/**
+ *
+ */
 export function rectToPoint(rect) {
   return gpt.point(rect.x, rect.y);
 }
 
+/**
+ *
+ */
 export function rectToCenter(rect) {
   const x = rect.x, y = rect.y, w = rect.width, h = rect.height;
   if (typeof x !== 'number' || typeof y !== 'number' ||
@@ -101,6 +128,9 @@ export function rectToCenter(rect) {
   return gpt.point(x + w / 2.0, y + h / 2.0);
 }
 
+/**
+ *
+ */
 export function rectToLines(rect) {
   const x = rect.x, y = rect.y;
   let w = rect.width, h = rect.height;
@@ -114,6 +144,9 @@ export function rectToLines(rect) {
   ];
 }
 
+/**
+ *
+ */
 export function pointsToRect(points) {
   if (!points || points.length === 0) return undefined;
   let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
@@ -127,6 +160,9 @@ export function pointsToRect(points) {
   return makeRect(minx, miny, maxx - minx, maxy - miny);
 }
 
+/**
+ *
+ */
 export function boundsToRect([pa, pb, pc, pd]) {
   const minx = Math.min(pa.x, pb.x, pc.x, pd.x);
   const miny = Math.min(pa.y, pb.y, pc.y, pd.y);
@@ -136,6 +172,9 @@ export function boundsToRect([pa, pb, pc, pd]) {
   return makeRect(minx, miny, maxx - minx, maxy - miny);
 }
 
+/**
+ *
+ */
 export function squaredPoints(points) {
   if (!points || points.length === 0) return undefined;
   let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
@@ -154,6 +193,9 @@ export function squaredPoints(points) {
   ];
 }
 
+/**
+ *
+ */
 export function joinRects(rects) {
   if (!rects || rects.length === 0) return undefined;
   let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
@@ -167,6 +209,9 @@ export function joinRects(rects) {
   return makeRect(minx, miny, maxx - minx, maxy - miny);
 }
 
+/**
+ *
+ */
 export function centerToRect(point, w, h) {
   if (h === undefined) h = w;
   if (point == null) return undefined;
@@ -175,10 +220,16 @@ export function centerToRect(point, w, h) {
   return makeRect(x - w / 2, y - h / 2, w, h);
 }
 
+/**
+ *
+ */
 function sEq(a, b) {
   return mth.almostZero(a - b);
 }
 
+/**
+ *
+ */
 export function overlapsRects(rectA, rectB) {
   const x1a = rectA.x, y1a = rectA.y;
   const x2a = x1a + rectA.width, y2a = y1a + rectA.height;
@@ -190,6 +241,9 @@ export function overlapsRects(rectA, rectB) {
          (y1a <= y2b || sEq(y1a, y2b));
 }
 
+/**
+ *
+ */
 export function containsPoint(rect, pt) {
   const x1 = rect.x, y1 = rect.y;
   const x2 = rect.x + rect.width, y2 = rect.y + rect.height;
@@ -200,6 +254,9 @@ export function containsPoint(rect, pt) {
          (py < y2 || sEq(py, y2));
 }
 
+/**
+ *
+ */
 export function containsRect(sra, srb) {
   return srb.x1 >= sra.x1 &&
          srb.x2 <= sra.x2 &&
@@ -207,6 +264,9 @@ export function containsRect(sra, srb) {
          srb.y2 <= sra.y2;
 }
 
+/**
+ *
+ */
 export function cornersToRect(p1, p2, p3, p4) {
   if (typeof p1 === 'number' && typeof p2 === 'number' && typeof p3 === 'number' && typeof p4 === 'number') {
     const xp1 = p1, yp1 = p2, xp2 = p3, yp2 = p4;
@@ -221,6 +281,9 @@ export function cornersToRect(p1, p2, p3, p4) {
   );
 }
 
+/**
+ *
+ */
 export function clipRect(selrect, bounds) {
   return cornersToRect(
     Math.max(bounds.x1, selrect.x1),
@@ -230,12 +293,15 @@ export function clipRect(selrect, bounds) {
   );
 }
 
+/**
+ *
+ */
 export function fixAspectRatio(bounds, aspectRatio) {
   if (aspectRatio == null) return bounds;
   const width = bounds.width, height = bounds.height;
   const targetHeight = width * aspectRatio;
   const targetWidth = height / aspectRatio;
-  let result = { ...bounds };
+  const result = { ...bounds };
   if (targetHeight > height) {
     result.height = targetHeight;
     result.y = result.y - (targetHeight - height) / 2;
@@ -246,11 +312,17 @@ export function fixAspectRatio(bounds, aspectRatio) {
   return makeRect(result);
 }
 
+/**
+ *
+ */
 export function rectToJSON(o) {
   if (!isRect(o)) return o;
   return { x: o.x, y: o.y, width: o.width, height: o.height, x1: o.x1, y1: o.y1, x2: o.x2, y2: o.y2 };
 }
 
+/**
+ *
+ */
 export function decodeRect(o) {
   if (o instanceof Rect) return o;
   if (typeof o === 'object' && o !== null) {

@@ -34,7 +34,7 @@ template.innerHTML = `
     .penpot-viewer__svg-shape:hover { filter: brightness(1.15); }
     .penpot-viewer__svg-interactive { cursor: pointer !important; }
     .penpot-viewer__svg-interactive:hover { filter: brightness(1.25) drop-shadow(0 0 4px rgba(49,239,184,0.5)); }
-    .penpot-viewer__overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 50; display: none; }
+    .penpot-viewer__overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: var(--penpot-z-canvas-overlay, 1); display: none; }
     .penpot-viewer__empty { color: var(--penpot-text-dim, #999); text-align: center; padding: var(--penpot-spacing-xxl, 32px); font-size: var(--penpot-font-size-m, 13px); }
   </style>
   <div class="penpot-viewer__toolbar">

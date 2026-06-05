@@ -432,9 +432,7 @@ export function decodeRequest(body, contentType = '') {
     try {
       const parsed = typeof body === 'string' ? JSON.parse(body) : body;
       return toKebabCase(parsed);
-    } catch {
-      return {};
-    }
+    } catch (err) { console.warn('[transit] decodeRequest JSON parse failed:', err.message); return {}; }
   }
 
   return {};

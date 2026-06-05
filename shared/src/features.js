@@ -1,11 +1,11 @@
 import { raise } from './exceptions.js';
 
-export let previous = new Set();
-export let current = new Set();
-export let newFeatures = null;
+export const previous = new Set();
+export const current = new Set();
+export const newFeatures = null;
 
-export let wrapWithObjectsMapFn = (x) => x;
-export let wrapWithPointerMapFn = (x) => x;
+export const wrapWithObjectsMapFn = (x) => x;
+export const wrapWithPointerMapFn = (x) => x;
 
 export const supportedFeatures = new Set([
   'fdata/objects-map', 'fdata/pointer-map', 'fdata/shape-data-type',
@@ -55,10 +55,16 @@ const FLAG_TO_FEATURE = new Map([
   ['feature-token-input', 'tokens/numeric-input'],
 ]);
 
+/**
+ *
+ */
 function flagToFeature(flag) {
   return FLAG_TO_FEATURE.get(flag);
 }
 
+/**
+ *
+ */
 export function migrateLegacyFeatures(features) {
   const result = features ? new Set(features) : new Set();
   if (result.has('storage/pointer-map')) {
@@ -77,24 +83,36 @@ export function migrateLegacyFeatures(features) {
   return result;
 }
 
+/**
+ *
+ */
 function setDifference(a, b) {
   const result = new Set(a);
   for (const v of b) result.delete(v);
   return result;
 }
 
+/**
+ *
+ */
 function setUnion(a, b) {
   const result = new Set(a);
   for (const v of b) result.add(v);
   return result;
 }
 
+/**
+ *
+ */
 function setIntersection(a, b) {
   const result = new Set();
   for (const v of a) { if (b.has(v)) result.add(v); }
   return result;
 }
 
+/**
+ *
+ */
 export function getEnabledFeatures(flags) {
   const result = new Set(defaultFeatures);
   for (const flag of flags) {
@@ -104,6 +122,9 @@ export function getEnabledFeatures(flags) {
   return result;
 }
 
+/**
+ *
+ */
 export function getTeamEnabledFeatures(flags, team) {
   const enabledFeatures = getEnabledFeatures(flags);
   const teamFeatures = new Set();
@@ -115,6 +136,9 @@ export function getTeamEnabledFeatures(flags, team) {
   return setUnion(setIntersection(enabledFeatures, noMigrationFeatures), teamFeatures);
 }
 
+/**
+ *
+ */
 export function checkClientFeatures(enabledFeatures, clientFeatures) {
   if (!(clientFeatures instanceof Set)) return enabledFeatures;
   const notSupported = setDifference(
@@ -136,6 +160,9 @@ export function checkClientFeatures(enabledFeatures, clientFeatures) {
   return enabledFeatures;
 }
 
+/**
+ *
+ */
 export function checkSupportedFeatures(enabledFeatures) {
   const notSupported = setDifference(enabledFeatures, supportedFeatures);
   const first = [...notSupported][0];
@@ -150,6 +177,9 @@ export function checkSupportedFeatures(enabledFeatures) {
   return enabledFeatures;
 }
 
+/**
+ *
+ */
 export function checkFileFeatures(enabledFeatures, fileFeatures) {
   const ff = new Set();
   if (fileFeatures) {
@@ -200,6 +230,9 @@ export function checkFileFeatures(enabledFeatures, fileFeatures) {
   return enabledFeatures;
 }
 
+/**
+ *
+ */
 export function checkTeamsCompatibility(source, destination) {
   const srcF = source.features || new Set();
   const dstF = destination.features || new Set();
@@ -222,6 +255,9 @@ export function checkTeamsCompatibility(source, destination) {
   }
 }
 
+/**
+ *
+ */
 export function checkPasteFeatures(enabledFeatures, pasteFeatures) {
   const ns1 = setDifference(setDifference(enabledFeatures, pasteFeatures), noMigrationFeatures);
   if (ns1.size > 0) {

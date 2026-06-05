@@ -72,6 +72,9 @@ const rectAttributes = new Set([...genericAttributes, ...borderRadiusKeys]);
 const frameWithLayoutAttributes = new Set([...rectAttributes, ...spacingGapPaddingKeys]);
 const textAttributes = new Set([...genericAttributes, ...typographyKeys, ...numberKeys]);
 
+/**
+ *
+ */
 export function shapeTypeToAttributes(type, isLayout) {
   switch (type) {
     case 'bool': return genericAttributes;
@@ -86,6 +89,9 @@ export function shapeTypeToAttributes(type, isLayout) {
   }
 }
 
+/**
+ *
+ */
 export function appliableAttrsForShape(attributes, shapeType, isLayout) {
   const validAttrs = shapeTypeToAttributes(shapeType, isLayout);
   if (!validAttrs) return new Set();
@@ -96,6 +102,9 @@ export function appliableAttrsForShape(attributes, shapeType, isLayout) {
   return result;
 }
 
+/**
+ *
+ */
 export function anyAppliableAttrForShapeQ(attributes, tokenType, isLayout) {
   const validAttrs = shapeTypeToAttributes(tokenType, isLayout);
   if (!validAttrs) return false;
@@ -143,10 +152,16 @@ export const tokensByInput = {
   'spacing': ['spacing', 'dimensions'],
 };
 
+/**
+ *
+ */
 export function tokenAttrQ(attr) {
   return allKeys.has(attr);
 }
 
+/**
+ *
+ */
 export function tokenAttrToShapeAttr(tokenAttr) {
   switch (tokenAttr) {
     case 'fill': return 'fills';
@@ -156,6 +171,9 @@ export function tokenAttrToShapeAttr(tokenAttr) {
   }
 }
 
+/**
+ *
+ */
 export function shapeAttrToTokenAttrs(shapeAttr, changedSubAttr) {
   if (shapeAttr === 'fills') return new Set(['fill']);
   if (shapeAttr === 'strokes' && changedSubAttr == null) return new Set(['stroke-width', 'stroke-color']);
@@ -187,6 +205,9 @@ export function shapeAttrToTokenAttrs(shapeAttr, changedSubAttr) {
   return new Set();
 }
 
+/**
+ *
+ */
 function generateAttrMap(token, attributes) {
   const result = {};
   for (const attr of attributes) {
@@ -195,11 +216,17 @@ function generateAttrMap(token, attributes) {
   return result;
 }
 
+/**
+ *
+ */
 export function applyTokenToShape({ shape, token, attributes }) {
   const mapToApply = generateAttrMap(token, attributes);
   return { ...shape, 'applied-tokens': { ...(shape['applied-tokens'] ?? {}), ...mapToApply } };
 }
 
+/**
+ *
+ */
 export function unapplyTokensFromShape(shape, attributes) {
   const appliedTokens = { ...(shape['applied-tokens'] ?? {}) };
   for (const attr of attributes) {
@@ -208,10 +235,16 @@ export function unapplyTokensFromShape(shape, attributes) {
   return { ...shape, 'applied-tokens': appliedTokens };
 }
 
+/**
+ *
+ */
 export function unapplyLayoutItemTokens(shape) {
   return unapplyTokensFromShape(shape, [...sizingLayoutItemKeys, ...spacingMarginKeys]);
 }
 
+/**
+ *
+ */
 export function findTokenValueReferences(tokenValue) {
   if (typeof tokenValue !== 'string') return new Set();
   const refs = new Set();
@@ -223,11 +256,17 @@ export function findTokenValueReferences(tokenValue) {
   return refs;
 }
 
+/**
+ *
+ */
 export function tokenValueSelfReferenceQ(tokenName, tokenValue) {
   const refs = findTokenValueReferences(tokenValue);
   return refs.has(tokenName);
 }
 
+/**
+ *
+ */
 export function referencesTokenQ(value, tokenName) {
   if (typeof value === 'string') return findTokenValueReferences(value).has(tokenName);
   if (value != null && typeof value === 'object' && !Array.isArray(value)) {
@@ -237,10 +276,16 @@ export function referencesTokenQ(value, tokenName) {
   return false;
 }
 
+/**
+ *
+ */
 export function compositeTokenReferenceQ(tokenValue) {
   return typeof tokenValue === 'string';
 }
 
+/**
+ *
+ */
 export function updateTokenValueReferences(value, oldName, newName) {
   if (typeof value === 'string') {
     const escaped = oldName.replace(/\./g, '\\.');
@@ -259,6 +304,9 @@ export function updateTokenValueReferences(value, oldName, newName) {
 
 export const textDecorationValues = new Set(['none', 'underline', 'strike-through']);
 
+/**
+ *
+ */
 export function validTextDecoration(value) {
   const normalized = String(value).trim().toLowerCase();
   return textDecorationValues.has(normalized) ? normalized : null;
@@ -286,6 +334,9 @@ for (const [weight, aliases] of Object.entries(fontWeightAliases)) {
   }
 }
 
+/**
+ *
+ */
 export function parseFontWeight(fontWeight) {
   const str = String(fontWeight).toLowerCase();
   const match = str.match(/^(.+?)\s*(italic)?$/);
@@ -293,6 +344,9 @@ export function parseFontWeight(fontWeight) {
   return { variant: match[1], italicQ: match[2] != null };
 }
 
+/**
+ *
+ */
 export function validFontWeightVariant(value) {
   const { variant, italicQ } = parseFontWeight(value);
   const weight = fontWeightMap[variant] ?? variant;
@@ -302,14 +356,23 @@ export function validFontWeightVariant(value) {
   return result;
 }
 
+/**
+ *
+ */
 export function splitFontFamily(fontValue) {
   return fontValue.split(',').map((s) => s.trim()).filter((s) => s.length > 0);
 }
 
+/**
+ *
+ */
 export function joinFontFamily(fontFamilies) {
   return fontFamilies.join(', ');
 }
 
+/**
+ *
+ */
 function insideRefQ(value, position) {
   const left = value.slice(0, position);
   const lastOpen = left.lastIndexOf('{');
@@ -317,6 +380,9 @@ function insideRefQ(value, position) {
   return lastOpen !== -1 && (lastClose === -1 || lastClose < lastOpen);
 }
 
+/**
+ *
+ */
 function blockOpenStart(value, position) {
   const left = value.slice(0, position);
   let i = left.lastIndexOf('{');
@@ -325,6 +391,9 @@ function blockOpenStart(value, position) {
   return i;
 }
 
+/**
+ *
+ */
 function insideClosedRefQ(value, position) {
   const left = value.slice(0, position);
   const right = value.slice(position);
@@ -337,6 +406,9 @@ function insideClosedRefQ(value, position) {
     && (firstSpaceRight === -1 || closePos < firstSpaceRight);
 }
 
+/**
+ *
+ */
 function buildResult(value, prefixEnd, suffixStart, name) {
   const ref = `{${name}}`;
   const firstPart = value.slice(0, prefixEnd);
@@ -344,6 +416,9 @@ function buildResult(value, prefixEnd, suffixStart, name) {
   return { value: firstPart + ref + secondPart, cursor: firstPart.length + ref.length };
 }
 
+/**
+ *
+ */
 export function insertRef(value, position, name) {
   if (insideRefQ(value, position)) {
     if (insideClosedRefQ(value, position)) {

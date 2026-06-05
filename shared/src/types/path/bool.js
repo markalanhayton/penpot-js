@@ -9,10 +9,16 @@ import * as subpath from './subpath.js';
 export const GROUP_STYLE_PROPERTIES = new Set(['shadow', 'blur']);
 export const STYLE_PROPERTIES = new Set([...GROUP_STYLE_PROPERTIES, 'fills', 'strokes']);
 
+/**
+ *
+ */
 export function getDefaultFills() {
   return [{ fillColor: '#000000' }];
 }
 
+/**
+ *
+ */
 export function addPrevious(content, first) {
   return d.withPrev(content).map(([cmd, prev]) => {
     if (!prev && first) return { ...cmd, prev: first };
@@ -21,6 +27,9 @@ export function addPrevious(content, first) {
   });
 }
 
+/**
+ *
+ */
 export function closePaths(content) {
   const result = [];
   let lastMove = null;
@@ -43,6 +52,9 @@ export function closePaths(content) {
   return result;
 }
 
+/**
+ *
+ */
 function splitCommand(cmd, values) {
   switch (cmd.command) {
     case 'line-to': return helpers.splitLineToRanges(cmd.prev, cmd, values);
@@ -51,6 +63,9 @@ function splitCommand(cmd, values) {
   }
 }
 
+/**
+ *
+ */
 function splitTs(seg1, seg2) {
   const cmd1 = seg1.command;
   const cmd2 = seg2.command;
@@ -70,6 +85,9 @@ function splitTs(seg1, seg2) {
   return [[], []];
 }
 
+/**
+ *
+ */
 export function contentIntersectSplit(contentA, contentB, srA, srB) {
   const commandToSelrectMemo = (() => {
     const cache = new Map();
@@ -80,22 +98,34 @@ export function contentIntersectSplit(contentA, contentB, srA, srB) {
     };
   })();
 
+  /**
+   *
+   */
   function overlapSegmentSelrectQ(seg, selrect) {
     if (seg.command === 'move-to') return false;
     return grc.overlapsRects(commandToSelrectMemo(seg), selrect);
   }
 
+  /**
+   *
+   */
   function overlapSegmentsQ(seg1, seg2) {
     if (seg1.command === 'move-to' || seg2.command === 'move-to') return false;
     return grc.overlapsRects(commandToSelrectMemo(seg1), commandToSelrectMemo(seg2));
   }
 
+  /**
+   *
+   */
   function split(seg1, seg2) {
     if (!overlapSegmentsQ(seg1, seg2)) return [seg1];
     const [tsSeg1] = splitTs(seg1, seg2);
     return splitCommand(seg1, tsSeg1).map(s => ({ ...s, prev: seg1.prev }));
   }
 
+  /**
+   *
+   */
   function splitSegmentOnContent(seg, content, contentSr) {
     if (!overlapSegmentSelrectQ(seg, contentSr)) return [seg];
     return content
@@ -103,6 +133,9 @@ export function contentIntersectSplit(contentA, contentB, srA, srB) {
       .reduce((result, current) => result.flatMap(s => split(s, current)), [seg]);
   }
 
+  /**
+   *
+   */
   function splitContent(contentA, contentB, srB) {
     return contentA.flatMap(s => splitSegmentOnContent(s, contentB, srB));
   }
@@ -110,10 +143,16 @@ export function contentIntersectSplit(contentA, contentB, srA, srB) {
   return [splitContent(contentA, contentB, srB), splitContent(contentB, contentA, srA)];
 }
 
+/**
+ *
+ */
 export function isSegmentQ(cmd) {
   return cmd.prev && (cmd.command === 'line-to' || cmd.command === 'curve-to');
 }
 
+/**
+ *
+ */
 export function containsSegmentQ(seg, content, contentSr, contentGeom) {
   let point;
   if (seg.command === 'line-to') {
@@ -127,6 +166,9 @@ export function containsSegmentQ(seg, content, contentSr, contentGeom) {
     (helpers.isPointInGeomDataQ(point, contentGeom) || helpers.isPointInBorderQ(point, content));
 }
 
+/**
+ *
+ */
 export function insideSegmentQ(seg, contentSr, contentGeom) {
   let point;
   if (seg.command === 'line-to') {
@@ -139,7 +181,13 @@ export function insideSegmentQ(seg, contentSr, contentGeom) {
   return grc.containsPoint(contentSr, point) && helpers.isPointInGeomDataQ(point, contentGeom);
 }
 
+/**
+ *
+ */
 export function overlapSegmentQ(seg, content) {
+  /**
+   *
+   */
   function overlapSingle(other) {
     if (seg.command !== other.command || (seg.command !== 'line-to' && seg.command !== 'curve-to')) return null;
     if (seg.command === 'line-to') {
@@ -162,6 +210,9 @@ export function overlapSegmentQ(seg, content) {
   return d.seek(overlapSingle, content) != null;
 }
 
+/**
+ *
+ */
 export function fixMoveTo(content) {
   const result = [];
   let prev = null;
@@ -176,6 +227,9 @@ export function fixMoveTo(content) {
   return result;
 }
 
+/**
+ *
+ */
 export function removeDuplicatedSegments(content) {
   const segments = new Set();
   const result = [];
@@ -194,10 +248,16 @@ export function removeDuplicatedSegments(content) {
   return result;
 }
 
+/**
+ *
+ */
 function closeContent(content) {
   return subpath.getSubpaths(subpath.closeSubpaths(content)).flatMap(s => s.data);
 }
 
+/**
+ *
+ */
 function contentToGeomData(content) {
   return closeContent(content)
     .filter(seg => seg.command === 'line-to' || seg.command === 'curve-to')
@@ -209,6 +269,9 @@ function contentToGeomData(content) {
     }));
 }
 
+/**
+ *
+ */
 function createUnion(contentA, contentASplit, contentB, contentBSplit, srA, srB) {
   const contentAGeom = contentToGeomData(contentA);
   const contentBGeom = contentToGeomData(contentB);
@@ -225,6 +288,9 @@ function createUnion(contentA, contentASplit, contentB, contentBSplit, srA, srB)
   return [...content, ...borderContent];
 }
 
+/**
+ *
+ */
 function createDifference(contentA, contentASplit, contentB, contentBSplit, srA, srB) {
   const contentAGeom = contentToGeomData(contentA);
   const contentBGeom = contentToGeomData(contentB);
@@ -234,6 +300,9 @@ function createDifference(contentA, contentASplit, contentB, contentBSplit, srA,
   ];
 }
 
+/**
+ *
+ */
 function createIntersection(contentA, contentASplit, contentB, contentBSplit, srA, srB) {
   const contentAGeom = contentToGeomData(contentA);
   const contentBGeom = contentToGeomData(contentB);
@@ -243,10 +312,16 @@ function createIntersection(contentA, contentASplit, contentB, contentBSplit, sr
   ];
 }
 
+/**
+ *
+ */
 function createExclusion(contentA, contentB) {
   return [...contentA, ...contentB];
 }
 
+/**
+ *
+ */
 export function contentBoolPair(boolType, contentA, contentB) {
   const shouldReverse = boolType !== 'union' && subpath.clockwiseQ(contentB) === subpath.clockwiseQ(contentA);
 
@@ -274,6 +349,9 @@ export function contentBoolPair(boolType, contentA, contentB) {
   return subpath.closeSubpaths(removeDuplicatedSegments(fixMoveTo(content)));
 }
 
+/**
+ *
+ */
 export function calculateContent(boolType, contents) {
   if (!contents || contents.length === 0) return [];
   return contents.reduce((a, b) => contentBoolPair(boolType, a, b));

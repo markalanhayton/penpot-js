@@ -6,6 +6,9 @@ import * as ctl from '../../../types/shape/layout.js';
 import * as flp from './positions.js';
 import * as gtr from '../transforms.js';
 
+/**
+ *
+ */
 function calcFillWidthData(parent, transform, transformInverse, child, childOrigin, childWidth, layoutData) {
   const { childrenData, lineWidth, toBoundWidth } = layoutData;
 
@@ -34,6 +37,9 @@ function calcFillWidthData(parent, transform, transformInverse, child, childOrig
   return null;
 }
 
+/**
+ *
+ */
 function calcFillHeightData(parent, transform, transformInverse, child, childOrigin, childHeight, layoutData) {
   const { childrenData, lineHeight, toBoundHeight } = layoutData;
 
@@ -62,6 +68,9 @@ function calcFillHeightData(parent, transform, transformInverse, child, childOri
   return null;
 }
 
+/**
+ *
+ */
 function fillModifiers(parent, parentBounds, child, childBounds, layoutLine) {
   const childOrigin = gpo.origin(childBounds);
   const childWidth = gpo.widthPoints(childBounds);
@@ -88,6 +97,9 @@ function fillModifiers(parent, parentBounds, child, childBounds, layoutLine) {
   return [finalWidth, finalHeight, mods];
 }
 
+/**
+ *
+ */
 export function layoutChildModifiers(parent, parentBounds, child, childBounds, layoutLine) {
   const childOrigin = gpo.origin(childBounds);
 

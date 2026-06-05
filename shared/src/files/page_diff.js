@@ -1,5 +1,8 @@
 import * as d from '../data.js';
 
+/**
+ *
+ */
 export function calculatePageDiff(oldPage, page, checkAttrs) {
   const oldObjects = oldPage.objects || {};
   const oldGuides = oldPage.guides || {};
@@ -9,6 +12,9 @@ export function calculatePageDiff(oldPage, page, checkAttrs) {
   const allObjectKeys = new Set([...Object.keys(oldObjects), ...Object.keys(newObjects)]);
   const allGuideKeys = new Set([...Object.keys(oldGuides), ...Object.keys(newGuides)]);
 
+  /**
+   *
+   */
   function changedObjectQ(id) {
     const oldv = oldObjects[id];
     const newv = newObjects[id];
@@ -18,45 +24,75 @@ export function calculatePageDiff(oldPage, page, checkAttrs) {
     return !d.equal(oldSelected, newSelected);
   }
 
+  /**
+   *
+   */
   function frameQ(id) {
     return newObjects[id]?.type === 'frame' || oldObjects[id]?.type === 'frame';
   }
 
+  /**
+   *
+   */
   function changedGuideQ(id) {
     return !d.equal(oldGuides[id], newGuides[id]);
   }
 
+  /**
+   *
+   */
   function deletedObjectQ(id) {
     return id in oldObjects && !(id in newObjects);
   }
 
+  /**
+   *
+   */
   function deletedGuideQ(id) {
     return id in oldGuides && !(id in newGuides);
   }
 
+  /**
+   *
+   */
   function newObjectQ(id) {
     return !(id in oldObjects) && id in newObjects;
   }
 
+  /**
+   *
+   */
   function newGuideQ(id) {
     return !(id in oldGuides) && id in newGuides;
   }
 
+  /**
+   *
+   */
   function changedFrameObjectQ(id) {
     return id in newObjects && id in oldObjects &&
       oldObjects[id]?.frameId !== newObjects[id]?.frameId;
   }
 
+  /**
+   *
+   */
   function changedFrameGuideQ(id) {
     return id in newGuides && id in oldGuides &&
       oldObjects[id]?.frameId !== newObjects[id]?.frameId;
   }
 
+  /**
+   *
+   */
   function changedAttrsObjectQ(id) {
     return id in newObjects && id in oldObjects &&
       oldObjects[id]?.frameId === newObjects[id]?.frameId;
   }
 
+  /**
+   *
+   */
   function changedAttrsGuideQ(id) {
     return id in newGuides && id in oldGuides &&
       oldObjects[id]?.frameId === newObjects[id]?.frameId;

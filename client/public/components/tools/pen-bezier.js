@@ -1,6 +1,7 @@
 'use strict';
 import { PenpotTool } from './base.js';
 import { createShape } from '../../lib/types.js';
+import { pointsToRect } from '@penpot/shared/geom/rect.js';
 
 export class PenBezierTool extends PenpotTool {
   #points = [];
@@ -316,28 +317,14 @@ export class PenBezierTool extends PenpotTool {
   }
 
   #getBounds() {
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const pt of this.#points) {
-      if (pt.x < minX) minX = pt.x;
-      if (pt.y < minY) minY = pt.y;
-      if (pt.x > maxX) maxX = pt.x;
-      if (pt.y > maxY) maxY = pt.y;
-    }
+    const allPoints = [...this.#points];
     for (const cp of this.#controlPoints) {
-      if (cp?.cp1) {
-        if (cp.cp1.x < minX) minX = cp.cp1.x;
-        if (cp.cp1.y < minY) minY = cp.cp1.y;
-        if (cp.cp1.x > maxX) maxX = cp.cp1.x;
-        if (cp.cp1.y > maxY) maxY = cp.cp1.y;
-      }
-      if (cp?.cp2) {
-        if (cp.cp2.x < minX) minX = cp.cp2.x;
-        if (cp.cp2.y < minY) minY = cp.cp2.y;
-        if (cp.cp2.x > maxX) maxX = cp.cp2.x;
-        if (cp.cp2.y > maxY) maxY = cp.cp2.y;
-      }
+      if (cp?.cp1) allPoints.push(cp.cp1);
+      if (cp?.cp2) allPoints.push(cp.cp2);
     }
-    return { x: minX, y: minY, width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) };
+    const r = pointsToRect(allPoints);
+    if (!r) return { x: 0, y: 0, width: 1, height: 1 };
+    return { x: r.x, y: r.y, width: Math.max(1, r.width), height: Math.max(1, r.height) };
   }
 
   #removeVisuals(canvas) {

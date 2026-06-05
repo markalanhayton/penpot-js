@@ -255,10 +255,7 @@ export function parseFeatures(value) {
     try {
       const parsed = JSON.parse(trimmed);
       if (Array.isArray(parsed)) return new Set(parsed);
-    } catch {
-      // Try comma-separated
-      return new Set(trimmed.split(',').map(s => s.trim()).filter(Boolean));
-    }
+    } catch (err) { console.warn('[features] JSON parse of flags failed, trying comma-separated:', err.message); return new Set(trimmed.split(',').map(s => s.trim()).filter(Boolean)); }
   }
   return new Set();
 }

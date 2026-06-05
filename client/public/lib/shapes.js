@@ -6,6 +6,8 @@
  */
 
 import { isFrame, isGroup, isText, isImage, isRect, isCircle, isPath, isBool, hasChildren, getShapeIcon } from './types.js';
+import { isValid as isUUID } from '@penpot/shared/uuid.js';
+import { makeRect } from '@penpot/shared/geom/rect.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -94,14 +96,12 @@ function shapeTransform(shape) {
   return transforms.length ? transforms.join(' ') : undefined;
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 function resolveMediaSrc(src) {
   if (!src) return '';
   if (src.startsWith('data:') || src.startsWith('http://') || src.startsWith('https://') || src.startsWith('/')) {
     return src;
   }
-  if (UUID_RE.test(src)) {
+  if (isUUID(src)) {
     return `/assets/by-file-media-id/${src}`;
   }
   return src;
@@ -139,9 +139,30 @@ function buildFilterDefs(shape) {
   const filterPrimitives = [];
   const blur = shape.blur && shape.blur > 0 ? shape.blur : 0;
   const filters = shape.filters || [];
+  const shadows = shape.shadows || [];
 
   if (blur > 0) {
     filterPrimitives.push(el('feGaussianBlur', { in: 'SourceGraphic', stdDeviation: String(blur) }));
+  }
+
+  for (let i = 0; i < shadows.length; i++) {
+    const s = shadows[i];
+    const isInset = s.style === 'inner-shadow';
+    const dx = s.offsetX ?? 0;
+    const dy = s.offsetY ?? 0;
+    const stdDev = Math.max(0, (s.blur ?? 0) / 2);
+    const color = s.color ?? '#000000';
+    const opacity = s.opacity ?? 0.5;
+    if (isInset) {
+      filterPrimitives.push(el('feGaussianBlur', { in: 'SourceAlpha', stdDeviation: String(stdDev), result: `blur-${i}` }));
+      filterPrimitives.push(el('feOffset', { in: `blur-${i}`, dx: String(dx), dy: String(dy), result: `offset-${i}` }));
+      filterPrimitives.push(el('feComposite', { in: `offset-${i}`, in2: 'SourceAlpha', operator: 'arithmetic', k2: '-1', k3: '1', result: `invert-${i}` }));
+      filterPrimitives.push(el('feFlood', { 'flood-color': String(color), 'flood-opacity': String(opacity), result: `flood-${i}` }));
+      filterPrimitives.push(el('feComposite', { in: `flood-${i}`, in2: `invert-${i}`, operator: 'in', result: `shadow-${i}` }));
+      filterPrimitives.push(el('feComposite', { in: `shadow-${i}`, in2: 'SourceGraphic', operator: 'over' }));
+    } else {
+      filterPrimitives.push(el('feDropShadow', { dx: String(dx), dy: String(dy), stdDeviation: String(stdDev), 'flood-color': String(color), 'flood-opacity': String(opacity) }));
+    }
   }
 
   for (let i = 0; i < filters.length; i++) {
@@ -200,7 +221,7 @@ function applyStrokeAttrs(attrs, shape) {
 }
 
 function renderFrame(shape, depth) {
-  const hasBlur = (shape.blur && shape.blur > 0) || (shape.filters && shape.filters.length > 0);
+  const hasBlur = (shape.blur && shape.blur > 0) || (shape.filters && shape.filters.length > 0) || (shape.shadows && shape.shadows.length > 0);
   const attrs = {
     id: `shape-${shape.id}`,
     x: shape.x,
@@ -348,7 +369,7 @@ function renderRect(shape) {
   const r3 = shape.r3 ?? rx ?? 0;
   const r4 = shape.r4 ?? rx ?? 0;
   const hasIndividualCorners = r1 !== r2 || r2 !== r3 || r3 !== r4;
-  const hasBlur = (shape.blur && shape.blur > 0) || (shape.filters && shape.filters.length > 0);
+  const hasBlur = (shape.blur && shape.blur > 0) || (shape.filters && shape.filters.length > 0) || (shape.shadows && shape.shadows.length > 0);
 
   const transform = shapeTransform(shape);
 
@@ -845,10 +866,21 @@ export function computeShapesBounds(shapes) {
   if (minX === Infinity) {
     return { x: 0, y: 0, width: 0, height: 0 };
   }
-  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+  const r = makeRect(minX, minY, maxX - minX, maxY - minY);
+  return { x: r.x, y: r.y, width: r.width, height: r.height };
 }
 
 function renderSelectionHandles(svg, shape) {
+  const cursorMap = {
+    nw: 'nwse-resize', n: 'ns-resize', ne: 'nesw-resize', e: 'ew-resize',
+    se: 'nwse-resize', s: 'ns-resize', sw: 'nesw-resize', w: 'ew-resize',
+  };
+  const handlesGroup = el('g', { 'data-handles-group': shape.id, style: 'pointer-events: none;' });
+  if (shape.rotation) {
+    const cx = (shape.x || 0) + (shape.width || 0) / 2;
+    const cy = (shape.y || 0) + (shape.height || 0) / 2;
+    handlesGroup.setAttribute('transform', `rotate(${shape.rotation} ${cx} ${cy})`);
+  }
   const handles = getResizeHandles(shape);
   for (const [name, hx, hy] of handles) {
     const rect = el('rect', {
@@ -860,9 +892,9 @@ function renderSelectionHandles(svg, shape) {
       stroke: 'var(--penpot-primary, #31efb8)',
       'stroke-width': '1.5',
       'data-handle': name,
-      style: 'cursor: pointer;',
+      style: `cursor: ${cursorMap[name] || 'pointer'}; pointer-events: auto;`,
     });
-    svg.appendChild(rect);
+    handlesGroup.appendChild(rect);
   }
 
   const rotHandle = getRotationHandle(shape);
@@ -873,8 +905,9 @@ function renderSelectionHandles(svg, shape) {
     y2: String(rotHandle.y),
     stroke: 'var(--penpot-primary, #31efb8)',
     'stroke-width': '1',
+    style: 'pointer-events: none;',
   });
-  svg.appendChild(rotLine);
+  handlesGroup.appendChild(rotLine);
   const rotCircle = el('circle', {
     cx: String(rotHandle.x),
     cy: String(rotHandle.y),
@@ -883,9 +916,10 @@ function renderSelectionHandles(svg, shape) {
     stroke: 'var(--penpot-primary, #31efb8)',
     'stroke-width': '1.5',
     'data-handle': 'rotation',
-    style: 'cursor: grab;',
+    style: 'cursor: grab; pointer-events: auto;',
   });
-  svg.appendChild(rotCircle);
+  handlesGroup.appendChild(rotCircle);
+  svg.appendChild(handlesGroup);
 }
 
 export function renderEmptyCanvas(message = 'No shapes on this page') {

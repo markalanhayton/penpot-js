@@ -91,4 +91,98 @@ describe('rpc/files-share — delete-share-link', () => {
       { type: 'not-found' }
     );
   });
+
+  it('throws authorization when non-editor deletes a link', async () => {
+    const created = await handlers['create-share-link'](
+      { fileId: ids.fileId, permissions: ['view'] },
+      { profileId: ids.profileId }
+    );
+
+    const now = new Date().toISOString();
+    const viewerId = 'viewer-del';
+    pool.insertReturning('profile', {
+      id: viewerId, fullname: 'Viewer', email: 'viewer-del@example.com',
+      password: '!', is_active: '1', is_demo: '0', is_blocked: '0',
+      auth_source: 'password', created_at: now, modified_at: now,
+    });
+    pool.insertReturning('team_profile_rel', {
+      team_id: ids.teamId, profile_id: viewerId,
+      is_owner: '0', is_admin: '0', can_edit: '0', is_member: '1',
+      created_at: now, modified_at: now,
+    });
+
+    await assert.rejects(
+      () => handlers['delete-share-link']({ id: created.id }, { profileId: viewerId }),
+      { type: 'authorization' }
+    );
+  });
+});
+
+describe('rpc/files-share — create-share-link edge cases', () => {
+  let pool;
+  let ids;
+  let handlers;
+
+  beforeEach(() => {
+    pool = createTestPool();
+    ids = seedFullHierarchy(pool);
+    handlers = captureHandlers(pool);
+  });
+  afterEach(() => { destroyTestPool(pool); });
+
+  it('stores permissions array', async () => {
+    const result = await handlers['create-share-link'](
+      { fileId: ids.fileId, permissions: ['view', 'comment'] },
+      { profileId: ids.profileId }
+    );
+    assert.ok(result.id);
+    assert.ok(result.token);
+
+    const row = pool.get('SELECT * FROM share_link WHERE id = ?', [result.id]);
+    assert.ok(row);
+    const parsed = JSON.parse(row.permissions);
+    assert.deepEqual(parsed, ['view', 'comment']);
+  });
+
+  it('defaults permissions to empty when not provided', async () => {
+    const result = await handlers['create-share-link'](
+      { fileId: ids.fileId },
+      { profileId: ids.profileId }
+    );
+    assert.ok(result.id);
+
+    const row = pool.get('SELECT * FROM share_link WHERE id = ?', [result.id]);
+    const parsed = JSON.parse(row.permissions);
+    assert.deepEqual(parsed, []);
+  });
+
+  it('throws authorization for deleted file', async () => {
+    pool.run('UPDATE file SET deleted_at = ? WHERE id = ?', [new Date().toISOString(), ids.fileId]);
+
+    await assert.rejects(
+      () => handlers['create-share-link'](
+        { fileId: ids.fileId, permissions: ['view'] },
+        { profileId: ids.profileId }
+      ),
+      { type: 'authorization' }
+    );
+  });
+
+  it('throws authorization for profile not on the team', async () => {
+    const now = new Date().toISOString();
+    const outsiderId = 'outsider-share';
+    pool.insertReturning('profile', {
+      id: outsiderId, fullname: 'Outsider', email: 'outsider@example.com',
+      password: '!', is_active: '1', is_demo: '0', is_blocked: '0',
+      auth_source: 'password', created_at: now, modified_at: now,
+    });
+
+    await assert.rejects(
+      () => handlers['create-share-link'](
+        { fileId: ids.fileId, permissions: ['view'] },
+        { profileId: outsiderId }
+      ),
+      { type: 'authorization' }
+    );
+  });
 });

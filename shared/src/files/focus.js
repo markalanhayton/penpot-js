@@ -3,6 +3,9 @@ import * as cfh from './helpers.js';
 import * as ctt from '../types/shape_tree.js';
 import * as uuid from '../uuid.js';
 
+/**
+ *
+ */
 export function focusObjects(objects, focus) {
   if (!d.notEmpty(focus)) return objects;
 
@@ -28,6 +31,9 @@ export function focusObjects(objects, focus) {
   return result;
 }
 
+/**
+ *
+ */
 export function filterNotFocus(objects, focus, ids) {
   if (!d.notEmpty(focus)) return ids;
 
@@ -41,6 +47,9 @@ export function filterNotFocus(objects, focus, ids) {
   return ids.filter(id => focusedIds.has(id));
 }
 
+/**
+ *
+ */
 export function isInFocusQ(objects, focus, id) {
   const allIds = [id, ...cfh.getParentIds(objects, id)];
   return allIds.some(fid => focus.has(fid));

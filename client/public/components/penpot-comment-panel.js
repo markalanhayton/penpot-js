@@ -15,10 +15,10 @@ template.innerHTML = `<style>
     .penpot-comment__comment-list { flex: 1; overflow-y: auto; padding: 8px; }
     .penpot-comment__comment-item { margin-bottom: 12px; }
     .penpot-comment__comment-bubble { background: #333; border-radius: 8px; padding: 8px 12px; }
-    .penpot-comment__comment-author { font-size: 11px; font-weight: 600; color: var(--cm-primary); margin-bottom: 4px; }
+    .penpot-comment__comment-author { font-size: 11px; font-weight: 600; color: var(--cm-primary); margin-bottom: 4px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
     .penpot-comment__comment-text { font-size: 12px; color: var(--cm-text); line-height: 1.4; }
     .penpot-comment__comment-time { font-size: 9px; color: var(--cm-dim); margin-top: 4px; }
-    .penpot-comment__comment-delete { background: none; border: none; color: var(--cm-dim); cursor: pointer; font-size: 10px; padding: 0 4px; float: right; }
+    .penpot-comment__comment-delete { background: none; border: none; color: var(--cm-dim); cursor: pointer; font-size: 10px; padding: 0 4px; margin-left: auto; }
     .penpot-comment__comment-delete:hover { color: #f44; }
     .penpot-comment__comment-resolve { background: none; border: 1px solid var(--cm-border); border-radius: 3px; color: var(--cm-dim); cursor: pointer; font-size: 9px; padding: 1px 6px; margin-left: 4px; }
     .penpot-comment__comment-resolve:hover { border-color: var(--cm-primary); color: var(--cm-primary); }
@@ -141,7 +141,7 @@ export class PenpotCommentPanel extends PenpotElement {
   async #loadComments() {
     if (!this.#fileId) return;
     try {
-      const result = await cmd('get-file-comments', { id: this.#fileId });
+      const result = await cmd('get-comment-threads', { 'file-id': this.#fileId });
       this.#comments = Array.isArray(result) ? result : [];
       this.#renderComments();
     } catch (err) {

@@ -4,6 +4,9 @@ import * as m from "../../src/files/migrations.js";
 import * as uuid from "../../src/uuid.js";
 import * as cts from "../../src/types/shape_type.js";
 
+/**
+ *
+ */
 function makeFile(overrides = {}) {
   return {
     id: uuid.random(),
@@ -18,10 +21,16 @@ function makeFile(overrides = {}) {
   };
 }
 
+/**
+ *
+ */
 function makePage(objects = {}, options = {}) {
   return { id: uuid.random(), objects, options, ...options };
 }
 
+/**
+ *
+ */
 function makeShape(type, props = {}) {
   return cts.setupShape({ type, id: uuid.random(), ...props });
 }

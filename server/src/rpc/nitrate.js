@@ -38,9 +38,7 @@ export default function registerNitrateCommands(register, pool) {
           return { connected: true, licenses: false };
         }
         return { connected: false, licenses: false };
-      } catch {
-        return { connected: false, licenses: false };
-      }
+      } catch (err) { console.warn('[nitrate] health check failed:', err.message); return { connected: false, licenses: false }; }
     },
   });
 

@@ -7,8 +7,8 @@ const template = document.createElement('template');
 template.innerHTML = `<style>
 
     penpot-share-dialog { --share-bg: #2a2a2a; --share-border: #444; --share-primary: #31efb8; }
-    .penpot-share__overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-    .penpot-share__dialog { background: var(--share-bg); border: 1px solid var(--share-border); border-radius: 8px; min-width: 440px; max-width: 500px; color: #e6e6e6; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+    .penpot-share__overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: var(--penpot-z-overlay, 1000); }
+    .penpot-share__dialog { background: var(--share-bg); border: 1px solid var(--share-border); border-radius: 8px; min-width: 440px; max-width: calc(100% - 2 * var(--penpot-spacing-l, 16px)); color: #e6e6e6; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
     .penpot-share__dialog-header { padding: 16px 20px; border-bottom: 1px solid var(--share-border); display: flex; align-items: center; justify-content: space-between; }
     .penpot-share__dialog-title { font-size: 15px; font-weight: 600; }
     .penpot-share__dialog-close { background: none; border: none; color: #999; font-size: 20px; cursor: pointer; padding: 4px; line-height: 1; }
@@ -140,18 +140,16 @@ export class PenpotShareDialog extends PenpotElement {
     this.#shareUrl = `${base}${sharePath}${params.toString() ? '?' + params.toString() : ''}`;
     this.querySelector('#share-url').value = this.#shareUrl;
 
-    cmd('update-file-share', {
-      id: this.#fileId,
-      permissions: {
-        view: viewPerm !== 'none' ? viewPerm : null,
-        comment: commentPerm !== 'none' ? commentPerm : null,
-        edit: editPerm !== 'none' ? editPerm : null,
-      },
+    const flags = [];
+    if (viewPerm !== 'none') flags.push('view');
+    if (commentPerm !== 'none') flags.push('comment');
+    if (editPerm !== 'none') flags.push('edit');
+
+    cmd('create-share-link', {
+      'file-id': this.#fileId,
+      permissions: flags,
     }).catch(err => {
-      console.error('[share] Failed to update permissions:', err);
-      import('../components/penpot-notification.js').then(({ danger }) => {
-        danger('Failed to update sharing permissions. Please try again.');
-      });
+      console.warn('[share] create-share-link failed (file may already be shared):', err?.message || err);
     });
   }
 
@@ -166,7 +164,8 @@ export class PenpotShareDialog extends PenpotElement {
         btn.textContent = 'Copy';
         btn.classList.remove('penpot-share__copied');
       }, 2000);
-    }).catch(() => {
+    }).catch((err) => {
+      console.warn('[share-dialog] clipboard write failed, using execCommand fallback:', err.message);
       document.execCommand('copy');
     });
   }

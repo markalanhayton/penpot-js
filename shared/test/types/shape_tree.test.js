@@ -9,6 +9,9 @@ describe('shape_tree', () => {
   const shapeId = '22222222-2222-2222-2222-222222222222';
   const childId = '33333333-3333-3333-3333-333333333333';
 
+  /**
+   *
+   */
   function makeContainer() {
     return {
       objects: {

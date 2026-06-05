@@ -2,6 +2,9 @@
 import { updateAllShapes, updateComponents, findRefShape, findNearMatch } from '../types/file.js';
 import { subcopyHeadQ, getSwapSlot, setSwapSlot } from '../types/component.js';
 
+/**
+ *
+ */
 export function removeUnneededObjectsInComponents(fileData) {
   return updateComponents(fileData, (component) => {
     if (component.deleted) {
@@ -20,6 +23,9 @@ export function removeUnneededObjectsInComponents(fileData) {
   });
 }
 
+/**
+ *
+ */
 export function fixMissingSwapSlots(fileData, libraries) {
   return updateAllShapes(fileData, (shape) => {
     if (!subcopyHeadQ(shape)) return { result: 'keep' };
@@ -44,6 +50,9 @@ export function fixMissingSwapSlots(fileData, libraries) {
   });
 }
 
+/**
+ *
+ */
 export function syncComponentIdWithRefShape(fileData, libraries) {
   let currentData = fileData;
   let iteration = 0;
@@ -57,6 +66,9 @@ export function syncComponentIdWithRefShape(fileData, libraries) {
   return currentData;
 }
 
+/**
+ *
+ */
 function syncOneIteration(fileData, libraries) {
   return updateAllShapes(fileData, (shape) => {
     if (!subcopyHeadQ(shape) || getSwapSlot(shape) != null) {

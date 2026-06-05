@@ -1,5 +1,8 @@
 import * as ctm from '../modifiers.js';
 
+/**
+ *
+ */
 export function objectsToBoundsMap(objects) {
   const result = {};
   for (const id of Object.keys(objects)) {
@@ -11,6 +14,9 @@ export function objectsToBoundsMap(objects) {
   return result;
 }
 
+/**
+ *
+ */
 function resolveModifTreeIds(objects, modifTree) {
   const ids = new Set(Object.keys(modifTree));
   for (const id of Object.keys(modifTree)) {
@@ -29,6 +35,9 @@ function resolveModifTreeIds(objects, modifTree) {
   return ids;
 }
 
+/**
+ *
+ */
 export function transformBoundsMap(boundsMap, objects, modifTree, ids) {
   const resolvedIds = ids ?? resolveModifTreeIds(objects, modifTree);
   const newBoundsMap = { ...boundsMap };
@@ -45,6 +54,9 @@ export function transformBoundsMap(boundsMap, objects, modifTree, ids) {
   return newBoundsMap;
 }
 
+/**
+ *
+ */
 export function boundsMapDebug(objects, boundsMap) {
   const result = {};
   for (const [id, bounds] of Object.entries(boundsMap)) {

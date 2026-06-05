@@ -3,6 +3,8 @@ import { createShape } from '../../lib/types.js';
 import { SnapGuides } from '../../lib/snap.js';
 import { parseSVG } from '../../lib/svg-import.js';
 import { computeShapesBounds } from '../../lib/shapes.js';
+import { pointsToRect } from '@penpot/shared/geom/rect.js';
+import { degrees } from '@penpot/shared/math.js';
 
 function imageToDataURL(img, width, height) {
   const canvas = document.createElement('canvas');
@@ -112,6 +114,9 @@ export class DrawingTool extends PenpotTool {
     });
 
     this.workspace.emit('penpot-shape-create', { shape });
+    if (this.workspace?.switchTool) {
+      this.workspace.switchTool('select');
+    }
   }
 
   onKeyDown(event, canvas) {
@@ -197,6 +202,10 @@ export class SelectTool extends PenpotTool {
   get selectedIds() { return this.#selectedIds; }
   get isResizing() { return this.#isResizing; }
   get isDragging() { return this.#isDragging; }
+
+  setSelectedIds(ids) {
+    this.#selectedIds = ids instanceof Set ? ids : new Set(ids);
+  }
 
   onActivate(canvas) {
     this.#snapGuides = new SnapGuides(canvas);
@@ -435,8 +444,19 @@ export class SelectTool extends PenpotTool {
     }
     if (!shape) return false;
     const rotationHandleOffset = 20;
-    const rhx = (shape.x || 0) + (shape.width || 0) / 2;
-    const rhy = (shape.y || 0) - rotationHandleOffset;
+    let rhx = (shape.x || 0) + (shape.width || 0) / 2;
+    let rhy = (shape.y || 0) - rotationHandleOffset;
+    if (shape.rotation) {
+      const cx = (shape.x || 0) + (shape.width || 0) / 2;
+      const cy = (shape.y || 0) + (shape.height || 0) / 2;
+      const rad = (shape.rotation * Math.PI) / 180;
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+      const dx = rhx - cx;
+      const dy = rhy - cy;
+      rhx = cx + dx * cos - dy * sin;
+      rhy = cy + dx * sin + dy * cos;
+    }
     return Math.abs(x - rhx) <= 7 && Math.abs(y - rhy) <= 7;
   }
 
@@ -454,6 +474,19 @@ export class SelectTool extends PenpotTool {
     if (!shape) return null;
 
     const handles = this.#getHandles(shape);
+    if (shape.rotation) {
+      const cx = (shape.x || 0) + (shape.width || 0) / 2;
+      const cy = (shape.y || 0) + (shape.height || 0) / 2;
+      const rad = (shape.rotation * Math.PI) / 180;
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+      for (let i = 0; i < handles.length; i++) {
+        const [name, hx, hy] = handles[i];
+        const dx = hx - cx;
+        const dy = hy - cy;
+        handles[i] = [name, cx + dx * cos - dy * sin, cy + dx * sin + dy * cos];
+      }
+    }
     for (const [name, hx, hy] of handles) {
       if (Math.abs(x - hx) <= HANDLE_SIZE / 2 + 2 && Math.abs(y - hy) <= HANDLE_SIZE / 2 + 2) {
         return name;
@@ -485,11 +518,11 @@ export class SelectTool extends PenpotTool {
     if (!this.#rotationStart) return;
     const { centerX, centerY, startAngle, originalRotation, multi, shapes } = this.#rotationStart;
     const currentAngle = Math.atan2(my - centerY, mx - centerX);
-    const deltaAngle = currentAngle - startAngle;
+    const deltaAngle = degrees(currentAngle - startAngle);
 
     if (multi && shapes) {
-      const cos = Math.cos(deltaAngle);
-      const sin = Math.sin(deltaAngle);
+      const cos = Math.cos(currentAngle - startAngle);
+      const sin = Math.sin(currentAngle - startAngle);
       for (const orig of shapes) {
         const dx = orig.centerX - centerX;
         const dy = orig.centerY - centerY;
@@ -766,7 +799,7 @@ export class TextTool extends PenpotTool {
 
     this.#input = document.createElement('input');
     this.#input.type = 'text';
-    this.#input.style.cssText = `position:absolute;left:${screenX}px;top:${screenY - 8}px;background:var(--penpot-input-bg,#333);border:1px solid var(--penpot-primary,#31efb8);color:var(--penpot-text,#e6e6e6);font-size:14px;font-family:var(--penpot-font-family,sans-serif);padding:2px 4px;outline:none;z-index:10;min-width:60px;`;
+    this.#input.style.cssText = `position:absolute;left:${screenX}px;top:${screenY - 8}px;background:var(--penpot-input-bg,#333);border:1px solid var(--penpot-primary,#31efb8);color:var(--penpot-text,#e6e6e6);font-size:14px;font-family:var(--penpot-font-family,sans-serif);padding:2px 4px;outline:none;z-index:var(--penpot-z-dropdown,400);min-width:60px;`;
     this.#input.placeholder = 'Type text...';
 
     this.#input.addEventListener('keydown', (e) => {
@@ -943,14 +976,9 @@ export class PathTool extends PenpotTool {
   }
 
   #getBounds(points) {
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const pt of points) {
-      if (pt.x < minX) minX = pt.x;
-      if (pt.y < minY) minY = pt.y;
-      if (pt.x > maxX) maxX = pt.x;
-      if (pt.y > maxY) maxY = pt.y;
-    }
-    return { x: minX, y: minY, width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) };
+    const r = pointsToRect(points);
+    if (!r) return { x: 0, y: 0, width: 1, height: 1 };
+    return { x: r.x, y: r.y, width: Math.max(1, r.width), height: Math.max(1, r.height) };
   }
 
   #removePathEl(canvas) {
@@ -1018,8 +1046,11 @@ export class ImageTool extends PenpotTool {
               y: Math.round(rawShape.y - minY + pos.y),
             });
             if (shape.width > 0 && shape.height > 0) {
-              this.workspace.emit('penpot-shape-create', { shape });
-            }
+    this.workspace.emit('penpot-shape-create', { shape });
+    if (this.workspace?.switchTool) {
+      this.workspace.switchTool('select');
+    }
+  }
           }
         } catch (err) {
           console.error('[ImageTool] SVG parse error:', err);

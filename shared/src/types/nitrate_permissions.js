@@ -3,10 +3,16 @@ const defaults = {
   'delete-teams': 'onlyOwners'
 };
 
+/**
+ *
+ */
 function canCreateTeam({ isOrgOwner, permissionValue }) {
   return isOrgOwner || permissionValue === 'any';
 }
 
+/**
+ *
+ */
 function canDeleteTeam({ isOrgOwner, permissionValue, teamPerms, allowOrgOwnerDelete }) {
   if (permissionValue === 'onlyMe') {
     return allowOrgOwnerDelete && isOrgOwner;
@@ -22,14 +28,23 @@ const actionRules = {
   'delete-team': { permissionKey: 'delete-teams', checkFn: canDeleteTeam }
 };
 
+/**
+ *
+ */
 function normalizeOrgPermissions(orgPerms) {
   return { ...defaults, ...(orgPerms?.permissions || {}) };
 }
 
+/**
+ *
+ */
 function isOwner(orgPerms, profileId) {
   return profileId === orgPerms?.['owner-id'];
 }
 
+/**
+ *
+ */
 export function allowed(action, { orgPerms, profileId, teamPerms, allowOrgOwnerDelete }) {
   const rule = actionRules[action];
   if (!rule) return false;

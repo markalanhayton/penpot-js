@@ -6,17 +6,29 @@ import { defaultColor } from './shape/attrs.js';
 
 const SHAPE_SYMBOL = Symbol('penpot/shape');
 
+/**
+ *
+ */
 export class Shape {
+  /**
+   *
+   */
   constructor(attrs) {
     Object.assign(this, attrs);
     this[SHAPE_SYMBOL] = true;
   }
 }
 
+/**
+ *
+ */
 export function createShape(attrs) {
   return new Shape(attrs);
 }
 
+/**
+ *
+ */
 export function isShape(o) {
   return o != null && o[SHAPE_SYMBOL] === true;
 }
@@ -43,12 +55,18 @@ export const GROW_TYPES = new Set(['auto-width', 'auto-height', 'fixed']);
 
 export const VALID_STROKE_ATTRS = new Set(['stroke-image', 'stroke-color', 'stroke-color-gradient']);
 
+/**
+ *
+ */
 export function hasValidStrokeAttrsQ(color) {
   const attrs = new Set(Object.keys(color));
   const intersection = [...attrs].filter((k) => VALID_STROKE_ATTRS.has(k));
   return intersection.length === 1;
 }
 
+/**
+ *
+ */
 export function hasImagesQ(shape) {
   return (shape.fills?.some((f) => f['fill-image']) ?? false) ||
          (shape.strokes?.some((s) => s['stroke-image']) ?? false);
@@ -90,6 +108,9 @@ const ALLOWED_ATTRS_BY_TYPE = new Map([
   ['text', new Set([...ALLOWED_TEXT_ATTRS, ...ALLOWED_GENERIC_ATTRS])],
 ]);
 
+/**
+ *
+ */
 export function isAllowedSwitchKeepAttrQ(attr, type) {
   const allowed = ALLOWED_ATTRS_BY_TYPE.get(type);
   return allowed ? allowed.has(attr) : false;
@@ -178,13 +199,19 @@ const MINIMAL_SHAPE_BY_TYPE = new Map([
   ['multiple', MINIMAL_MULTIPLE_ATTRS],
 ]);
 
+/**
+ *
+ */
 function getMinimalShape(type) {
   return MINIMAL_SHAPE_BY_TYPE.get(type) ?? {};
 }
 
+/**
+ *
+ */
 function makeMinimalShape(type) {
   if (type === 'curve') type = 'path';
-  let attrs = { ...getMinimalShape(type) };
+  const attrs = { ...getMinimalShape(type) };
   if (type !== 'path' && type !== 'bool') {
     attrs.x = attrs.x ?? 0;
     attrs.y = attrs.y ?? 0;
@@ -198,6 +225,9 @@ function makeMinimalShape(type) {
   return createShape(attrs);
 }
 
+/**
+ *
+ */
 export function setupRect(shape) {
   const selrect = shape.selrect ?? makeRect(shape.x, shape.y, shape.width, shape.height);
   const transform = shape.transform ?? matrix();
@@ -205,6 +235,9 @@ export function setupRect(shape) {
   return { ...shape, selrect, points, transform, 'transform-inverse': shape['transform-inverse'] ?? matrix() };
 }
 
+/**
+ *
+ */
 export function setupShape(props) {
   const type = props.type === 'curve' ? 'path' : props.type;
   let shape = makeMinimalShape(type);
@@ -227,6 +260,9 @@ export function setupShape(props) {
   return shape;
 }
 
+/**
+ *
+ */
 function withoutNils(data) {
   if (data == null) return data;
   if (Array.isArray(data)) return data;
@@ -238,6 +274,9 @@ function withoutNils(data) {
   return result;
 }
 
+/**
+ *
+ */
 function rectToPoints(rect, transform) {
   const cx = rect.x + rect.width / 2;
   const cy = rect.y + rect.height / 2;
@@ -250,10 +289,16 @@ function rectToPoints(rect, transform) {
   return corners;
 }
 
+/**
+ *
+ */
 export function processShapeColors(shape, processFn) {
   return shape;
 }
 
+/**
+ *
+ */
 export function getAllColors(shape) {
   const colors = [];
   for (const fill of (shape.fills ?? [])) {
@@ -273,11 +318,17 @@ export function getAllColors(shape) {
   return colors;
 }
 
+/**
+ *
+ */
 export function usesLibraryColorQ(shape, libraryId, colorId) {
   const allColors = getAllColors(shape);
   return allColors.some((c) => c['ref-id'] === colorId && c['ref-file'] === libraryId);
 }
 
+/**
+ *
+ */
 export function usesLibraryColorsQ(shape, libraryId) {
   const allColors = getAllColors(shape);
   return allColors.some((c) => c['ref-id'] != null && c['ref-file'] === libraryId);

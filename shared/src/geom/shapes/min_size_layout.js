@@ -1,6 +1,9 @@
 import * as gpo from '../points.js';
 import * as ctl from '../../types/shape/layout.js';
 
+/**
+ *
+ */
 export function childMinWidth(child, childBounds, bounds, objects, strictQ) {
   if (strictQ === undefined) strictQ = false;
 
@@ -23,6 +26,9 @@ export function childMinWidth(child, childBounds, bounds, objects, strictQ) {
   return gpo.widthPoints(childBounds);
 }
 
+/**
+ *
+ */
 export function childMaxWidth(child, _childBounds, _bounds, _objects, _strictQ) {
   if (ctl.fillWidthQ(child) && child?.['layout-item-max-w'] != null && child?.['layout-item-h-sizing'] === 'fill') {
     return Math.max(0.01, child['layout-item-max-w']);
@@ -30,6 +36,9 @@ export function childMaxWidth(child, _childBounds, _bounds, _objects, _strictQ) 
   return Infinity;
 }
 
+/**
+ *
+ */
 export function childMinHeight(child, childBounds, bounds, objects, strictQ) {
   if (strictQ === undefined) strictQ = false;
 
@@ -52,6 +61,9 @@ export function childMinHeight(child, childBounds, bounds, objects, strictQ) {
   return gpo.heightPoints(childBounds);
 }
 
+/**
+ *
+ */
 export function childMaxHeight(child, _childBounds, _bounds, _objects, _strictQ) {
   if (ctl.fillHeightQ(child) && child?.['layout-item-max-h'] != null && child?.['layout-item-v-sizing'] === 'fill') {
     return Math.max(0.01, child['layout-item-max-h']);

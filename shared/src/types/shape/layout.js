@@ -24,99 +24,156 @@ export const layoutChildAttrs = new Set([
   'layout-item-align-self', 'layout-item-absolute', 'layout-item-z-index',
 ]);
 
+/**
+ *
+ */
 export function flexLayoutQ(objectsOrShape, id) {
   const shape = typeof id === 'string' ? objectsOrShape[id] : objectsOrShape;
   return shape?.type === 'frame' && shape?.layout === 'flex';
 }
 
+/**
+ *
+ */
 export function gridLayoutQ(objectsOrShape, id) {
   const shape = typeof id === 'string' ? objectsOrShape[id] : objectsOrShape;
   return shape?.type === 'frame' && shape?.layout === 'grid';
 }
 
+/**
+ *
+ */
 export function anyLayoutQ(objectsOrShape, id) {
   const shape = typeof id === 'string' ? objectsOrShape[id] : objectsOrShape;
   return shape?.type === 'frame' && (shape?.layout === 'flex' || shape?.layout === 'grid');
 }
 
+/**
+ *
+ */
 export function flexLayoutImmediateChildQ(objects, shape) {
   const parentId = shape?.['parent-id'];
   const parent = objects[parentId];
   return flexLayoutQ(parent);
 }
 
+/**
+ *
+ */
 export function gridLayoutImmediateChildQ(objects, shape) {
   const parentId = shape?.['parent-id'];
   const parent = objects[parentId];
   return gridLayoutQ(parent);
 }
 
+/**
+ *
+ */
 export function anyLayoutImmediateChildQ(objects, shape) {
   const parentId = shape?.['parent-id'];
   const parent = objects[parentId];
   return anyLayoutQ(parent);
 }
 
+/**
+ *
+ */
 export function flexLayoutImmediateChildIdQ(objects, id) {
   const parentId = objects[id]?.['parent-id'];
   const parent = objects[parentId];
   return flexLayoutQ(parent);
 }
 
+/**
+ *
+ */
 export function gridLayoutImmediateChildIdQ(objects, id) {
   const parentId = objects[id]?.['parent-id'];
   const parent = objects[parentId];
   return gridLayoutQ(parent);
 }
 
+/**
+ *
+ */
 export function anyLayoutImmediateChildIdQ(objects, id) {
   const parentId = objects[id]?.['parent-id'];
   const parent = objects[parentId];
   return anyLayoutQ(parent);
 }
 
+/**
+ *
+ */
 export function fillWidthQ(objectsOrChild, id) {
   const child = typeof id === 'string' ? objectsOrChild[id] : objectsOrChild;
   return child?.['layout-item-h-sizing'] === 'fill';
 }
 
+/**
+ *
+ */
 export function fillHeightQ(objectsOrChild, id) {
   const child = typeof id === 'string' ? objectsOrChild[id] : objectsOrChild;
   return child?.['layout-item-v-sizing'] === 'fill';
 }
 
+/**
+ *
+ */
 export function fillQ(objectsOrShape, id) {
   return fillHeightQ(objectsOrShape, id) || fillWidthQ(objectsOrShape, id);
 }
 
+/**
+ *
+ */
 export function autoQ(objectsOrShape, id) {
   const shape = typeof id === 'string' ? objectsOrShape[id] : objectsOrShape;
   return autoHeightQ(shape) || autoWidthQ(shape);
 }
 
+/**
+ *
+ */
 export function autoWidthQ(objectsOrChild, id) {
   const child = typeof id === 'string' ? objectsOrChild[id] : objectsOrChild;
   return child?.['layout-item-h-sizing'] === 'auto';
 }
 
+/**
+ *
+ */
 export function autoHeightQ(objectsOrChild, id) {
   const child = typeof id === 'string' ? objectsOrChild[id] : objectsOrChild;
   return child?.['layout-item-v-sizing'] === 'auto';
 }
 
+/**
+ *
+ */
 export function colQ(shape) {
   return shape?.['layout-flex-dir'] === 'column' || shape?.['layout-flex-dir'] === 'column-reverse';
 }
 
+/**
+ *
+ */
 export function rowQ(shape) {
   return shape?.['layout-flex-dir'] === 'row' || shape?.['layout-flex-dir'] === 'row-reverse';
 }
 
+/**
+ *
+ */
 export function gaps(shape) {
   const gap = shape?.['layout-gap'] ?? {};
   return [gap['row-gap'] ?? 0, gap['column-gap'] ?? 0];
 }
 
+/**
+ *
+ */
 export function paddings(shape) {
   const padding = shape?.['layout-padding'] ?? {};
   const p1 = padding.p1 ?? 0;
@@ -129,6 +186,9 @@ export function paddings(shape) {
   return [p1, p2, p3, p4];
 }
 
+/**
+ *
+ */
 export function hPadding(shape) {
   const padding = shape?.['layout-padding'] ?? {};
   if (shape?.['layout-padding-type'] === 'simple') {
@@ -137,6 +197,9 @@ export function hPadding(shape) {
   return (padding.p2 ?? 0) + (padding.p4 ?? 0);
 }
 
+/**
+ *
+ */
 export function vPadding(shape) {
   const padding = shape?.['layout-padding'] ?? {};
   if (shape?.['layout-padding-type'] === 'simple') {
@@ -145,6 +208,9 @@ export function vPadding(shape) {
   return (padding.p1 ?? 0) + (padding.p3 ?? 0);
 }
 
+/**
+ *
+ */
 export function childMinWidth(child) {
   if (fillWidthQ(child) && child?.['layout-item-min-w'] != null) {
     return Math.max(0.01, child['layout-item-min-w']);
@@ -152,6 +218,9 @@ export function childMinWidth(child) {
   return 0.01;
 }
 
+/**
+ *
+ */
 export function childMaxWidth(child) {
   if (fillWidthQ(child) && child?.['layout-item-max-w'] != null) {
     return Math.max(0.01, child['layout-item-max-w']);
@@ -159,6 +228,9 @@ export function childMaxWidth(child) {
   return Infinity;
 }
 
+/**
+ *
+ */
 export function childMinHeight(child) {
   if (fillHeightQ(child) && child?.['layout-item-min-h'] != null) {
     return Math.max(0.01, child['layout-item-min-h']);
@@ -166,6 +238,9 @@ export function childMinHeight(child) {
   return 0.01;
 }
 
+/**
+ *
+ */
 export function childMaxHeight(child) {
   if (fillHeightQ(child) && child?.['layout-item-max-h'] != null) {
     return Math.max(0.01, child['layout-item-max-h']);
@@ -173,6 +248,9 @@ export function childMaxHeight(child) {
   return Infinity;
 }
 
+/**
+ *
+ */
 export function childMargins(child) {
   const margin = child?.['layout-item-margin'] ?? {};
   const m1 = margin.m1 ?? 0;
@@ -185,55 +263,88 @@ export function childMargins(child) {
   return [m1, m2, m1, m2];
 }
 
+/**
+ *
+ */
 export function childHeightMargin(child) {
   const [top, , bottom] = childMargins(child);
   return top + bottom;
 }
 
+/**
+ *
+ */
 export function childWidthMargin(child) {
   const [, right, , left] = childMargins(child);
   return right + left;
 }
 
+/**
+ *
+ */
 export function wrapQ(shape) {
   return shape?.['layout-wrap-type'] === 'wrap';
 }
 
+/**
+ *
+ */
 export function itemAbsoluteQ(objectsOrShape, id) {
   const shape = typeof id === 'string' ? objectsOrShape[id] : objectsOrShape;
   return shape?.['layout-item-absolute'] === true;
 }
 
+/**
+ *
+ */
 export function positionAbsoluteQ(objectsOrShape, id) {
   const shape = typeof id === 'string' ? objectsOrShape[id] : objectsOrShape;
   return itemAbsoluteQ(shape) || shape?.hidden === true;
 }
 
+/**
+ *
+ */
 export function layoutZIndex(objectsOrShape, id) {
   const shape = typeof id === 'string' ? objectsOrShape[id] : objectsOrShape;
   return shape?.['layout-item-z-index'] ?? 0;
 }
 
+/**
+ *
+ */
 export function reverseQ(objectsOrShape, id) {
   const shape = typeof id === 'string' ? objectsOrShape[id] : objectsOrShape;
   return shape?.['layout-flex-dir'] === 'row-reverse' || shape?.['layout-flex-dir'] === 'column-reverse';
 }
 
+/**
+ *
+ */
 export function removeLayoutItemData(shape) {
   const { 'layout-item-min-w': _, 'layout-item-min-h': __, 'layout-item-max-w': ___, 'layout-item-max-h': ____, 'layout-item-h-sizing': _____, 'layout-item-v-sizing': ______, 'layout-item-align-self': _______, 'layout-item-absolute': ________, 'layout-item-z-index': _________, 'layout-item-margin': __________, 'layout-item-margin-type': ___________, ...rest } = shape;
   return rest;
 }
 
+/**
+ *
+ */
 export function pushIntoCell(shape, ids, row, column) {
   const currentShapes = shape?.['layout-grid-cells']?.[shape.id]?.shapes ?? [];
   const newShapes = [...currentShapes, ...ids];
   return { ...shape, 'layout-grid-cells': { ...shape['layout-grid-cells'], [shape.id]: { ...shape['layout-grid-cells']?.[shape.id], shapes: newShapes, row, column } } };
 }
 
+/**
+ *
+ */
 export function assignCells(parent, objects) {
   return parent;
 }
 
+/**
+ *
+ */
 export function getCellByShapeId(parent, shapeId) {
   const cells = parent?.['layout-grid-cells'] ?? {};
   for (const [cellId, cell] of Object.entries(cells)) {
@@ -244,6 +355,9 @@ export function getCellByShapeId(parent, shapeId) {
   return null;
 }
 
+/**
+ *
+ */
 export function removeLayoutContainerData(shape) {
   const {
     layout: _layout,
@@ -266,114 +380,189 @@ export function removeLayoutContainerData(shape) {
   return rest;
 }
 
+/**
+ *
+ */
 export function hStartQ(shape) {
   if (colQ(shape)) return shape['layout-align-items'] === 'start';
   if (rowQ(shape)) return shape['layout-justify-content'] === 'start';
   return false;
 }
 
+/**
+ *
+ */
 export function hCenterQ(shape) {
   if (colQ(shape)) return shape['layout-align-items'] === 'center';
   if (rowQ(shape)) return shape['layout-justify-content'] === 'center';
   return false;
 }
 
+/**
+ *
+ */
 export function hEndQ(shape) {
   if (colQ(shape)) return shape['layout-align-items'] === 'end';
   if (rowQ(shape)) return shape['layout-justify-content'] === 'end';
   return false;
 }
 
+/**
+ *
+ */
 export function vStartQ(shape) {
   if (rowQ(shape)) return shape['layout-align-items'] === 'start';
   if (colQ(shape)) return shape['layout-justify-content'] === 'start';
   return false;
 }
 
+/**
+ *
+ */
 export function vCenterQ(shape) {
   if (rowQ(shape)) return shape['layout-align-items'] === 'center';
   if (colQ(shape)) return shape['layout-justify-content'] === 'center';
   return false;
 }
 
+/**
+ *
+ */
 export function vEndQ(shape) {
   if (rowQ(shape)) return shape['layout-align-items'] === 'end';
   if (colQ(shape)) return shape['layout-justify-content'] === 'end';
   return false;
 }
 
+/**
+ *
+ */
 export function contentStartQ(shape) {
   return shape?.['layout-align-content'] === 'start';
 }
 
+/**
+ *
+ */
 export function contentCenterQ(shape) {
   return shape?.['layout-align-content'] === 'center';
 }
 
+/**
+ *
+ */
 export function contentEndQ(shape) {
   return shape?.['layout-align-content'] === 'end';
 }
 
+/**
+ *
+ */
 export function contentBetweenQ(shape) {
   return shape?.['layout-align-content'] === 'space-between';
 }
 
+/**
+ *
+ */
 export function contentAroundQ(shape) {
   return shape?.['layout-align-content'] === 'space-around';
 }
 
+/**
+ *
+ */
 export function contentEvenlyQ(shape) {
   return shape?.['layout-align-content'] === 'space-evenly';
 }
 
+/**
+ *
+ */
 export function contentStretchQ(shape) {
   return shape?.['layout-align-content'] === 'stretch' || shape?.['layout-align-content'] == null;
 }
 
+/**
+ *
+ */
 export function alignItemsCenterQ(shape) {
   return shape?.['layout-align-items'] === 'center';
 }
 
+/**
+ *
+ */
 export function alignItemsStartQ(shape) {
   return shape?.['layout-align-items'] === 'start';
 }
 
+/**
+ *
+ */
 export function alignItemsEndQ(shape) {
   return shape?.['layout-align-items'] === 'end';
 }
 
+/**
+ *
+ */
 export function alignItemsStretchQ(shape) {
   return shape?.['layout-align-items'] === 'stretch';
 }
 
+/**
+ *
+ */
 export function spaceBetweenQ(shape) {
   return shape?.['layout-justify-content'] === 'space-between';
 }
 
+/**
+ *
+ */
 export function spaceAroundQ(shape) {
   return shape?.['layout-justify-content'] === 'space-around';
 }
 
+/**
+ *
+ */
 export function spaceEvenlyQ(shape) {
   return shape?.['layout-justify-content'] === 'space-evenly';
 }
 
+/**
+ *
+ */
 export function alignSelfStartQ(shape) {
   return shape?.['layout-item-align-self'] === 'start';
 }
 
+/**
+ *
+ */
 export function alignSelfEndQ(shape) {
   return shape?.['layout-item-align-self'] === 'end';
 }
 
+/**
+ *
+ */
 export function alignSelfCenterQ(shape) {
   return shape?.['layout-item-align-self'] === 'center';
 }
 
+/**
+ *
+ */
 export function alignSelfStretchQ(shape) {
   return shape?.['layout-item-align-self'] === 'stretch';
 }
 
+/**
+ *
+ */
 export function updateFlexScale(shape, scale) {
   const gap = shape?.['layout-gap'] ?? {};
   const padding = shape?.['layout-padding'] ?? {};
@@ -390,6 +579,9 @@ export function updateFlexScale(shape, scale) {
   return { ...shape, 'layout-gap': newGap, 'layout-padding': newPadding };
 }
 
+/**
+ *
+ */
 export function updateGridScale(shape, scale) {
   const rows = (shape?.['layout-grid-rows'] ?? []).map((track) =>
     track.type === 'fixed' ? { ...track, value: track.value * scale } : track

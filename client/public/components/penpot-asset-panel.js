@@ -430,7 +430,7 @@ export class PenpotAssetPanel extends PenpotElement {
       card.addEventListener('dragstart', (e) => {
         e.dataTransfer.setData('application/penpot-component', card.dataset.componentId);
         e.dataTransfer.effectAllowed = 'copy';
-        try { e.dataTransfer.setDragImage(card, card.offsetWidth / 2, card.offsetHeight / 2); } catch (_) {}
+        try { e.dataTransfer.setDragImage(card, card.offsetWidth / 2, card.offsetHeight / 2); } catch (err) { console.warn('[asset-panel] setDragImage failed:', err.message); }
       });
     });
 
@@ -452,7 +452,7 @@ export class PenpotAssetPanel extends PenpotElement {
       item.addEventListener('dragstart', (e) => {
         e.dataTransfer.setData('application/penpot-component', item.dataset.componentId);
         e.dataTransfer.effectAllowed = 'copy';
-        try { e.dataTransfer.setDragImage(item, item.offsetWidth / 2, item.offsetHeight / 2); } catch (_) {}
+        try { e.dataTransfer.setDragImage(item, item.offsetWidth / 2, item.offsetHeight / 2); } catch (err) { console.warn('[asset-panel] setDragImage failed:', err.message); }
       });
     });
 

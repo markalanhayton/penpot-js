@@ -1,6 +1,6 @@
 # E2E Testing Document
 
-> Last updated: 2026-05-26
+> Last updated: 2026-05-30
 
 Comprehensive guide to end-to-end, integration, and unit testing across all modules of the Penpot JS port.
 
@@ -52,10 +52,10 @@ The Penpot JS port uses a layered testing strategy tailored to each module's run
 
 | Module | Test Type | Runner | Location | Count |
 |--------|-----------|--------|----------|-------|
-| `client/` | E2E | Playwright | `client/e2e/*.spec.js` | 32 spec files, 490+ tests |
-| `server/` | Integration + Unit | `node:test` | `server/test/*.test.js` | 78 files, 909 tests, 296 suites |
-| `shared/` | Unit | `node:test` | `shared/test/*.test.js` | 65 files, 232 suites, 1,596 tests |
-| `server/exporter/` | Unit | `node:test` | `server/exporter/test/*.test.js` | 22 tests |
+| `client/` | E2E | Playwright | `client/e2e/*.spec.js` | 42 spec files, 632 tests |
+| `server/` | Integration + Unit | `node:test` | `server/test/*.test.js` | 80 files, 1,201 tests, 413 suites |
+| `shared/` | Unit | `node:test` | `shared/test/*.test.js` | 65 files, 297 suites, 1,662 tests |
+| `server/exporter/` | Unit | `node:test` | `server/exporter/test/*.test.js` | 23 tests |
 | `frontend/` (upstream) | E2E | Playwright | `frontend/playwright/ui/specs/*.spec.js` | 35 spec files |
 
 ---
@@ -129,7 +129,7 @@ Server integration tests use an in-memory SQLite database (`:memory:`) that is c
 
 - **Full isolation**: No test pollution between runs.
 - **Fast setup**: No external database server required.
-- **Realistic queries**: The same SQL schema as production (21 migrations applied on setup).
+- **Realistic queries**: The same SQL schema as production (22 migrations applied on setup).
 - **Transactional cleanup**: Tests can wrap operations in transactions and roll back.
 
 ### 2.4 Test Account
@@ -178,7 +178,7 @@ The client E2E tests cover the full user journey from authentication through des
 | `drawing-cycle.spec.js` | Other | ~420 | 17 | Draw shapes, undo/redo, properties, selection |
 | `file-persistence.spec.js` | Other | ~260 | 16 | Save, undo, redo, file name, keyboard shortcuts |
 
-**Total**: 32 spec files, ~5,500+ lines, 490+ tests.
+**Total**: 42 spec files, ~8,800+ lines, 632 tests.
 
 ### 3.2 Test Helpers
 
@@ -274,7 +274,7 @@ This pattern avoids hard failures when the test database doesn't have pre-seeded
 
 The server test suite uses `node:test` with `node:assert/strict` and an in-memory SQLite database. Tests cover RPC commands, middleware, database operations, authentication, WebSocket, storage, and more.
 
-**Statistics**: 75 test files, 872 test cases, 287 suites, 0 failures.
+**Statistics**: 80 test files, 1,201 test cases, 413 suites, 0 failures.
 
 ### 4.2 Test File Inventory
 
@@ -422,7 +422,7 @@ describe('Rate Limiter', () => {
 
 ### 5.1 Overview
 
-The `shared/` module has 176 test suites with 1,584+ assertions across 63 test files. Tests cover pure functions — geometry calculations, type definitions, data transformations, codecs, and validation logic.
+The `shared/` module has 297 test suites with 1,662 assertions across 65 test files. Tests cover pure functions — geometry calculations, type definitions, data transformations, codecs, and validation logic.
 
 ### 5.2 Test Organization
 
@@ -567,7 +567,7 @@ describe('Transit codec', () => {
 
 ### 6.1 Overview
 
-The exporter has 22 unit tests covering configuration, URL building, export grouping, and context options.
+The exporter has 23 unit tests covering configuration, URL building, export grouping, and context options.
 
 ### 6.2 Test File
 
@@ -580,7 +580,7 @@ The exporter has 22 unit tests covering configuration, URL building, export grou
 | Grouping | 5 | Shape/frame grouping by page, scale factor |
 | Context Options | 4 | Playwright context configuration, viewport |
 | Rendering | 6 | Bitmap/SVG/PDF renderer dispatch |
-| Error Handling | 4 | Invalid requests, missing parameters |
+| Error Handling | 5 | Invalid requests, missing parameters |
 
 ### 6.3 Running Tests
 
@@ -867,11 +867,11 @@ Set these environment variables for CI:
 
 | Module | Test Type | Test Files | Test Cases/Assertions | Pass | Fail | Skip |
 |--------|-----------|-----------|----------------------|------|------|------|
-| `shared/` | Unit | 65 files | 1,596 tests, 232 suites | 1,596 | 0 | 0 |
-| `server/` | Integration | 78 | 909 tests, 296 suites | 909 | 0 | 0 |
-| `server/exporter/` | Unit | 1 | 22 tests, 6 suites | 22 | 0 | 0 |
-| `client/` | E2E | 32 spec files | 490+ tests | 490+ | 0 | 0 |
-| **Total** | | **~176** | **2,945+** | **2,945+** | **0** | **0** |
+| `shared/` | Unit | 65 files | 1,662 tests, 297 suites | 1,662 | 0 | 0 |
+| `server/` | Integration | 80 | 1,201 tests, 413 suites | 1,201 | 0 | 0 |
+| `server/exporter/` | Unit | 1 | 23 tests, 7 suites | 23 | 0 | 0 |
+| `client/` | E2E | 42 spec files | 632 tests | 632 | 0 | 0 |
+| **Total** | | **~188** | **3,518** | **3,518** | **0** | **0** |
 
 ### 11.2 By Test Category
 
@@ -896,8 +896,18 @@ Set these environment variables for CI:
 | **E2E Interaction** | ~17 tests | Prototyping panel, add/edit/remove interactions, events |
 | **E2E Ruler Guides** | ~16 tests | Rulers, guides overlay, creation zones |
 | **E2E MCP Panel** | ~14 tests | MCP panel rendering, connect, toggle, events |
-| **E2E Accessibility** | ~19 tests | Keyboard nav, ARIA, focus, shortcuts |
-| **E2E Visual Regression** | ~17 tests | Component rendering, workspace states, error-free |
+| **E2E Accessibility** | ~52 tests | Keyboard nav, ARIA, focus, shortcuts, axe-core |
+| **E2E Design Tokens** | ~10 tests | Token panel, color/typography CRUD, apply events |
+| **E2E Clipboard** | ~9 tests | Ctrl+C/V/X/D shortcuts, delete, select all, undo/redo |
+| **E2E Share Dialog** | ~9 tests | Open/close, share URL, copy, permission selects |
+| **E2E Comment Panel** | ~10 tests | Filter tabs, comment input/send, empty state |
+| **E2E Layout Panel** | ~12 tests | Layout type toggle, flex direction/gap/wrap, grid |
+| **E2E Variant Panel** | ~10 tests | Shadow DOM, empty state, property switcher, combine |
+| **E2E Plugin Panel** | ~7 tests | Plugin-panel/plugin-manager registration, sidebar |
+| **E2E Form Components** | ~15 tests | Registration checks for form components |
+| **E2E Release Notes** | ~12 tests | Auto-show, open/close, skip, version badge, events |
+| **E2E Performance** | ~13 tests | FPS benchmarks, memory usage, load time |
+| **E2E Visual Regression** | ~25 tests | Screenshot comparison (Playwright toHaveScreenshot), auth/dashboard/workspace/sidebar/canvas/component states |
 | **E2E Gradient Editor** | ~10 tests | Add gradient, type toggle, stops, events |
 | **E2E Shadow Editor** | ~11 tests | Add shadow, type toggle, properties, delete, error |
 | **E2E Library Drag-Drop** | ~16 tests | Component/color/typo drag, drop handlers, error |
@@ -1382,8 +1392,8 @@ describe('PenpotMcpPanel', () => {
 
 ```bash
 # All unit + integration tests (fast, ~1 minute total)
-cd shared && npm test       # ~2s, 1596 assertions
-cd server && npm test     # ~8s, 570 tests
+cd shared && npm test       # ~2s, 1596 tests
+cd server && npm test     # ~15s, 1096 tests
 cd server/exporter && node --test test/exporter.test.js  # ~1s, 22 tests
 
 # Client E2E tests (requires browser + servers, ~5 minutes)

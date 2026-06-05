@@ -3,7 +3,7 @@ import { PenpotElement } from './base.js';
 
 const template = document.createElement('template');
 template.innerHTML = `<style>
-  :host { display: flex; align-items: center; gap: 0; }
+  penpot-main-menu { display: flex; align-items: center; gap: 0; }
   .penpot-menu__bar { display: flex; align-items: center; gap: 0; }
   .penpot-menu__trigger { background: none; border: none; color: var(--penpot-text-dim, #999); font-size: var(--penpot-font-size-s, 12px); padding: var(--penpot-spacing-xs, 4px) var(--penpot-spacing-s, 8px); cursor: pointer; border-radius: var(--penpot-radius-xs, 2px); position: relative; white-space: nowrap; font-family: inherit; line-height: 1; }
   .penpot-menu__trigger:hover, .penpot-menu__trigger:focus { background: var(--penpot-surface-high, #333); color: var(--penpot-text, #e6e6e6); }
@@ -84,6 +84,7 @@ const MENU_DEFS = [
       { label: 'Version History', shortcut: '', icon: '\uD83D\uDD50', action: 'toggle-version-history' },
       { type: 'separator' },
       { label: 'Keyboard Shortcuts', shortcut: 'Ctrl+/', icon: '', action: 'show-shortcuts' },
+      { label: "What's New", shortcut: '', icon: '\u2728', action: 'show-release-notes' },
     ],
   },
 ];

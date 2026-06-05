@@ -1,4 +1,10 @@
+/**
+ *
+ */
 export class PenpotError extends Error {
+  /**
+   *
+   */
   constructor(message, data = {}, cause = null) {
     super(message);
     this.name = 'PenpotError';
@@ -11,24 +17,39 @@ export class PenpotError extends Error {
   }
 }
 
+/**
+ *
+ */
 export function error(type, data = {}) {
   const hint = data.hint || type;
   const message = typeof hint === 'string' ? hint : String(hint);
   return new PenpotError(message, { type, ...data }, data.cause || null);
 }
 
+/**
+ *
+ */
 export function raise(type, data = {}) {
   throw error(type, data);
 }
 
+/**
+ *
+ */
 export function isError(v) {
   return v instanceof PenpotError;
 }
 
+/**
+ *
+ */
 export function isException(v) {
   return v instanceof Error;
 }
 
+/**
+ *
+ */
 export function ignoring(...fns) {
   try {
     for (const fn of fns) fn();
@@ -37,6 +58,9 @@ export function ignoring(...fns) {
   }
 }
 
+/**
+ *
+ */
 export async function ignoringAsync(...fns) {
   try {
     for (const fn of fns) await fn();
@@ -45,6 +69,9 @@ export async function ignoringAsync(...fns) {
   }
 }
 
+/**
+ *
+ */
 export function tryExpr(expr, { reraiseWith, onException } = {}) {
   try {
     return expr();
@@ -59,6 +86,9 @@ export function tryExpr(expr, { reraiseWith, onException } = {}) {
   }
 }
 
+/**
+ *
+ */
 export function instanceOf(errorClass, cause) {
   let current = cause;
   while (current) {
@@ -68,6 +98,9 @@ export function instanceOf(errorClass, cause) {
   return null;
 }
 
+/**
+ *
+ */
 export function getHint(cause) {
   if (cause instanceof PenpotError) {
     const hint = cause.data?.hint || cause.hint;
@@ -79,12 +112,18 @@ export function getHint(cause) {
   return null;
 }
 
+/**
+ *
+ */
 export function firstLine(s) {
   if (typeof s !== 'string') return s;
   const idx = s.indexOf('\n');
   return idx > 0 ? s.substring(0, idx) : s;
 }
 
+/**
+ *
+ */
 export function formatThrowable(cause) {
   const lines = ['===================='];
 
@@ -117,6 +156,9 @@ export function formatThrowable(cause) {
   return lines.join('\n');
 }
 
+/**
+ *
+ */
 export function printThrowable(cause, { prefix } = {}) {
   const title = prefix
     ? `${prefix}: ${getHint(cause) || 'Error'}`

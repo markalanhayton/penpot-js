@@ -1,5 +1,6 @@
 'use strict';
 import { cmd, setAuthToken, clearAuthToken } from '../lib/rpc.js';
+import { disconnectWS } from '../lib/ws.js';
 import { appStore, dispatch } from '../lib/store.js';
 import { t } from '../lib/i18n.js';
 import { PenpotElement } from './base.js';
@@ -72,7 +73,7 @@ template.innerHTML = `
           <span class="penpot-app__user-avatar" id="user-avatar"></span>
           <span id="user-name"></span>
         </span>
-        <button class="penpot-app__btn" id="settings-btn">Settings</button>
+        <button class="penpot-app__btn" id="profile-settings-btn">Settings</button>
         <button class="penpot-app__btn penpot-app__danger" id="logout-btn">Sign out</button>
       </div>
       <div class="penpot-app__content" id="content">
@@ -99,7 +100,7 @@ export class PenpotDashboard extends PenpotElement {
     super.connectedCallback();
 
     this.querySelector('#logout-btn').addEventListener('click', () => this.logout());
-    this.querySelector('#settings-btn').addEventListener('click', () => {
+    this.querySelector('#profile-settings-btn').addEventListener('click', () => {
       console.log('[dashboard] Settings button clicked, navigating to settings');
       try {
         window.__penpot.navigate('settings-profile');
@@ -246,7 +247,7 @@ export class PenpotDashboard extends PenpotElement {
         resultsEl.querySelectorAll('.penpot-app__file-card[data-file-id]').forEach(el => {
           el.addEventListener('click', () => {
             appStore.set('currentFileId', el.dataset.fileId);
-            window.__penpot.navigate('workspace');
+            window.__penpot.navigate('workspace', { fileId: el.dataset.fileId });
           });
         });
         const recentSearches = JSON.parse(localStorage.getItem('penpot-recent-searches') || '[]');
@@ -567,10 +568,10 @@ export class PenpotDashboard extends PenpotElement {
     try {
       let deletedFiles = [];
       try {
-        deletedFiles = await cmd('get-deleted-files', { teamId: this.#currentTeamId });
+        deletedFiles = await cmd('get-team-deleted-files', { teamId: this.#currentTeamId });
         deletedFiles = Array.isArray(deletedFiles) ? deletedFiles : [];
       } catch (err) {
-        console.warn('[dashboard] get-deleted-files failed:', err?.message || err);
+        console.warn('[dashboard] get-team-deleted-files failed:', err?.message || err);
         import('../components/penpot-notification.js').then(({ warning }) => {
           warning('Could not load deleted files.');
         });
@@ -709,15 +710,14 @@ export class PenpotDashboard extends PenpotElement {
   async #fetchThumbnails(files) {
     if (!files || files.length === 0) return;
     try {
-      const fileId = files[0].id;
-      const thumbnailMap = await cmd('get-file-object-thumbnails', { fileId });
-      if (!thumbnailMap || typeof thumbnailMap !== 'object') return;
       for (const file of files) {
+        const thumbnailMap = await cmd('get-file-object-thumbnails', { fileId: file.id });
+        if (!thumbnailMap || typeof thumbnailMap !== 'object') continue;
         const objId = thumbnailMap[''] || thumbnailMap[file.id];
         if (objId) {
           const mediaId = typeof objId === 'string' ? objId : objId.mediaId || objId.media_id || objId;
           if (mediaId) {
-            file.thumbnailUrl = `/api/rpc/command/get-file-media-object?file-id=${encodeURIComponent(file.id)}&media-id=${encodeURIComponent(mediaId)}`;
+            file.thumbnailUrl = `/assets/by-id/${encodeURIComponent(mediaId)}`;
           }
         }
       }
@@ -755,17 +755,26 @@ export class PenpotDashboard extends PenpotElement {
           height: pageData.height || 800,
         };
 
-        const success = await generateAndUploadThumbnail(file.id, pageData.id || firstPage.id, thumbnailData, {
+        const result = await generateAndUploadThumbnail(file.id, pageData.id || firstPage.id, thumbnailData, {
           width: 400,
           height: 250,
         });
 
-        if (success) {
-          file.thumbnailUrl = `/api/rpc/command/get-file-media-object?file-id=${encodeURIComponent(file.id)}&media-id=_thumb_${pageData.id || firstPage.id}`;
+        if (result) {
+          const mediaId = typeof result === 'object' && result.id ? result.id : null;
+          if (mediaId) {
+            file.thumbnailUrl = `/assets/by-id/${encodeURIComponent(mediaId)}`;
+          } else {
+            const thumbMap = await cmd('get-file-object-thumbnails', { fileId: file.id });
+            const objId = thumbMap?.[''] || thumbMap?.[file.id];
+            if (objId) {
+              file.thumbnailUrl = `/assets/by-id/${encodeURIComponent(typeof objId === 'string' ? objId : objId.mediaId || objId.media_id || objId)}`;
+            }
+          }
           const fileCards = this.querySelectorAll(`.penpot-app__file-card[data-file-id="${file.id}"]`);
           fileCards.forEach(card => {
             const thumbContainer = card.querySelector('.penpot-app__file-thumb') || card.querySelector('.penpot-app__file-icon')?.parentElement;
-            if (thumbContainer) {
+            if (thumbContainer && file.thumbnailUrl) {
               thumbContainer.innerHTML = `<img src="${this.escAttr(file.thumbnailUrl)}" style="width:100%;height:100%;object-fit:cover;" alt="" loading="lazy">`;
             }
           });
@@ -830,7 +839,7 @@ export class PenpotDashboard extends PenpotElement {
             appStore.set('currentFileId', el.dataset.fileId);
             appStore.set('currentProjectId', this.#currentProjectId);
             appStore.set('currentTeamId', this.#currentTeamId);
-            window.__penpot.navigate('workspace');
+            window.__penpot.navigate('workspace', { projectId: this.#currentProjectId, fileId: el.dataset.fileId });
           }
         });
         el.addEventListener('contextmenu', (e) => {
@@ -840,7 +849,7 @@ export class PenpotDashboard extends PenpotElement {
           const ctxMenu = this.querySelector('#ctx-menu');
           if (!ctxMenu) return;
           ctxMenu.items = [
-            { label: 'Open in workspace', action: () => { appStore.set('currentFileId', fileId); appStore.set('currentProjectId', this.#currentProjectId); appStore.set('currentTeamId', this.#currentTeamId); window.__penpot.navigate('workspace'); } },
+            { label: 'Open in workspace', action: () => { appStore.set('currentFileId', fileId); appStore.set('currentProjectId', this.#currentProjectId); appStore.set('currentTeamId', this.#currentTeamId); window.__penpot.navigate('workspace', { projectId: this.#currentProjectId, fileId }); } },
             { type: 'separator' },
             { label: 'Rename', action: () => { this.#inlineRenameFile(fileId, fileName); } },
             { label: 'Duplicate', action: () => { this.#duplicateFile(fileId); } },
@@ -880,7 +889,7 @@ export class PenpotDashboard extends PenpotElement {
       const file = await cmd('create-file', { projectId, name: 'Untitled file' });
       appStore.set('currentFileId', file.id);
       appStore.set('currentProjectId', projectId);
-      window.__penpot.navigate('workspace');
+      window.__penpot.navigate('workspace', { projectId, fileId: file.id });
     } catch (err) {
       console.error('[dashboard] create file error:', err);
       content.insertAdjacentHTML('beforeend', `<div class="penpot-app__error-msg">Failed to create file: ${this.escHtml(err.hint || err.message || err)}</div>`);
@@ -935,7 +944,7 @@ export class PenpotDashboard extends PenpotElement {
       const newFile = await cmd('create-file', { projectId, name: `${file.name || 'Untitled'} copy` });
       appStore.set('currentFileId', newFile.id);
       appStore.set('currentProjectId', projectId);
-      window.__penpot.navigate('workspace');
+      window.__penpot.navigate('workspace', { projectId, fileId: newFile.id });
     } catch (err) {
       console.error('[dashboard] duplicate error:', err);
     }
@@ -1038,6 +1047,7 @@ export class PenpotDashboard extends PenpotElement {
   async logout() {
     try { await cmd('logout'); } catch (err) { console.warn('[dashboard] Logout RPC failed (continuing locally):', err?.message || err); }
     clearAuthToken();
+    disconnectWS();
     document.cookie = 'auth-token=; path=/; max-age=0';
     appStore.reset({ profile: null, teams: [], currentTeamId: null, currentProjectId: null, currentFileId: null });
     window.__penpot.navigate('login');

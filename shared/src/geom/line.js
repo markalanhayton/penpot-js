@@ -1,5 +1,8 @@
 import * as gpt from './point.js';
 
+/**
+ *
+ */
 export function lineValue(line, point) {
   const [linePoint, lineDir] = line;
   const px = linePoint.x ?? linePoint[0];
@@ -13,6 +16,9 @@ export function lineValue(line, point) {
   return a * x + b * y + c;
 }
 
+/**
+ *
+ */
 export function isInsideLinesQ(line1, line2, pos) {
   return lineValue(line1, pos) * lineValue(line2, pos) < 0;
 }

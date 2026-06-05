@@ -7,26 +7,47 @@ import * as flp from './positions.js';
 let childMinWidthFn = null;
 let childMinHeightFn = null;
 
+/**
+ *
+ */
 export function setChildMinWidthFn(fn) { childMinWidthFn = fn; }
+/**
+ *
+ */
 export function setChildMinHeightFn(fn) { childMinHeightFn = fn; }
 
+/**
+ *
+ */
 function childMinWidth(child, childBounds, bounds, objects) {
   return childMinWidthFn(child, childBounds, bounds, objects);
 }
 
+/**
+ *
+ */
 function childMinHeight(child, childBounds, bounds, objects) {
   return childMinHeightFn(child, childBounds, bounds, objects);
 }
 
+/**
+ *
+ */
 function conjv(arr, item) {
   return arr ? [...arr, item] : [item];
 }
 
+/**
+ *
+ */
 export function layoutBounds(parent, shapeBounds) {
   const [padTop, padRight, padBottom, padLeft] = ctl.paddings(parent);
   return gpo.padPoints(shapeBounds, -padTop, -padRight, -padBottom, -padLeft);
 }
 
+/**
+ *
+ */
 export function initLayoutLines(shape, children, layoutBounds, bounds, objects, autoQ) {
   const col = ctl.colQ(shape);
   const row = ctl.rowQ(shape);
@@ -41,6 +62,9 @@ export function initLayoutLines(shape, children, layoutBounds, bounds, objects, 
   const layoutWidth = gpo.widthPoints(layoutBounds);
   const layoutHeight = gpo.heightPoints(layoutBounds);
 
+  /**
+   *
+   */
   function loop(lineData, result, children) {
     if (!children || children.length === 0) {
       const finalResult = lineData ? [...result, lineData] : result;
@@ -123,6 +147,9 @@ export function initLayoutLines(shape, children, layoutBounds, bounds, objects, 
   return loop(null, [], children);
 }
 
+/**
+ *
+ */
 function addSpaceToItems(prop, propMin, propMax, toShare, items) {
   const numItems = items.filter(it => !mth.close(it[prop], it[propMax])).length;
   const perLineTarget = toShare / numItems;
@@ -141,6 +168,9 @@ function addSpaceToItems(prop, propMin, propMax, toShare, items) {
   return [result, remainder];
 }
 
+/**
+ *
+ */
 function distributeSpace(prop, propMin, propMax, minValue, boundValue, items) {
   let toShare = boundValue - minValue;
   let currentItems = items;
@@ -158,6 +188,9 @@ function distributeSpace(prop, propMin, propMax, minValue, boundValue, items) {
   return currentItems;
 }
 
+/**
+ *
+ */
 export function addLinesPositions(parent, layoutBounds, autoQ, layoutLines) {
   const row = ctl.rowQ(parent);
   const col = ctl.colQ(parent);
@@ -169,10 +202,16 @@ export function addLinesPositions(parent, layoutBounds, autoQ, layoutLines) {
   const layoutWidth = gpo.widthPoints(layoutBounds);
   const layoutHeight = gpo.heightPoints(layoutBounds);
 
+  /**
+   *
+   */
   function addLines([totalWidth, totalHeight], line) {
     return [totalWidth + (line.lineWidth || 0), totalHeight + (line.lineHeight || 0)];
   }
 
+  /**
+   *
+   */
   function addRanges([totalMinWidth, totalMinHeight, totalMaxWidth, totalMaxHeight], line) {
     return [
       totalMinWidth + line.lineMinWidth,
@@ -182,17 +221,26 @@ export function addLinesPositions(parent, layoutBounds, autoQ, layoutLines) {
     ];
   }
 
+  /**
+   *
+   */
   function addStarts(totalWidth, totalHeight, numLines, [result, baseP], layoutLine) {
     const startP = flp.getStartLine(parent, layoutBounds, layoutLine, baseP, totalWidth, totalHeight, numLines);
     const nextP = flp.getNextLine(parent, layoutBounds, layoutLine, baseP, totalWidth, totalHeight, numLines);
     return [[...result, { ...layoutLine, startP }], nextP];
   }
 
+  /**
+   *
+   */
   function getLayoutWidth(line) {
     const numGap = spaceEvenly ? line.numChildren + 1 : spaceAround ? line.numChildren : line.numChildren - 1;
     return layoutWidth - layoutGapCol * numGap;
   }
 
+  /**
+   *
+   */
   function getLayoutHeight(line) {
     const numGap = spaceEvenly ? line.numChildren + 1 : spaceAround ? line.numChildren : line.numChildren - 1;
     return layoutHeight - layoutGapRow * numGap;
@@ -284,6 +332,9 @@ export function addLinesPositions(parent, layoutBounds, autoQ, layoutLines) {
   return finalResult;
 }
 
+/**
+ *
+ */
 export function addLineSpacing(shape, layoutBounds, autoQ, lineData) {
   const { numChildren, lineWidth, lineHeight } = lineData;
   const width = gpo.widthPoints(layoutBounds);
@@ -329,6 +380,9 @@ export function addLineSpacing(shape, layoutBounds, autoQ, lineData) {
   };
 }
 
+/**
+ *
+ */
 export function addChildrenResizes(shape, lineData) {
   const { lineMinWidth, lineWidth, lineMinHeight, lineHeight } = lineData;
   const row = ctl.rowQ(shape);
@@ -355,6 +409,9 @@ export function addChildrenResizes(shape, lineData) {
   return { ...lineData, childrenData };
 }
 
+/**
+ *
+ */
 export function calcLayoutData(shape, shapeBounds, children, bounds, objects, autoQ) {
   const lb = layoutBounds(shape, shapeBounds);
   const reverse = ctl.reverseQ(shape);

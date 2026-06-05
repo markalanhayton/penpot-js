@@ -7,18 +7,30 @@ export const CURVE_CURVE_PRECISION = 0.1;
 export const CURVE_RANGE_PRECISION = 2;
 const NUM_SEGMENTS = 10;
 
+/**
+ *
+ */
 export function sEq(a, b) {
   return mth.almostZero(a - b);
 }
 
+/**
+ *
+ */
 export function makeMoveTo(to) {
   return { command: 'move-to', params: { x: to.x, y: to.y } };
 }
 
+/**
+ *
+ */
 export function makeLineTo(to) {
   return { command: 'line-to', params: { x: to.x, y: to.y } };
 }
 
+/**
+ *
+ */
 export function makeCurveParams(point, handler, h2) {
   if (h2 === undefined) {
     if (handler === undefined) {
@@ -36,6 +48,9 @@ export function makeCurveParams(point, handler, h2) {
   };
 }
 
+/**
+ *
+ */
 export function updateCurveTo(command, h1, h2) {
   return {
     command: 'curve-to',
@@ -50,10 +65,16 @@ export function updateCurveTo(command, h1, h2) {
   };
 }
 
+/**
+ *
+ */
 export function makeCurveTo(to, h1, h2) {
   return { command: 'curve-to', params: makeCurveParams(to, h1, h2) };
 }
 
+/**
+ *
+ */
 export function prefixToCoords(prefix) {
   switch (prefix) {
     case 'c1': return ['c1x', 'c1y'];
@@ -62,6 +83,9 @@ export function prefixToCoords(prefix) {
   }
 }
 
+/**
+ *
+ */
 export function segmentToPoint(segment, coord) {
   if (!segment || !segment.params) return undefined;
   const p = segment.params;
@@ -73,11 +97,17 @@ export function segmentToPoint(segment, coord) {
   }
 }
 
+/**
+ *
+ */
 export function commandToLine(segment, prev) {
   if (prev === undefined) prev = segment.prev;
   return [prev, segmentToPoint(segment)];
 }
 
+/**
+ *
+ */
 export function commandToBezier(segment, prev) {
   if (prev === undefined) prev = segment.prev;
   return [
@@ -88,6 +118,9 @@ export function commandToBezier(segment, prev) {
   ];
 }
 
+/**
+ *
+ */
 export function commandToSelrect(command, prevPoint) {
   if (prevPoint === undefined) prevPoint = command.prev;
   let points;
@@ -109,11 +142,17 @@ export function commandToSelrect(command, prevPoint) {
   return grc.pointsToRect(points);
 }
 
+/**
+ *
+ */
 export function lineValues([fromP, toP], t) {
   const moveV = gpt.scale(gpt.toVec(fromP, toP), t);
   return gpt.add(fromP, moveV);
 }
 
+/**
+ *
+ */
 export function lineWindup(l, t) {
   const [fromP, toP] = l;
   const p = lineValues(l, t);
@@ -127,6 +166,9 @@ export function lineWindup(l, t) {
   return 0;
 }
 
+/**
+ *
+ */
 export function curveValues(start, end, h1, h2, t) {
   if (Array.isArray(start)) {
     [start, end, h1, h2] = start;
@@ -144,6 +186,9 @@ export function curveValues(start, end, h1, h2, t) {
   );
 }
 
+/**
+ *
+ */
 function solveRootsStar(result, conj, a, b, c, d) {
   const sqrtB2_4ac = mth.sqrt(b * b - 4 * a * c);
   if (mth.almostZero(d) && mth.almostZero(a) && mth.almostZero(b)) {
@@ -166,8 +211,8 @@ function solveRootsStar(result, conj, a, b, c, d) {
     const mp3 = (-p) / 3;
     const mp33 = mp3 * mp3 * mp3;
     const r = mth.sqrt(mp33);
-    let t = (-q) / (2 * r);
-    let cosphi = t < -1 ? -1 : t > 1 ? 1 : t;
+    const t = (-q) / (2 * r);
+    const cosphi = t < -1 ? -1 : t > 1 ? 1 : t;
     const phi = mth.acos(cosphi);
     const crtr = mth.cubicroot(r);
     const t1 = 2 * crtr;
@@ -192,11 +237,17 @@ function solveRootsStar(result, conj, a, b, c, d) {
   return conj(result, root);
 }
 
+/**
+ *
+ */
 function solveRoots(a, b, c, d) {
   if (d === undefined) { d = 0; }
   return solveRootsStar([], (r, v) => { r.push(v); return r; }, a, b, c, d);
 }
 
+/**
+ *
+ */
 export function curveExtremities(start, end, h1, h2) {
   if (Array.isArray(start)) {
     [start, end, h1, h2] = start;
@@ -218,6 +269,9 @@ export function curveExtremities(start, end, h1, h2) {
   return result;
 }
 
+/**
+ *
+ */
 export function calculateCurveExtremities(start, end, h1, h2) {
   const coords = [
     [start.x, h1.x, h2.x, end.x],
@@ -250,6 +304,9 @@ export function calculateCurveExtremities(start, end, h1, h2) {
   return result;
 }
 
+/**
+ *
+ */
 export function curveTangent(curve, t) {
   const [start, end, h1, h2] = curve;
   const coords = [
@@ -268,6 +325,9 @@ export function curveTangent(curve, t) {
   return gpt.point(x / d, y / d);
 }
 
+/**
+ *
+ */
 export function curveWindup(curve, t) {
   const tangent = curveTangent(curve, t);
   if (tangent.y > 0) return -1;
@@ -275,6 +335,9 @@ export function curveWindup(curve, t) {
   return 0;
 }
 
+/**
+ *
+ */
 export function curveToLines(start, end, h1, h2) {
   const offset = 1 / NUM_SEGMENTS;
   const tp = t => curveValues(start, end, h1, h2, t);
@@ -289,6 +352,9 @@ export function curveToLines(start, end, h1, h2) {
   return result;
 }
 
+/**
+ *
+ */
 export function curveSplit(start, end, h1, h2, t) {
   if (Array.isArray(start)) {
     t = end;
@@ -303,12 +369,18 @@ export function curveSplit(start, end, h1, h2, t) {
   return [[start, sp, p1, p4], [sp, end, p5, p3]];
 }
 
+/**
+ *
+ */
 export function splitLineTo(fromP, segment, tVal) {
   const toP = segmentToPoint(segment);
   const sp = gpt.lerp(fromP, toP, tVal);
   return [makeLineTo(sp), segment];
 }
 
+/**
+ *
+ */
 export function splitCurveTo(fromP, segment, tVal) {
   const params = segment.params;
   const end = gpt.point(params.x, params.y);
@@ -319,6 +391,9 @@ export function splitCurveTo(fromP, segment, tVal) {
     makeCurveTo(splits[1][1], splits[1][2], splits[1][3])];
 }
 
+/**
+ *
+ */
 export function subcurveRange(start, end, h1, h2, t1, t2) {
   if (Array.isArray(start)) {
     if (Array.isArray(end)) {
@@ -335,6 +410,9 @@ export function subcurveRange(start, end, h1, h2, t1, t2) {
   return curveSplit(split[1][0], split[1][1], split[1][2], split[1][3], t2p)[0];
 }
 
+/**
+ *
+ */
 export function splitLineToRanges(fromP, segment, values) {
   values = values.filter(v => v > 0 && v < 1);
   if (values.length === 0) return [segment];
@@ -343,6 +421,9 @@ export function splitLineToRanges(fromP, segment, values) {
   return valuesSet.map(val => makeLineTo(gpt.lerp(fromP, toP, val)));
 }
 
+/**
+ *
+ */
 export function splitCurveToRanges(fromP, segment, values) {
   values = values.filter(v => v > 0 && v < 1);
   if (values.length === 0) return [segment];
@@ -361,6 +442,9 @@ export function splitCurveToRanges(fromP, segment, values) {
   return result;
 }
 
+/**
+ *
+ */
 function getLineTval(line, point) {
   const [{ x: x1, y: y1 }, { x: x2, y: y2 }] = line;
   const { x, y } = point;
@@ -369,12 +453,18 @@ function getLineTval(line, point) {
   return (x - x1) / (x2 - x1);
 }
 
+/**
+ *
+ */
 function curveRangeToRect(curve, fromT, toT) {
   const c = subcurveRange(curve[0], curve[1], curve[2], curve[3], fromT, toT);
   const extremes = curveExtremities(c).map(t => curveValues(c, t));
   return grc.pointsToRect([c[0], c[1], ...extremes]);
 }
 
+/**
+ *
+ */
 export function lineHasPointQ(point, line) {
   const { x: x1, y: y1 } = line[0];
   const { x: x2, y: y2 } = line[1];
@@ -384,13 +474,22 @@ export function lineHasPointQ(point, line) {
   return (sEq(x1, x2) && sEq(px, x1)) || (vy !== null && sEq(py, vy));
 }
 
+/**
+ *
+ */
 export function segmentHasPointQ(point, line) {
   if (!lineHasPointQ(point, line)) return false;
   const t = getLineTval(line, point);
   return (t > 0 || sEq(t, 0)) && (t < 1 || sEq(t, 1));
 }
 
+/**
+ *
+ */
 export function curveHasPointQ(point, curve) {
+  /**
+   *
+   */
   function checkRange(fromT, toT) {
     const r = curveRangeToRect(curve, fromT, toT);
     if (!grc.containsPoint(r, point)) return false;
@@ -401,6 +500,9 @@ export function curveHasPointQ(point, curve) {
   return checkRange(0, 1);
 }
 
+/**
+ *
+ */
 export function curveRoots(start, end, h1, h2, coord) {
   if (Array.isArray(start)) {
     coord = end;
@@ -421,6 +523,9 @@ export function curveRoots(start, end, h1, h2, coord) {
   return result;
 }
 
+/**
+ *
+ */
 export function lineLineCrossing(l1, l2) {
   const { x: x1, y: y1 } = l1[0];
   const { x: x2, y: y2 } = l1[1];
@@ -442,6 +547,9 @@ export function lineLineCrossing(l1, l2) {
   return null;
 }
 
+/**
+ *
+ */
 export function lineLineIntersect(l1, l2) {
   const crossing = lineLineCrossing(l1, l2);
   if (!crossing) return null;
@@ -454,6 +562,9 @@ export function lineLineIntersect(l1, l2) {
   return null;
 }
 
+/**
+ *
+ */
 export function lineCurveCrossing(line, curve) {
   const [fromP1, toP1] = line;
   const [fromP2, toP2, h1P2, h2P2] = curve;
@@ -469,8 +580,11 @@ export function lineCurveCrossing(line, curve) {
   return curveRoots(c2p, 'y');
 }
 
+/**
+ *
+ */
 export function lineCurveIntersect(l1, c2) {
-  let curveTs = lineCurveCrossing(l1, c2).filter(curveT => {
+  const curveTs = lineCurveCrossing(l1, c2).filter(curveT => {
     if (mth.almostZero(curveT)) curveT = 0;
     const curveV = curveValues(c2, curveT);
     const lineT = getLineTval(l1, curveV);
@@ -481,11 +595,17 @@ export function lineCurveIntersect(l1, c2) {
   return [lineTs, curveTs];
 }
 
+/**
+ *
+ */
 export function rayOverlapsQ(rayPoint, { selrect }) {
   return (rayPoint.y > selrect.y1 || mth.almostZero(rayPoint.y - selrect.y1)) &&
     (rayPoint.y < selrect.y2 || mth.almostZero(rayPoint.y - selrect.y2));
 }
 
+/**
+ *
+ */
 export function rayLineIntersect(point, line) {
   let [a, b] = line;
   const rayLine = [point, gpt.point(point.x + 1, point.y)];
@@ -501,6 +621,9 @@ export function rayLineIntersect(point, line) {
   return null;
 }
 
+/**
+ *
+ */
 export function rayCurveIntersect(rayLine, curve) {
   const curveTs = lineCurveCrossing(rayLine, curve).filter(t => {
     const curveV = curveValues(curve, t);
@@ -514,7 +637,13 @@ export function rayCurveIntersect(rayLine, curve) {
   return curveTs.map(t => [curveValues(curve, t), curveWindup(curve, t)]);
 }
 
+/**
+ *
+ */
 export function curveCurveIntersect(c1, c2) {
+  /**
+   *
+   */
   function checkRange(c1From, c1To, c2From, c2To) {
     const r1 = curveRangeToRect(c1, c1From, c1To);
     const r2 = curveRangeToRect(c2, c2From, c2To);
@@ -537,15 +666,21 @@ export function curveCurveIntersect(c1, c2) {
     return result.length > 0 ? result : null;
   }
 
+  /**
+   *
+   */
   function removeCloseTs(current) {
     return ({ p1, p2 }) =>
       gpt.distance(p1, current.p1) >= CURVE_RANGE_PRECISION &&
       gpt.distance(p2, current.p2) >= CURVE_RANGE_PRECISION;
   }
 
+  /**
+   *
+   */
   function processTs(ts) {
-    let c1Ts = [];
-    let c2Ts = [];
+    const c1Ts = [];
+    const c2Ts = [];
     let current = ts[0];
     let pending = ts.slice(1);
     while (current) {
@@ -563,6 +698,9 @@ export function curveCurveIntersect(c1, c2) {
   return processTs(allTs);
 }
 
+/**
+ *
+ */
 export function isPointInGeomDataQ(point, contentGeom) {
   const rayLine = [point, gpt.point(point.x + 1, point.y)];
   return contentGeom
@@ -580,6 +718,9 @@ export function isPointInGeomDataQ(point, contentGeom) {
     .reduce((a, b) => a + b, 0) !== 0;
 }
 
+/**
+ *
+ */
 export function isPointInBorderQ(point, content) {
   return content.some(segment => {
     switch (segment.command) {
@@ -590,6 +731,9 @@ export function isPointInBorderQ(point, content) {
   });
 }
 
+/**
+ *
+ */
 function closestAngle(angle) {
   if (angle > 337.5 || angle <= 22.5) return 0;
   if (angle <= 67.5) return 45;
@@ -601,6 +745,9 @@ function closestAngle(angle) {
   return 315;
 }
 
+/**
+ *
+ */
 export function positionFixedAngle(point, fromPoint) {
   if (fromPoint && point) {
     const angle = ((360 + (gpt.angle(point, fromPoint))) % 360);

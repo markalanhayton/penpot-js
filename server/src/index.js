@@ -46,6 +46,7 @@ import { errorHandler, requestContextMiddleware } from './middleware/errors.js';
 import { registerSecurityHeaders, registerCorsHeaders } from './middleware/security.js';
 import { ensureStorageDir } from './storage/fs.js';
 import { registerSSEEndpoint } from './http/sse.js';
+import { registerAssetRoutes } from './http/assets.js';
 import { runSetup } from './setup/index.js';
 import { registerMetricsEndpoint, rpcMainTiming, httpDispatchTiming } from './metrics/index.js';
 
@@ -68,39 +69,7 @@ const logger = {
  *
  * @returns {Promise<import('fastify').FastifyInstance>} The Fastify server instance.
  */
-export async function startServer() {
-  logger.info('Starting Penpot backend (Node.js/SQLite)');
-  logger.info(`Database: ${config.database.path}`);
-  logger.info(`HTTP: ${config.http.host}:${config.http.port}`);
-  logger.info(`Public URI: ${config.publicUri}`);
-
-  // Warn if the default secret key is used in a non-localhost deployment
-  if (config.auth.secretKey === 'penpot-dev-secret-key-change-me') {
-    const host = config.host || '';
-    if (host !== 'localhost' && host !== '127.0.0.1' && host !== '0.0.0.0') {
-      logger.warn('SECURITY: PENPOT_SECRET_KEY is set to the default value. Change it in production!');
-    } else {
-      logger.warn('PENPOT_SECRET_KEY is using the default value. Set PENPOT_SECRET_KEY for production deployments.');
-    }
-  }
-
-  // Initialize storage directory
-  ensureStorageDir();
-
-  // Initialize database and run migrations
-  const pool = createPool(config.database.path);
-  logger.info('Running database migrations...');
-  const migrationCount = runMigrations(pool.db);
-  logger.info(`Migrations: ${migrationCount} applied`);
-
-  // Run instance setup (creates instance ID, optional admin user)
-  const { instanceId, adminCreated } = await runSetup(pool);
-  logger.info(`Instance: ${instanceId}${adminCreated ? ' (admin created)' : ''}`);
-
-  // Register all RPC command modules
-  await registerAllCommands(pool);
-
-  // Create Fastify server
+export async function createApp(pool) {
   const app = Fastify({
     logger: false,
     bodyLimit: config.http.maxBodySize,
@@ -189,9 +158,7 @@ export async function startServer() {
           });
         }
         methodList = methodEntries;
-      } catch {
-        methodList = [];
-      }
+      } catch (err) { console.warn('[index] route introspection failed:', err.message); methodList = []; }
       return {
         methods: methodList,
         flags: config.flags,
@@ -229,20 +196,20 @@ export async function startServer() {
         try {
           await nodeFs.access(subDir);
           await app.register(fastifyStatic, { root: subDir, prefix, wildcard: true, decorateReply: false });
-        } catch { /* dir doesn't exist, skip */ }
+        } catch (err) { /* dir doesn't exist, skip */ }
       }
 
       // Favicon
       try {
         const favicon = await nodeFs.readFile(nodePath.join(frontendRoot, 'favicon.svg'));
         app.get('/favicon.svg', async () => favicon);
-      } catch { /* no favicon */ }
+      } catch (err) { /* no favicon */ }
 
       // Serve index.html for the root and all SPA routes
       let indexHtml = null;
       try {
         indexHtml = await nodeFs.readFile(nodePath.join(frontendRoot, 'index.html'), 'utf8');
-      } catch { /* no index.html */ }
+      } catch (err) { /* no index.html */ }
 
       if (indexHtml) {
         // Config JS — inject penpotPublicURI and flags before the app loads
@@ -280,6 +247,48 @@ export async function startServer() {
   // Server-Sent Events endpoint
   registerSSEEndpoint(app);
   logger.info('SSE endpoint registered at /api/sse');
+
+  // Storage asset routes (images, fonts, thumbnails, exports)
+  registerAssetRoutes(app, pool);
+  logger.info('Asset routes registered at /assets/*');
+
+  return app;
+}
+
+export async function startServer() {
+  logger.info('Starting Penpot backend (Node.js/SQLite)');
+  logger.info(`Database: ${config.database.path}`);
+  logger.info(`HTTP: ${config.http.host}:${config.http.port}`);
+  logger.info(`Public URI: ${config.publicUri}`);
+
+  // Warn if the default secret key is used in a non-localhost deployment
+  if (config.auth.secretKey === 'penpot-dev-secret-key-change-me') {
+    const host = config.host || '';
+    if (host !== 'localhost' && host !== '127.0.0.1' && host !== '0.0.0.0') {
+      logger.warn('SECURITY: PENPOT_SECRET_KEY is set to the default value. Change it in production!');
+    } else {
+      logger.warn('PENPOT_SECRET_KEY is using the default value. Set PENPOT_SECRET_KEY for production deployments.');
+    }
+  }
+
+  // Initialize storage directory
+  ensureStorageDir();
+
+  // Initialize database and run migrations
+  const pool = createPool(config.database.path);
+  logger.info('Running database migrations...');
+  const migrationCount = runMigrations(pool.db);
+  logger.info(`Migrations: ${migrationCount} applied`);
+
+  // Run instance setup (creates instance ID, optional admin user)
+  const { instanceId, adminCreated } = await runSetup(pool);
+  logger.info(`Instance: ${instanceId}${adminCreated ? ' (admin created)' : ''}`);
+
+  // Register all RPC command modules
+  await registerAllCommands(pool);
+
+  // Create Fastify app (separated for testability)
+  const app = await createApp(pool);
 
   // Start background task scheduler and worker
   startTaskScheduler(pool);

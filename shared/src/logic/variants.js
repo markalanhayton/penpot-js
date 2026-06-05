@@ -21,6 +21,9 @@ export const SHAPE_TYPE_CLASSIFICATION = {
   path: 'shape',
 };
 
+/**
+ *
+ */
 export function generateAddNewVariant(changes, shape, variantId, newComponentId, newShapeId, propNum) {
   const data = pcb.getLibraryData(changes);
   const objects = pcb.getObjects(changes);
@@ -47,6 +50,9 @@ export function generateAddNewVariant(changes, shape, variantId, newComponentId,
   return result;
 }
 
+/**
+ *
+ */
 function generatePath(path, objects, baseId, shape) {
   const getType = (type) => SHAPE_TYPE_CLASSIFICATION[type] || type;
   if (baseId === shape.id) return path;
@@ -58,6 +64,9 @@ function generatePath(path, objects, baseId, shape) {
   );
 }
 
+/**
+ *
+ */
 function addUniquePath(shapes, objects, baseId) {
   const counts = {};
   const result = [];
@@ -70,6 +79,9 @@ function addUniquePath(shapes, objects, baseId) {
   return result;
 }
 
+/**
+ *
+ */
 function keepSwappedItem(changes, relatedShapeInNew, origSwappedChild, ldata, page, swapRefId) {
   const beforeChanges = pcb.emptyChanges();
   const bc = pcb.withPage(beforeChanges, page);
@@ -95,6 +107,9 @@ function keepSwappedItem(changes, relatedShapeInNew, origSwappedChild, ldata, pa
   return deleteResult;
 }
 
+/**
+ *
+ */
 function childOfSwappedQ(shape, objects, baseParentId) {
   const ancestors = cfh.getParentHeads(objects, shape);
   const filtered = ancestors.filter((a) => a.id !== baseParentId);
@@ -107,6 +122,9 @@ function childOfSwappedQ(shape, objects, baseParentId) {
   return relevant.some((a) => getSwapSlot(a) != null);
 }
 
+/**
+ *
+ */
 function findShapeRefChildOf(container, libraries, shape, parentId) {
   const refShape = findRefShape(null, container, libraries, shape, true);
   if (!refShape) return null;
@@ -121,28 +139,46 @@ function findShapeRefChildOf(container, libraries, shape, parentId) {
   return null;
 }
 
+/**
+ *
+ */
 function addTouchedFromRefChain(container, libraries, shape) {
   const newTouched = getTouchedFromRefChainUntilTargetRef(container, libraries, shape, null);
   return { ...shape, touched: newTouched };
 }
 
+/**
+ *
+ */
 function findRefShape(file, container, libraries, shape, withContextQ) {
   return findRefShapeImpl(file, container, libraries, shape, { includeDeleted: false, withContext: withContextQ });
 }
 
+/**
+ *
+ */
 function findRemoteShape(container, libraries, shape, opts) {
   const withContext = opts?.['with-context?'] ?? opts?.withContext ?? false;
   return findRemoteShapeImpl(container, libraries, shape, { withContext });
 }
 
+/**
+ *
+ */
 function getTouchedFromRefChainUntilTargetRef(container, libraries, shape, targetRefId) {
   return getTouchedImpl(container, libraries, shape, targetRefId);
 }
 
+/**
+ *
+ */
 function findRefIdForSwapped(shape, container, libraries) {
   return findRefIdForSwappedImpl(shape, container, libraries);
 }
 
+/**
+ *
+ */
 export function generateKeepTouched(changes, newShape, originalShape, originalShapes, page, libraries, ldata) {
   const objects = pcb.getObjects(changes);
   const container = ctn.makeContainer(page, 'page');
@@ -215,15 +251,24 @@ export function generateKeepTouched(changes, newShape, originalShape, originalSh
   return [resultChanges, parentsOfSwapped];
 }
 
+/**
+ *
+ */
 export function changeShowInViewer(shape, hide) {
   return { ...shape, 'hide-in-viewer': hide };
 }
 
+/**
+ *
+ */
 export function addNewInteraction(shape, interaction) {
   const interactions = shape.interactions ?? [];
   return { ...shape, interactions: [...interactions, interaction] };
 }
 
+/**
+ *
+ */
 export function showInViewer(shape) {
   const { 'hide-in-viewer': _, ...rest } = shape;
   return rest;

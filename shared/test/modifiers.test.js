@@ -102,8 +102,8 @@ describe('modifiers', () => {
   });
 
   it('addModifiers combines two modifiers', () => {
-    let m1 = move(empty(), point(10, 20));
-    let m2 = move(empty(), point(5, 5));
+    const m1 = move(empty(), point(10, 20));
+    const m2 = move(empty(), point(5, 5));
     const combined = addModifiers(m1, m2);
     assert.equal(combined.lastOrder, m1.lastOrder + m2.lastOrder);
   });

@@ -1,14 +1,23 @@
 import * as d from '../data.js';
 import * as dt from '../time.js';
 
+/**
+ *
+ */
 export function getColors(fileData) {
   return fileData.colors ?? {};
 }
 
+/**
+ *
+ */
 export function getColor(fileData, colorId) {
   return fileData.colors?.[colorId];
 }
 
+/**
+ *
+ */
 export function getRefColor(libraryData, color) {
   if (color['ref-file'] === libraryData.id) {
     return getColor(libraryData, color['ref-id']);
@@ -16,10 +25,16 @@ export function getRefColor(libraryData, color) {
   return undefined;
 }
 
+/**
+ *
+ */
 function touch(color) {
   return { ...color, modifiedAt: dt.now() };
 }
 
+/**
+ *
+ */
 export function addColor(fileData, color) {
   return {
     ...fileData,
@@ -27,6 +42,9 @@ export function addColor(fileData, color) {
   };
 }
 
+/**
+ *
+ */
 export function setColor(fileData, color) {
   const current = fileData.colors?.[color.id];
   if (current === undefined) return fileData;
@@ -36,15 +54,24 @@ export function setColor(fileData, color) {
   };
 }
 
+/**
+ *
+ */
 export function updateColor(fileData, colorId, f, ...args) {
   return d.updateInWhen(fileData, ['colors', colorId], (c) => touch(f(c, ...args)));
 }
 
+/**
+ *
+ */
 export function deleteColor(fileData, colorId) {
   const { [colorId]: _, ...rest } = fileData.colors ?? {};
   return { ...fileData, colors: rest };
 }
 
+/**
+ *
+ */
 export function usedColorsChangedSince(shape, library, sinceDate) {
   const results = [];
   const allColors = getAllColors(shape);
@@ -57,6 +84,9 @@ export function usedColorsChangedSince(shape, library, sinceDate) {
   return results;
 }
 
+/**
+ *
+ */
 function getAllColors(shape) {
   const colors = [];
   if (shape.fills) {
@@ -72,6 +102,9 @@ function getAllColors(shape) {
   return colors;
 }
 
+/**
+ *
+ */
 export function syncColors(shape, libraryId, libraryColors) {
   let result = shape;
 

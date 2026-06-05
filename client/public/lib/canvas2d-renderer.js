@@ -1,4 +1,5 @@
 'use strict';
+import { makeRect } from '@penpot/shared/geom/rect.js';
 export class Canvas2DRenderer {
   #canvas = null;
   #ctx = null;
@@ -619,7 +620,8 @@ export class Canvas2DRenderer {
       }
     }
     if (minX === Infinity) return { x: 0, y: 0, width: 0, height: 0 };
-    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+    const r = makeRect(minX, minY, maxX - minX, maxY - minY);
+    return { x: r.x, y: r.y, width: r.width, height: r.height };
   }
 
   #roundRectPath(ctx, x, y, w, h, tl, tr, br, bl) {

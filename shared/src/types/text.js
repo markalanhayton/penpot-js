@@ -62,10 +62,16 @@ export const defaultTextAttrs = {
   'text-direction': 'ltr',
 };
 
+/**
+ *
+ */
 export function getDefaultTextFills() {
   return defaultTextFills;
 }
 
+/**
+ *
+ */
 export function getDefaultTextAttrs() {
   return { ...defaultTextAttrs, fills: getDefaultTextFills() };
 }
@@ -80,6 +86,9 @@ export const defaultTypography = {
   name: 'Source Sans Pro Regular',
 };
 
+/**
+ *
+ */
 export function nodeSeq(root, matchQ) {
   const pred = matchQ ?? (() => true);
   const result = [];
@@ -98,30 +107,51 @@ export function nodeSeq(root, matchQ) {
   return result.length > 0 ? result : undefined;
 }
 
+/**
+ *
+ */
 export function isTextNodeQ(node) {
   return node && node.type === undefined && typeof node.text === 'string';
 }
 
+/**
+ *
+ */
 export function isParagraphSetNodeQ(node) {
   return node && node.type === 'paragraph-set';
 }
 
+/**
+ *
+ */
 export function isParagraphNodeQ(node) {
   return node && node.type === 'paragraph';
 }
 
+/**
+ *
+ */
 export function isRootNodeQ(node) {
   return node && node.type === 'root';
 }
 
+/**
+ *
+ */
 export function isNodeQ(node) {
   return isTextNodeQ(node) || isParagraphNodeQ(node) || isParagraphSetNodeQ(node) || isRootNodeQ(node);
 }
 
+/**
+ *
+ */
 export function isContentNodeQ(node) {
   return isTextNodeQ(node) || isParagraphNodeQ(node) || isRootNodeQ(node);
 }
 
+/**
+ *
+ */
 export function transformNodes(root, predOrTransform, transform) {
   let pred, transformFn;
   if (transform === undefined) {
@@ -132,6 +162,9 @@ export function transformNodes(root, predOrTransform, transform) {
     transformFn = transform;
   }
 
+  /**
+   *
+   */
   function walk(item) {
     if (item && typeof item === 'object' && isNodeQ(item)) {
       let result = pred(item) ? transformFn(item) : item;
@@ -146,16 +179,25 @@ export function transformNodes(root, predOrTransform, transform) {
   return walk(root);
 }
 
+/**
+ *
+ */
 export function updateTextContent(shape, predFn, updateFn, attrs) {
   const updateAttrsFn = (node) => updateFn(node, attrs);
   const transform = (content) => transformNodes(content, predFn, updateAttrsFn);
   return { ...shape, content: transform(shape.content) };
 }
 
+/**
+ *
+ */
 export function generateShapeName(text) {
   return text.slice(0, Math.min(280, text.length));
 }
 
+/**
+ *
+ */
 function compareTextContent(a, b, callbacks) {
   if (a === b) return new Set();
 
@@ -196,6 +238,9 @@ function compareTextContent(a, b, callbacks) {
   return new Set(['text-content-structure']);
 }
 
+/**
+ *
+ */
 export function equalAttrsQ(item, attrs, ignoreQ = true) {
   const itemAttrs = { ...item };
   delete itemAttrs.text;
@@ -212,6 +257,9 @@ export function equalAttrsQ(item, attrs, ignoreQ = true) {
   return true;
 }
 
+/**
+ *
+ */
 export function getFirstParagraphTextAttrs(content) {
   const first = content?.children?.[0]?.children?.[0];
   if (!first) return {};
@@ -223,6 +271,9 @@ export function getFirstParagraphTextAttrs(content) {
   return result;
 }
 
+/**
+ *
+ */
 export function getDiffType(a, b) {
   return compareTextContent(a, b, {
     textCb: (acc) => new Set([...acc, 'text-content-text']),
@@ -230,6 +281,9 @@ export function getDiffType(a, b) {
   });
 }
 
+/**
+ *
+ */
 export function getDiffAttrs(a, b) {
   const diffAttrs = compareTextContent(a, b, {
     textCb: (acc) => acc,
@@ -250,6 +304,9 @@ export function getDiffAttrs(a, b) {
   return result;
 }
 
+/**
+ *
+ */
 export function equalStructureQ(a, b) {
   if (typeof a !== typeof b && !(a && b && typeof a === 'object' && typeof b === 'object')) {
     return false;
@@ -265,6 +322,9 @@ export function equalStructureQ(a, b) {
   return true;
 }
 
+/**
+ *
+ */
 export function copyTextKeys(origin, destiny) {
   if (!origin || typeof origin !== 'object') return destiny;
 
@@ -282,6 +342,9 @@ export function copyTextKeys(origin, destiny) {
   return result;
 }
 
+/**
+ *
+ */
 export function copyAttrsKeys(content, attrs) {
   const result = {};
   for (const [k, v] of Object.entries(content)) {
@@ -294,12 +357,18 @@ export function copyAttrsKeys(content, attrs) {
   return result;
 }
 
+/**
+ *
+ */
 export function contentHasTextQ(content, search) {
   const searchLower = search.toLowerCase();
   const nodes = nodeSeq(content, isTextNodeQ) ?? [];
   return nodes.some((n) => n.text.toLowerCase().includes(searchLower));
 }
 
+/**
+ *
+ */
 function replaceAllCaseInsensitive(text, search, replacement) {
   const textLower = text.toLowerCase();
   const searchLower = search.toLowerCase();
@@ -319,6 +388,9 @@ function replaceAllCaseInsensitive(text, search, replacement) {
   return result;
 }
 
+/**
+ *
+ */
 export function replaceTextInContent(content, search, replacement) {
   return transformNodes(
     content,
@@ -327,6 +399,9 @@ export function replaceTextInContent(content, search, replacement) {
   );
 }
 
+/**
+ *
+ */
 export function contentToText(content) {
   const nodes = nodeSeq(content) ?? [];
   const paragraphs = [];
@@ -349,9 +424,15 @@ export function contentToText(content) {
   return paragraphs.map((p) => p.join('')).join('\n');
 }
 
+/**
+ *
+ */
 export function contentToTextPlusStyles(node) {
   const result = [];
 
+  /**
+   *
+   */
   function recStyleTextMap(acc, item, style) {
     const nodeStyle = { ...style, ...d.pick(item, [...textAllAttrs]) };
 
@@ -384,6 +465,9 @@ export function contentToTextPlusStyles(node) {
   return recStyleTextMap([], node, {}).reverse();
 }
 
+/**
+ *
+ */
 export function changeText(content, text, styles = {}) {
   const rootStyles = d.pick(content, rootAttrs);
 
@@ -419,6 +503,9 @@ export function changeText(content, text, styles = {}) {
   );
 }
 
+/**
+ *
+ */
 export function createDefaultContent(text = 'Text', attrs = {}) {
   const textAttrs = { ...getDefaultTextAttrs(), ...attrs };
   return {
@@ -435,12 +522,18 @@ export function createDefaultContent(text = 'Text', attrs = {}) {
   };
 }
 
+/**
+ *
+ */
 export function contentToPlainText(content) {
   if (typeof content === 'string') return content;
   if (!content || typeof content !== 'object') return '';
   return contentToText(content);
 }
 
+/**
+ *
+ */
 export function isContentTree(content) {
   return content && typeof content === 'object' && content.type === 'root';
 }
@@ -452,20 +545,23 @@ export function isContentTree(content) {
  * paragraph/root/paragraph-set nodes get offsets spanning their children.
  */
 export function decorateRangeInfo(content) {
-  let charOffset = 0;
+  const charOffset = 0;
 
+  /**
+   *
+   */
   function walk(node) {
     if (isTextNodeQ(node)) {
       const len = Array.from(node.text).length;
       return { ...node, start: charOffset, end: charOffset + len };
     }
     if (isParagraphNodeQ(node)) {
-      let start = charOffset;
+      const start = charOffset;
       const children = node.children.map(walk);
       return { ...node, start, end: charOffset, children };
     }
     if (isRootNodeQ(node) || isParagraphSetNodeQ(node)) {
-      let start = charOffset;
+      const start = charOffset;
       const children = node.children.map(walk);
       return { ...node, start, end: charOffset, children };
     }
@@ -475,6 +571,9 @@ export function decorateRangeInfo(content) {
   return walk(content);
 }
 
+/**
+ *
+ */
 function splitTextNode(node, pos) {
   const codePoints = Array.from(node.text);
   if (pos <= 0 || pos >= codePoints.length) return [node];
@@ -484,7 +583,13 @@ function splitTextNode(node, pos) {
   ];
 }
 
+/**
+ *
+ */
 export function updateTextRange(content, startOffset, endOffset, attrs) {
+  /**
+   *
+   */
   function walk(node) {
     if (isTextNodeQ(node)) {
       const textLen = Array.from(node.text).length;
@@ -550,6 +655,9 @@ export function updateTextRange(content, startOffset, endOffset, attrs) {
   return walk(decorated);
 }
 
+/**
+ *
+ */
 function removeRangeInfo(node) {
   const cleaned = { ...node };
   delete cleaned.start;
@@ -557,10 +665,16 @@ function removeRangeInfo(node) {
   return cleaned;
 }
 
+/**
+ *
+ */
 export function updateRootAttrs(content, attrs) {
   return { ...content, ...d.pick(attrs, rootAttrs) };
 }
 
+/**
+ *
+ */
 export function updateParagraphAttrs(content, attrs) {
   const paragraphAttrsSubset = d.pick(attrs, [...paragraphAttrs, ...textNodeAttrs]);
   return transformNodes(content, isParagraphNodeQ, (node) => ({
@@ -569,6 +683,9 @@ export function updateParagraphAttrs(content, attrs) {
   }));
 }
 
+/**
+ *
+ */
 export function updateTextAttrs(content, attrs) {
   const textNodeAttrsSubset = d.pick(attrs, textNodeAttrs);
   const paragraphAttrsSubset = d.pick(attrs, paragraphAttrs);
@@ -584,16 +701,25 @@ export function updateTextAttrs(content, attrs) {
   });
 }
 
+/**
+ *
+ */
 export function currentRootAttrs(content) {
   return d.pick(content, rootAttrs);
 }
 
+/**
+ *
+ */
 export function currentParagraphAttrs(content) {
   const paragraph = nodeSeq(content, isParagraphNodeQ)?.[0];
   if (!paragraph) return { ...defaultParagraphAttrs };
   return { ...defaultParagraphAttrs, ...d.pick(paragraph, [...paragraphAttrs, ...textNodeAttrs]) };
 }
 
+/**
+ *
+ */
 export function currentTextNodeAttrs(content) {
   const textNode = nodeSeq(content, isTextNodeQ)?.[0];
   if (!textNode) return { ...getDefaultTextAttrs() };
@@ -604,6 +730,9 @@ export function currentTextNodeAttrs(content) {
   return result;
 }
 
+/**
+ *
+ */
 export function mergeTextNodeAttrs(base, override) {
   const result = { ...base };
   for (const attr of textNodeAttrs) {

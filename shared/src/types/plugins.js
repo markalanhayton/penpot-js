@@ -1,3 +1,6 @@
+/**
+ *
+ */
 export function validPluginData(data) {
   if (data == null) return true;
   if (typeof data !== 'object') return false;
@@ -11,6 +14,9 @@ export function validPluginData(data) {
   return true;
 }
 
+/**
+ *
+ */
 export function validRegistryEntry(entry) {
   return entry != null &&
     typeof entry['plugin-id'] === 'string' &&
@@ -19,6 +25,9 @@ export function validRegistryEntry(entry) {
     typeof entry.code === 'string';
 }
 
+/**
+ *
+ */
 export function validPluginRegistry(registry) {
   return registry != null &&
     Array.isArray(registry.ids) &&

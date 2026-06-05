@@ -11,20 +11,32 @@ export const FILL_ATTRS = new Set([
 
 export const VALID_FILL_ATTRS = new Set(['fill-image', 'fill-color', 'fill-color-gradient']);
 
+/**
+ *
+ */
 export function hasValidFillAttrs(fill) {
   const keys = new Set(Object.keys(fill));
   const intersection = [...keys].filter(k => VALID_FILL_ATTRS.has(k));
   return intersection.length === 1;
 }
 
+/**
+ *
+ */
 export function validFill(fill) {
   return hasValidFillAttrs(fill);
 }
 
+/**
+ *
+ */
 export function fillsIs(o) {
   return Array.isArray(o);
 }
 
+/**
+ *
+ */
 export function coerce(o) {
   if (o == null) return [];
   if (fillsIs(o)) return o;
@@ -32,6 +44,9 @@ export function coerce(o) {
   raise({ type: 'internal', code: 'invalid-type', hint: `cannot coerce ${o} to fills` });
 }
 
+/**
+ *
+ */
 export function getImageIds(fills) {
   if (Array.isArray(fills)) {
     const ids = new Set();
@@ -43,6 +58,9 @@ export function getImageIds(fills) {
   return new Set();
 }
 
+/**
+ *
+ */
 export function fillsAssoc(fills, position, fill) {
   if (fills == null) return [fill];
   const arr = coerce(fills);
@@ -51,20 +69,32 @@ export function fillsAssoc(fills, position, fill) {
   return copy;
 }
 
+/**
+ *
+ */
 export function fillsUpdate(fills, fn, ...args) {
   const arr = [...(fills || [])];
   const result = fn(arr, ...args);
   return Array.isArray(result) ? result : [];
 }
 
+/**
+ *
+ */
 export function fillsCreate(...elements) {
   return [...elements];
 }
 
+/**
+ *
+ */
 export function fillsPrepend(fills, fill) {
   return [fill, ...(fills || [])];
 }
 
+/**
+ *
+ */
 export function fillToColor(fill) {
   return d.withoutNils({
     color: fill['fill-color'],

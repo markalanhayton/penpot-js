@@ -15,6 +15,9 @@ import * as ctm from '../modifiers.js';
 import * as ctl from '../types/shape/layout.js';
 import { zero as uuidZero } from '../uuid.js';
 
+/**
+ *
+ */
 function setChildrenModifiers(modifTree, children, objects, bounds, parent, transformedParentBounds, ignoreConstraints) {
   const modifiers = modifTree?.[parent.id]?.modifiers;
 
@@ -42,6 +45,9 @@ function setChildrenModifiers(modifTree, children, objects, bounds, parent, tran
   }, modifTree);
 }
 
+/**
+ *
+ */
 function setFlexLayoutModifiers(modifTree, children, objects, bounds, parent, transformedParentBounds) {
   const bmap = cgb.transformBoundsMap(bounds, objects, modifTree, children);
 
@@ -84,6 +90,9 @@ function setFlexLayoutModifiers(modifTree, children, objects, bounds, parent, tr
   return currentTree;
 }
 
+/**
+ *
+ */
 function setGridLayoutModifiers(modifTree, objects, bounds, parent, transformedParentBounds) {
   const bmap = cgb.transformBoundsMap(bounds, objects, modifTree, parent.shapes);
 
@@ -109,6 +118,9 @@ function setGridLayoutModifiers(modifTree, objects, bounds, parent, transformedP
   return currentTree;
 }
 
+/**
+ *
+ */
 function setModifiersConstraints(objects, bounds, ignoreConstraints, modifTree, parent) {
   const parentId = parent.id;
   const children = parent.shapes;
@@ -125,6 +137,9 @@ function setModifiersConstraints(objects, bounds, ignoreConstraints, modifTree, 
   return modifTree;
 }
 
+/**
+ *
+ */
 function setModifiersLayout(objects, bounds, ignoreConstraints, modifTree, parent) {
   const parentId = parent.id;
   const rootQ = parentId === uuidZero;
@@ -161,26 +176,44 @@ function setModifiersLayout(objects, bounds, ignoreConstraints, modifTree, paren
   return result;
 }
 
+/**
+ *
+ */
 export function propagateModifiersConstraints(objects, bounds, ignoreConstraints, shapes) {
   return propagateModifiersConstraintsTree(objects, bounds, ignoreConstraints, {}, shapes);
 }
 
+/**
+ *
+ */
 export function propagateModifiersConstraintsTree(objects, bounds, ignoreConstraints, modifTree, shapes) {
   return shapes.reduce((tree, shape) => setModifiersConstraints(objects, bounds, ignoreConstraints, tree, shape), modifTree);
 }
 
+/**
+ *
+ */
 export function propagateModifiersLayouts(objects, bounds, ignoreConstraints, shapes) {
   return propagateModifiersLayoutsTree(objects, bounds, ignoreConstraints, {}, shapes);
 }
 
+/**
+ *
+ */
 export function propagateModifiersLayoutsTree(objects, bounds, ignoreConstraints, modifTree, shapes) {
   return shapes.reduce((tree, shape) => setModifiersLayout(objects, bounds, ignoreConstraints, tree, shape), modifTree);
 }
 
+/**
+ *
+ */
 function calcAutoModifiers(objects, bounds, parent) {
   const parentId = parent.id;
   const parentBounds = bounds[parentId];
 
+  /**
+   *
+   */
   function setParentAutoWidth(modifiers, autoWidth) {
     const origin = gpo.origin(parentBounds);
     const currentWidth = gpo.widthPoints(parentBounds);
@@ -188,6 +221,9 @@ function calcAutoModifiers(objects, bounds, parent) {
     return ctm.resize(modifiers, gpt.point(scaleWidth, 1), origin, parent.transform, parent.transformInverse);
   }
 
+  /**
+   *
+   */
   function setParentAutoHeight(modifiers, autoHeight) {
     const origin = gpo.origin(parentBounds);
     const currentHeight = gpo.heightPoints(parentBounds);
@@ -241,6 +277,9 @@ function calcAutoModifiers(objects, bounds, parent) {
   return modifiers;
 }
 
+/**
+ *
+ */
 export function findAutoLayouts(objects, shapes) {
   return new Set(shapes.filter(shape => {
     if (ctl.autoQ(shape)) return true;
@@ -249,11 +288,17 @@ export function findAutoLayouts(objects, shapes) {
   }).map(s => s.id));
 }
 
+/**
+ *
+ */
 export function fullTreeQ(objects, layoutId) {
   const layoutJustifyContent = objects[layoutId]?.layoutJustifyContent;
   return ['center', 'end', 'space-around', 'space-evenly', 'stretch'].includes(layoutJustifyContent);
 }
 
+/**
+ *
+ */
 export function sizingAutoModifiers(modifTree, sizingAutoLayouts, objects, bounds, ignoreConstraints) {
   const result = [...sizingAutoLayouts].reverse().reduce(([tree, bmap], layoutId) => {
     const layout = objects[layoutId];
@@ -281,6 +326,9 @@ export function sizingAutoModifiers(modifTree, sizingAutoLayouts, objects, bound
   return result[0];
 }
 
+/**
+ *
+ */
 export function filterLayoutsIds(objects, modifTree) {
   return new Set(
     Object.entries(modifTree)
@@ -293,6 +341,9 @@ export function filterLayoutsIds(objects, modifTree) {
   );
 }
 
+/**
+ *
+ */
 export function setObjectsModifiers(modifTree, objects, params) {
   const {
     ignoreConstraints = false,
@@ -301,7 +352,7 @@ export function setObjectsModifiers(modifTree, objects, params) {
     snapIgnoreAxis = null,
   } = params || {};
 
-  let oldModifTree = null;
+  const oldModifTree = null;
 
   let currentObjects = objects;
   currentObjects = cgt.applyStructureModifiersToObjects(currentObjects, modifTree);
@@ -321,7 +372,7 @@ export function setObjectsModifiers(modifTree, objects, params) {
 
   boundsMap = cgb.transformBoundsMap(boundsMap, currentObjects, currentModifTree);
 
-  let modifTreeLayout = propagateModifiersLayoutsTree(currentObjects, boundsMap, ignoreConstraints, shapesTreeLayout);
+  const modifTreeLayout = propagateModifiersLayoutsTree(currentObjects, boundsMap, ignoreConstraints, shapesTreeLayout);
 
   currentModifTree = cgt.mergeModifTree(currentModifTree, modifTreeLayout);
 

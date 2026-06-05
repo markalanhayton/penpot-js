@@ -2,6 +2,9 @@ import * as gpt from '../../point.js';
 import * as gpo from '../points.js';
 import * as ctl from '../../../types/shape/layout.js';
 
+/**
+ *
+ */
 export function getBaseLine(parent, layoutBounds, totalWidth, totalHeight, numLines) {
   const layoutWidth = gpo.widthPoints(layoutBounds);
   const layoutHeight = gpo.heightPoints(layoutBounds);
@@ -42,6 +45,9 @@ export function getBaseLine(parent, layoutBounds, totalWidth, totalHeight, numLi
   return result;
 }
 
+/**
+ *
+ */
 export function getNextLine(parent, layoutBounds, line, baseP, totalWidth, totalHeight, numLines) {
   const { lineWidth, lineHeight } = line;
   const layoutWidth = gpo.widthPoints(layoutBounds);
@@ -88,6 +94,9 @@ export function getNextLine(parent, layoutBounds, line, baseP, totalWidth, total
   return result;
 }
 
+/**
+ *
+ */
 export function getStartLine(parent, layoutBounds, line, baseP, totalWidth, totalHeight, numLines) {
   const { lineWidth, lineHeight, numChildren } = line;
   const layoutWidth = gpo.widthPoints(layoutBounds);
@@ -142,6 +151,9 @@ export function getStartLine(parent, layoutBounds, line, baseP, totalWidth, tota
   return startP;
 }
 
+/**
+ *
+ */
 export function getChildPosition(parent, child, childWidth, childHeight, layoutData) {
   const { startP, layoutGapRow, layoutGapCol, marginX, marginY, lineHeight, lineWidth, layoutBounds } = layoutData;
 

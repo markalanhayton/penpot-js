@@ -2,6 +2,9 @@ import * as d from '../../../data.js';
 import * as gpt from '../../point.js';
 import * as gpo from '../points.js';
 
+/**
+ *
+ */
 export function layoutContentPoints(bounds, parent, layoutData) {
   const parentId = parent.id;
   const parentBounds = bounds.get(parentId);
@@ -24,6 +27,9 @@ export function layoutContentPoints(bounds, parent, layoutData) {
   return [...rowPoints, ...colPoints];
 }
 
+/**
+ *
+ */
 export function layoutContentBounds(bounds, parent, layoutData) {
   if (!layoutData) return bounds.get(parent.id);
 
@@ -45,6 +51,9 @@ export function layoutContentBounds(bounds, parent, layoutData) {
   return parentBounds;
 }
 
+/**
+ *
+ */
 export function calculateGridLayoutBounds(bounds, shape, layoutData) {
   return layoutContentBounds(bounds, shape, layoutData);
 }

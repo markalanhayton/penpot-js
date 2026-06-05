@@ -12,9 +12,10 @@ template.innerHTML = `<style>
     penpot-canvas { display: flex; flex: 1; position: relative; overflow: hidden; background: #e8e8e8; }
     .penpot-canvas__canvas-container { width: 100%; height: 100%; position: relative; overflow: hidden; }
     .penpot-canvas__canvas-container svg, .penpot-canvas__canvas-container canvas { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+    .penpot-canvas__canvas-container svg [data-handle], .penpot-canvas__canvas-container svg [data-handle="rotation"] { pointer-events: auto; }
     .penpot-canvas__canvas-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-    .penpot-canvas__rulers { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
-    .penpot-canvas__guides { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 6; }
+    .penpot-canvas__rulers { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: var(--penpot-z-canvas-overlay, 1); }
+    .penpot-canvas__guides { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: calc(var(--penpot-z-canvas-overlay, 1) + 1); }
     .penpot-canvas__canvas-message { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; }
     .penpot-canvas__canvas-message.penpot-canvas__loading { color: var(--penpot-text-dim, #999); font-size: var(--penpot-font-size-m, 13px); }
     .penpot-canvas__canvas-message.penpot-canvas__empty { color: var(--penpot-text-dim, #999); font-size: var(--penpot-font-size-m, 13px); }
@@ -99,14 +100,23 @@ export class PenpotCanvas extends PenpotElement {
   set panY(y) { this.#panY = y; this.#applyTransform(); }
 
   screenToCanvas(clientX, clientY) {
+    if (this.#svgEl) {
+      const pt = this.#svgEl.createSVGPoint();
+      pt.x = clientX;
+      pt.y = clientY;
+      const ctm = this.#svgEl.getScreenCTM();
+      if (ctm) {
+        const transformed = pt.matrixTransform(ctm.inverse());
+        return { x: transformed.x, y: transformed.y };
+      }
+    }
     const container = this.querySelector('#container');
     if (!container) return { x: 0, y: 0 };
     const rect = container.getBoundingClientRect();
-    const screenX = clientX - rect.left;
-    const screenY = clientY - rect.top;
-    const canvasX = (screenX / this.#zoom) - this.#panX;
-    const canvasY = (screenY / this.#zoom) - this.#panY;
-    return { x: canvasX, y: canvasY };
+    return {
+      x: (clientX - rect.left) / this.#zoom - this.#panX,
+      y: (clientY - rect.top) / this.#zoom - this.#panY,
+    };
   }
 
   showLoading(msg = 'Loading...') {

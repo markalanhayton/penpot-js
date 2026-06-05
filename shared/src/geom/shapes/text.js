@@ -1,10 +1,16 @@
 import * as grc from '../rect.js';
 import * as gco from './common.js';
 
+/**
+ *
+ */
 export function positionDataToRect({ x, y, width, height }) {
   return grc.makeRect(x, y - height, width, height);
 }
 
+/**
+ *
+ */
 export function shapeToRect(shape) {
   const points = shape.positionData
     ?.flatMap((pd) => grc.rectToPoints(positionDataToRect(pd)));
@@ -14,6 +20,9 @@ export function shapeToRect(shape) {
   return shape.selrect;
 }
 
+/**
+ *
+ */
 export function shapeToBounds(shape, transformMatrixFn) {
   const points = shape.positionData
     ?.flatMap((pd) => grc.rectToPoints(positionDataToRect(pd)));
@@ -23,6 +32,9 @@ export function shapeToBounds(shape, transformMatrixFn) {
   return grc.pointsToRect(transformed);
 }
 
+/**
+ *
+ */
 export function overlapsPositionDataQ(shape, positionData) {
   const boundingBox = grc.pointsToRect(shape.points);
   if (!boundingBox) return false;

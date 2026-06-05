@@ -1,0 +1,18 @@
+{
+  "watch": [
+    "src/",
+    ".env"
+  ],
+  "ext": "js,json,mjs,env",
+  "ignore": [
+    "node_modules/",
+    "test/",
+    "penpot.sqlite",
+    "penpot.sqlite-shm",
+    "penpot.sqlite-wal",
+    "storage/",
+    "*.log"
+  ],
+  "delay": 200,
+  "verbose": true
+}

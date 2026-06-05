@@ -6,6 +6,9 @@ import * as mth from '../../math.js';
 import * as helpers from './helpers.js';
 import * as impl from './impl.js';
 
+/**
+ *
+ */
 function updateHandler(command, prefix, point) {
   const [cox, coy] = prefix === 'c1' ? ['c1x', 'c1y'] : ['c2x', 'c2y'];
   return {
@@ -14,6 +17,9 @@ function updateHandler(command, prefix, point) {
   };
 }
 
+/**
+ *
+ */
 export function getHandler(command, prefix) {
   if (!command || !command.params) return undefined;
   const cx = prefix + 'x';
@@ -24,6 +30,9 @@ export function getHandler(command, prefix) {
   return undefined;
 }
 
+/**
+ *
+ */
 export function getHandlers(content) {
   let prevPoint = null;
   const result = {};
@@ -44,10 +53,16 @@ export function getHandlers(content) {
   return result;
 }
 
+/**
+ *
+ */
 function pointKey(p) {
   return `${p.x},${p.y}`;
 }
 
+/**
+ *
+ */
 export function pointIndices(content, point) {
   const result = [];
   for (const [index, segment] of d.enumerate(content)) {
@@ -58,6 +73,9 @@ export function pointIndices(content, point) {
   return result;
 }
 
+/**
+ *
+ */
 export function handlerIndices(content, point) {
   const result = [];
   const withPrevContent = d.withPrev(Array.from(content));
@@ -72,6 +90,9 @@ export function handlerIndices(content, point) {
   return result;
 }
 
+/**
+ *
+ */
 export function oppositeIndex(content, index, prefix) {
   const point = prefix === 'c2'
     ? helpers.segmentToPoint(content.get(index))
@@ -86,6 +107,9 @@ export function oppositeIndex(content, index, prefix) {
   return null;
 }
 
+/**
+ *
+ */
 export function getHandlerPoint(content, index, prefix) {
   if (index == null || content == null) return undefined;
   return content.lookup(index, (command, c1x, c1y, c2x, c2y, x, y) => {
@@ -98,6 +122,9 @@ export function getHandlerPoint(content, index, prefix) {
   });
 }
 
+/**
+ *
+ */
 export function handlerToNode(content, index, prefix) {
   if (prefix === 'c1') {
     return helpers.segmentToPoint(content.get(index - 1));
@@ -105,17 +132,26 @@ export function handlerToNode(content, index, prefix) {
   return helpers.segmentToPoint(content.get(index));
 }
 
+/**
+ *
+ */
 export function calculateOppositeHandler(point, handler) {
   const handlerVector = gpt.toVec(point, handler);
   return gpt.add(point, gpt.negate(handlerVector));
 }
 
+/**
+ *
+ */
 export function getPoints(content) {
   return content.walk((type, _c1x, _c1y, _c2x, _c2y, x, y) => {
     if (type !== 'close-path') return gpt.point(x, y);
   }, []);
 }
 
+/**
+ *
+ */
 export function pathToLines(shape) {
   const result = [];
   let lastStart = null;
@@ -143,6 +179,9 @@ export function pathToLines(shape) {
   return result;
 }
 
+/**
+ *
+ */
 function curveClosestPoint(position, start, end, h1, h2, precision) {
   const dMemo = new Map();
   const dFn = (t) => {
@@ -168,6 +207,9 @@ function curveClosestPoint(position, start, end, h1, h2, precision) {
   return helpers.curveValues(start, end, h1, h2, t1);
 }
 
+/**
+ *
+ */
 function lineClosestPoint(position, fromP, toP) {
   const e1 = gpt.toVec(fromP, toP);
   const e2 = gpt.toVec(fromP, position);
@@ -180,6 +222,9 @@ function lineClosestPoint(position, fromP, toP) {
   return gpt.distance(position, fromP) <= gpt.distance(position, toP) ? fromP : toP;
 }
 
+/**
+ *
+ */
 export function closestPoint(content, position, precision) {
   const withPrevContent = d.withPrev(Array.from(content));
   let minP = null, minDist = Infinity;
@@ -209,6 +254,9 @@ export function closestPoint(content, position, precision) {
   return minP;
 }
 
+/**
+ *
+ */
 function removeLineCurves(content) {
   const withPrevContent = d.enumerate(d.withPrev(content));
   return withPrevContent.reduce((result, [index, [segment, prev]]) => {
@@ -225,6 +273,9 @@ function removeLineCurves(content) {
   }, [...content]);
 }
 
+/**
+ *
+ */
 export function makeCornerPoint(content, point) {
   const pointToHandlers = getHandlers(content);
   const handlerList = pointToHandlers[pointKey(point)] || [];
@@ -243,6 +294,9 @@ export function makeCornerPoint(content, point) {
   return impl.fromPlain(result);
 }
 
+/**
+ *
+ */
 function lineToCurve(fromP, segment) {
   const toP = helpers.segmentToPoint(segment);
   const v = gpt.toVec(fromP, toP);
@@ -257,6 +311,9 @@ function lineToCurve(fromP, segment) {
   };
 }
 
+/**
+ *
+ */
 export function isCurveQ(content, point) {
   const pointToHandlers = getHandlers(content);
   const handlerList = pointToHandlers[pointKey(point)] || [];
@@ -266,9 +323,12 @@ export function isCurveQ(content, point) {
   });
 }
 
+/**
+ *
+ */
 export function makeCurvePoint(content, point) {
   const indices = pointIndices(content, point);
-  let result = [...content];
+  const result = [...content];
 
   const vectors = indices.map(index => {
     const segment = result[index];
@@ -351,6 +411,9 @@ export function makeCurvePoint(content, point) {
   return impl.fromPlain(result);
 }
 
+/**
+ *
+ */
 export function getSegmentsWithPoints(content, points) {
   const pointSet = new Set(points.map(p => pointKey(p)));
   const result = [];
@@ -375,7 +438,13 @@ export function getSegmentsWithPoints(content, points) {
   return result;
 }
 
+/**
+ *
+ */
 export function splitSegments(content, points, value) {
+  /**
+   *
+   */
   function splitCommand(segment) {
     switch (segment.command) {
       case 'line-to': return [segment.index, helpers.splitLineTo(segment.start, segment, value)];
@@ -397,6 +466,9 @@ export function splitSegments(content, points, value) {
   );
 }
 
+/**
+ *
+ */
 export function nextNode(content, position, prevPoint, prevHandler) {
   const pos = { x: position.x, y: position.y };
   const lastCommand = content.length > 0 ? content.get(content.length - 1)?.command : null;
@@ -408,6 +480,9 @@ export function nextNode(content, position, prevPoint, prevHandler) {
   return { command: 'move-to', params: pos };
 }
 
+/**
+ *
+ */
 export function removeNodes(content, points) {
   if (points.length === 0) return content;
 
@@ -427,7 +502,7 @@ export function removeNodes(content, points) {
     const point = helpers.segmentToPoint(curSegment);
     const removeQ = pointSet.has(pointKey(point));
 
-    let newSegment = { ...curSegment, params: { ...curSegment.params } };
+    const newSegment = { ...curSegment, params: { ...curSegment.params } };
 
     if (!moveQ && subpath.length === 0) {
       newSegment.command = 'move-to';
@@ -456,11 +531,17 @@ export function removeNodes(content, points) {
     .flat();
 }
 
+/**
+ *
+ */
 export function joinNodes(content, points) {
   const arr = Array.from(content);
   const segmentsWithPoints = getSegmentsWithPoints(content, points);
   const segmentsSet = new Set(segmentsWithPoints.map(s => pointKey(s.start) + '|' + pointKey(s.end)));
 
+  /**
+   *
+   */
   function notSegmentQ(point, other) {
     const key1 = pointKey(point) + '|' + pointKey(other);
     const key2 = pointKey(other) + '|' + pointKey(point);
@@ -480,6 +561,9 @@ export function joinNodes(content, points) {
   return [...arr, ...newContent];
 }
 
+/**
+ *
+ */
 export function separateNodes(content, points) {
   const pointSet = new Set(points.map(p => pointKey(p)));
   const withPrevContent = d.withPrev(Array.from(content));
@@ -504,10 +588,16 @@ export function separateNodes(content, points) {
   return result.filter(sp => sp.length > 1).flat();
 }
 
+/**
+ *
+ */
 function addToSet(setList, target, value) {
   return setList.map(it => it === target ? new Set([...it, value]) : it);
 }
 
+/**
+ *
+ */
 function joinSets(setList, target, other) {
   return [
     ...setList.filter(it => it !== target && it !== other),
@@ -515,6 +605,9 @@ function joinSets(setList, target, other) {
   ];
 }
 
+/**
+ *
+ */
 function groupSegments(segments) {
   let result = [];
   for (const { start, end } of segments) {
@@ -534,6 +627,9 @@ function groupSegments(segments) {
   return result;
 }
 
+/**
+ *
+ */
 function calculateMergePoints(groupedSegments, points) {
   const groupToMergePoint = new Map();
   for (const group of groupedSegments) {
@@ -559,6 +655,9 @@ function calculateMergePoints(groupedSegments, points) {
   return result;
 }
 
+/**
+ *
+ */
 function replacePoints(content, pointToMergePoint) {
   return content.map(segment => {
     const point = helpers.segmentToPoint(segment);
@@ -570,6 +669,9 @@ function replacePoints(content, pointToMergePoint) {
   });
 }
 
+/**
+ *
+ */
 export function mergeNodes(content, points) {
   const segments = getSegmentsWithPoints(content, points);
   if (segments.length === 0) return content;
@@ -580,20 +682,29 @@ export function mergeNodes(content, points) {
   return replacePoints(separated, pointToMergePoint);
 }
 
+/**
+ *
+ */
 export function transformContent(content, transform) {
   if (transform == null) return content;
   return impl.pathData(content).transform(transform);
 }
 
+/**
+ *
+ */
 export function moveContent(content, moveVec) {
   if (gpt.isZero(moveVec)) return content;
   const transform = gmt.translateMatrix(moveVec);
   return transformContent(content, transform);
 }
 
+/**
+ *
+ */
 function calculateExtremities(content) {
   const arr = Array.from(content);
-  let points = new Set();
+  const points = new Set();
   let fromP = null;
   let moveP = null;
   let i = 0;
@@ -641,6 +752,9 @@ function calculateExtremities(content) {
   });
 }
 
+/**
+ *
+ */
 export function contentToSelrect(content) {
   let extremities = calculateExtremities(content);
   if (extremities.length === 0) {
@@ -652,15 +766,24 @@ export function contentToSelrect(content) {
   return grc.pointsToRect(extremities);
 }
 
+/**
+ *
+ */
 export function contentCenter(content) {
   return grc.rectToCenter(contentToSelrect(content));
 }
 
+/**
+ *
+ */
 export function appendSegment(content, segment) {
   const arr = impl.pathDataQ(content) ? Array.from(content) : content || [];
   return [...arr, impl.checkSegment(segment)];
 }
 
+/**
+ *
+ */
 export function pointsToContent(points, { close = false } = {}) {
   const initial = points[0];
   if (!initial) return impl.fromPlain([]);

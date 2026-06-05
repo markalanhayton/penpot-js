@@ -3,12 +3,14 @@ import { cmd, cmdUpload } from '../lib/rpc.js';
 import { appStore } from '../lib/store.js';
 import { ToolManager } from '../lib/tool-manager.js';
 import { connectWS, disconnectWS, subscribeFile, unsubscribeFile, onWSMessage, sendPointerUpdate, sendSelectionUpdate, getCursorPositions } from '../lib/ws.js';
+import { success as notifySuccess, danger as notifyDanger } from './penpot-notification.js';
 import { initPersistence, enqueueChange, enqueueChanges, makeCreateChange, makeModifyChange, makeDeleteChange, makeMoveChange, makeAddPageChange, makeModPageChange, makeDeletePageChange, makeAddMediaChange, destroyPersistence, flushSave } from '../lib/persistence.js';
 import { wireShortcuts, destroyShortcuts } from '../lib/shortcuts.js';
 import { parseSVG } from '../lib/svg-import.js';
 import { createShape } from '../lib/types.js';
 import { PenpotElement } from './base.js';
 import { createComponentFromShape, detachInstanceFromShape, extractComponentsFromFile, syncInstanceToMain, createInstanceFromComponent, findMainInstanceForComponent, syncWithCrossPageLookup } from '../lib/components-lib.js';
+import { isMobile, openLeftSidebar, openRightSidebar, closeSidebars, initTouchGestures } from '../lib/responsive.js';
 import { PenpotContextMenu } from './penpot-context-menu.js';
 import { initCollaboration, resolveConflict, handleRemoteFileChange, broadcastChange, getPendingChanges, destroyCollaboration } from '../lib/collaboration.js';
 import { importFileToProject } from '../lib/file-import.js';
@@ -21,11 +23,14 @@ import { fixDeletedFontsForPage, fixDeletedFontsForLibrary, findMissingFonts, bu
 import { generateAndUploadThumbnail } from '../lib/thumbnail.js';
 import { nextPropertyNumber, propertiesToName, distance } from '@penpot/shared/types/variant.js';
 import { generateAddNewProperty, generateUpdatePropertyName, generateRemoveProperty, generateUpdatePropertyValue } from '@penpot/shared/logic/variant_properties.js';
+import { random as uuidRandom } from '@penpot/shared/uuid.js';
+import { computeShapesBounds } from '../lib/shapes.js';
+import { rgbToHex as _rgbToHex } from '@penpot/shared/colors.js';
 import { propagateFrameResize } from '../lib/constraint-propagation.js';
 import { reflowLayout, reflowLayoutWithResize } from '../lib/layout-reflow.js';
 import { PluginManager } from '../lib/plugin-api.js';
 import { PathEditor } from '../lib/path-editor.js';
-import { convertToPath } from '../../shared/src/types/path.js';
+import { convertToPath } from '@penpot/shared/types/path.js';
 import './penpot-cursor-overlay.js';
 import './penpot-presence-bar.js';
 import './penpot-export-dialog.js';
@@ -38,6 +43,7 @@ import './penpot-version-panel.js';
 import './penpot-shortcuts-reference.js';
 import './penpot-mcp-panel.js';
 import './penpot-plugin-manager.js';
+import './penpot-release-notes.js';
 import './penpot-path-toolbar.js';
 
 function imageToDataURL(img, width, height) {
@@ -52,19 +58,22 @@ function imageToDataURL(img, width, height) {
 const template = document.createElement('template');
 template.innerHTML = `
   <style>
-    penpot-workspace { display:flex; flex-direction:column; width:100%; height:100%; background:var(--penpot-bg,#1c1c1c); color:var(--penpot-text,#e6e6e6); font-family:var(--penpot-font-family,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif); }
+    penpot-workspace { display:flex; flex-direction:column; width:100%; height:100%; background:var(--penpot-bg,#1c1c1c); color:var(--penpot-text,#e6e6e6); font-family:var(--penpot-font-family,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif); overflow:hidden; }
     .penpot-app__workspace { display:flex; flex-direction:column; height:100%; }
-    .penpot-app__canvas-area { flex:1; display:flex; overflow:hidden; }
+    .penpot-app__canvas-area { flex:1; display:flex; flex-direction:row; overflow:hidden; min-height:0; }
+    penpot-left-sidebar { flex:0 0 var(--penpot-sidebar-width, 260px); min-width:0; }
+    penpot-right-sidebar { flex:0 0 var(--penpot-sidebar-width, 260px); min-width:0; }
     .penpot-app__comment-panel { width:280px; border-left:1px solid var(--penpot-border,#444); background:var(--penpot-surface,#2a2a2a); display:none; flex-direction:column; }
     .penpot-app__comment-panel.penpot-app__open { display:flex; }
-    .penpot-app__mcp-overlay { position:fixed; inset:0; z-index:300; display:none; }
+    .penpot-app__mcp-overlay { position:fixed; inset:0; z-index:var(--penpot-z-modal,600); display:none; }
     .penpot-app__mcp-overlay.penpot-app__open { display:flex; }
     .penpot-app__mcp-backdrop { position:absolute; inset:0; background:rgba(0,0,0,0.4); }
-    .penpot-app__mcp-panel-container { position:absolute; right:270px; top:0; bottom:0; width:340px; z-index:1; }
-    .penpot-app__plugin-overlay { position:fixed; inset:0; z-index:300; display:none; }
+    .penpot-app__mcp-panel-container { position:absolute; right:calc(var(--penpot-sidebar-width,260px) + 10px); top:0; bottom:0; width:340px; z-index:1; }
+    .penpot-app__plugin-overlay { position:fixed; inset:0; z-index:var(--penpot-z-modal,600); display:none; }
     .penpot-app__plugin-overlay.penpot-app__open { display:flex; }
     .penpot-app__plugin-backdrop { position:absolute; inset:0; background:rgba(0,0,0,0.4); }
-    .penpot-app__plugin-panel-container { position:absolute; right:270px; top:0; bottom:0; width:340px; z-index:1; background:var(--penpot-surface,#2a2a2a); display:flex; flex-direction:column; }
+    .penpot-app__plugin-panel-container { position:absolute; right:calc(var(--penpot-sidebar-width,260px) + 10px); top:0; bottom:0; width:340px; z-index:1; background:var(--penpot-surface,#2a2a2a); display:flex; flex-direction:column; }
+    .penpot-app__canvas-wrapper { position:relative; flex:1; display:flex; overflow:hidden; }
     penpot-workspace.penpot-workspace__drag-over .penpot-app__canvas-area { outline:2px solid var(--penpot-primary,#31efb8); outline-offset:-2px; }
     penpot-workspace.penpot-workspace__drag-over .penpot-app__canvas-area penpot-canvas { opacity:0.85; }
   </style>
@@ -72,17 +81,20 @@ template.innerHTML = `
     <penpot-toolbar id="toolbar"></penpot-toolbar>
     <penpot-tools-bar id="tools"></penpot-tools-bar>
     <div class="penpot-app__canvas-area">
+      <button class="penpot-mobile-sidebar-toggle penpot-visible-mobile" id="mobile-left-toggle" title="Show layers" aria-label="Toggle layers panel">\u2630</button>
       <penpot-left-sidebar id="left-sidebar"></penpot-left-sidebar>
-      <div style="position:relative;flex:1;display:flex;">
+      <div class="penpot-app__canvas-wrapper">
         <penpot-canvas id="canvas"></penpot-canvas>
         <penpot-cursor-overlay id="cursors"></penpot-cursor-overlay>
         <penpot-text-toolbar id="text-toolbar"></penpot-text-toolbar>
       </div>
       <penpot-right-sidebar id="right-sidebar"></penpot-right-sidebar>
+      <button class="penpot-mobile-sidebar-toggle penpot-visible-mobile" id="mobile-right-toggle" title="Show properties" aria-label="Toggle properties panel">\u2699</button>
       <div class="penpot-app__comment-panel" id="comment-panel">
         <penpot-comment-panel id="comments"></penpot-comment-panel>
       </div>
       <penpot-onboarding id="onboarding"></penpot-onboarding>
+      <penpot-release-notes id="release-notes"></penpot-release-notes>
     </div>
   </div>
   <penpot-export-dialog id="export-dialog"></penpot-export-dialog>
@@ -131,8 +143,28 @@ export class PenpotWorkspace extends PenpotElement {
     super();
   }
 
+  get currentPage() { return this.#pages[this.#currentPageIndex] || null; }
+  get pages() { return this.#pages; }
+  get currentPageIndex() { return this.#currentPageIndex; }
+  get selectedIds() { return this.#selectedIds; }
+  get fileData() { return this.#fileData; }
+
+  switchTool(name) {
+    if (this.#toolManager) {
+      this.#toolManager.switchTool(name);
+    }
+    this.querySelector('#tools')?.selectTool?.(name);
+  }
+
+  #beforeUnloadHandler = () => {
+    flushSave().catch(() => {});
+  };
+
   connectedCallback() {
     super.connectedCallback();
+
+    // Save pending changes before page unload
+    window.addEventListener('beforeunload', this.#beforeUnloadHandler);
 
     this.querySelector('#toolbar').addEventListener('penpot-back-to-dashboard', () => {
       window.__penpot.navigate('dashboard');
@@ -199,6 +231,25 @@ export class PenpotWorkspace extends PenpotElement {
     });
     this.querySelector('#toolbar').addEventListener('penpot-plugin-toggle', () => {
       this.#togglePluginPanel();
+    });
+
+    const mobileLeftToggle = this.querySelector('#mobile-left-toggle');
+    if (mobileLeftToggle) {
+      mobileLeftToggle.addEventListener('click', () => {
+        if (isMobile()) openLeftSidebar();
+      });
+    }
+    const mobileRightToggle = this.querySelector('#mobile-right-toggle');
+    if (mobileRightToggle) {
+      mobileRightToggle.addEventListener('click', () => {
+        if (isMobile()) openRightSidebar();
+      });
+    }
+    this.querySelector('#toolbar').addEventListener('penpot-mobile-left-toggle', () => {
+      if (isMobile()) openLeftSidebar();
+    });
+    this.querySelector('#toolbar').addEventListener('penpot-mobile-right-toggle', () => {
+      if (isMobile()) openRightSidebar();
     });
     this.querySelector('#toolbar').addEventListener('penpot-undo', () => {
       if (this.#toolManager) this.#toolManager.undo();
@@ -267,6 +318,7 @@ export class PenpotWorkspace extends PenpotElement {
     });
 
     this.querySelector('#canvas').addEventListener('penpot-canvas-click', (e) => {
+      if (isMobile()) closeSidebars();
       if (!this.#commentPanelOpen) return;
       const comments = this.querySelector('#comments');
       if (comments) {
@@ -276,6 +328,27 @@ export class PenpotWorkspace extends PenpotElement {
         if (input) input.focus();
       }
     });
+
+    const canvasEl = this.querySelector('#canvas');
+    if (canvasEl) {
+      initTouchGestures(canvasEl);
+      canvasEl.addEventListener('penpot-pinch-zoom', (e) => {
+        const canvas = this.querySelector('#canvas');
+        if (canvas) {
+          canvas.zoom = e.detail.zoom;
+          this.querySelector('#tools').zoom = canvas.zoom;
+          this.#updateScrollbars();
+        }
+      });
+      canvasEl.addEventListener('penpot-touch-pan', (e) => {
+        const canvas = this.querySelector('#canvas');
+        if (canvas) {
+          canvas.panX += e.detail.deltaX;
+          canvas.panY += e.detail.deltaY;
+          this.#updateScrollbars();
+        }
+      });
+    }
 
     this.querySelector('#left-sidebar').addEventListener('penpot-page-select', (e) => {
       this.#currentPageIndex = e.detail.pageIndex;
@@ -431,7 +504,7 @@ export class PenpotWorkspace extends PenpotElement {
       const page = this.#pages[this.#currentPageIndex];
       if (!page || !this.#fileData) return;
       const colorObj = {
-        id: crypto.randomUUID(),
+        id: uuidRandom(),
         name: name || color || 'Gradient',
         color: color || gradient?.stops?.[0]?.color || '#000',
         opacity: 1,
@@ -522,7 +595,7 @@ export class PenpotWorkspace extends PenpotElement {
     this.querySelector('#left-sidebar').addEventListener('penpot-typography-add', () => {
       if (!this.#fileData) return;
       const typo = {
-        id: crypto.randomUUID(),
+        id: uuidRandom(),
         name: 'New Typography',
         'font-family': 'Inter, sans-serif',
         'font-size': '14',
@@ -943,6 +1016,9 @@ export class PenpotWorkspace extends PenpotElement {
   }
 
   disconnectedCallback() {
+    window.removeEventListener('beforeunload', this.#beforeUnloadHandler);
+    // Flush any pending changes before disconnecting
+    flushSave().catch(err => console.warn('[workspace] flush on disconnect failed:', err?.message || err));
     destroyPersistence();
     destroyShortcuts();
     destroyCollaboration();
@@ -1225,7 +1301,7 @@ export class PenpotWorkspace extends PenpotElement {
             this.renderCurrentPage();
             return;
           }
-        } catch {}
+        } catch (err) { console.warn('[workspace] clipboard penpot-shapes parse failed:', err.message); }
       }
 
       if (hasSVG) {
@@ -1485,6 +1561,10 @@ export class PenpotWorkspace extends PenpotElement {
       this.#selectedIds.clear();
     }
 
+    if (this.#toolManager) {
+      this.#toolManager.setSelectedIds(this.#selectedIds);
+    }
+
     const rightSidebar = this.querySelector('#right-sidebar');
     const leftSidebar = this.querySelector('#left-sidebar');
     const canvas = this.querySelector('#canvas');
@@ -1672,8 +1752,8 @@ export class PenpotWorkspace extends PenpotElement {
     const sourceShape = this.#findMainShapeForComponent(variants[0][0]);
     if (!sourceShape) return;
 
-    const newId = crypto.randomUUID ? crypto.randomUUID() : ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c => (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16)));
-    const newShapeId = crypto.randomUUID ? crypto.randomUUID() : ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c => (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16)));
+    const newId = uuidRandom();
+    const newShapeId = uuidRandom();
 
     const newShape = {
       ...sourceShape,
@@ -1808,24 +1888,16 @@ export class PenpotWorkspace extends PenpotElement {
     const selectedShapes = selectedIds.map(id => this.#findShape(page, id)).filter(Boolean);
     if (selectedShapes.length < 2) return;
 
-    const variantId = crypto.randomUUID ? crypto.randomUUID() : 'var-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+    const variantId = uuidRandom();
 
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const s of selectedShapes) {
-      if (s.x != null && s.y != null) {
-        minX = Math.min(minX, s.x);
-        minY = Math.min(minY, s.y);
-        maxX = Math.max(maxX, s.x + (s.width || 0));
-        maxY = Math.max(maxY, s.y + (s.height || 0));
-      }
-    }
-    if (minX === Infinity) return;
+    const bounds = computeShapesBounds(selectedShapes);
+    if (bounds.width === 0 && bounds.height === 0) return;
 
     const padding = 20;
-    const frameX = minX - padding;
-    const frameY = minY - padding;
-    const frameW = (maxX - minX) + padding * 2;
-    const frameH = (maxY - minY) + padding * 2;
+    const frameX = bounds.x - padding;
+    const frameY = bounds.y - padding;
+    const frameW = bounds.width + padding * 2;
+    const frameH = bounds.height + padding * 2;
 
     const frameId = 'frame-' + Date.now() + '-' + Math.random().toString(36).slice(2);
 
@@ -1903,6 +1975,16 @@ export class PenpotWorkspace extends PenpotElement {
       for (const s of shapes) {
         if (s.componentId === componentId) return s.id;
       }
+    }
+    return null;
+  }
+
+  #findMainShapeForComponent(componentId) {
+    const shapeId = this.#findMainShapeIdForComponent(componentId);
+    if (!shapeId) return null;
+    for (const page of this.#pages) {
+      const shape = this.#findShape(page, shapeId);
+      if (shape) return shape;
     }
     return null;
   }
@@ -2089,7 +2171,7 @@ export class PenpotWorkspace extends PenpotElement {
     switch (type) {
       case 'color': {
         if (!this.#fileData.data.colors) this.#fileData.data.colors = [];
-        const colorId = crypto.randomUUID ? crypto.randomUUID() : `color-${Date.now()}`;
+        const colorId = uuidRandom();
         const colorObj = { id: colorId, name: `Color ${this.#fileData.data.colors.length + 1}`, color: '#000000' };
         this.#fileData.data.colors.push(colorObj);
         enqueueChange({ type: 'add-color', color: colorObj });
@@ -2097,7 +2179,7 @@ export class PenpotWorkspace extends PenpotElement {
       }
       case 'typography': {
         if (!this.#fileData.data.typographies) this.#fileData.data.typographies = [];
-        const typoId = crypto.randomUUID ? crypto.randomUUID() : `typo-${Date.now()}`;
+        const typoId = uuidRandom();
         const typo = { id: typoId, name: `Typography ${this.#fileData.data.typographies.length + 1}`, fontFamily: 'sans-serif', fontSize: 14, fontWeight: 'normal', fontStyle: 'normal' };
         this.#fileData.data.typographies.push(typo);
         enqueueChange({ type: 'add-typography', typography: typo });
@@ -2105,14 +2187,14 @@ export class PenpotWorkspace extends PenpotElement {
       }
       case 'token-set': {
         if (!this.#fileData.data.tokenSets) this.#fileData.data.tokenSets = [];
-        const setId = crypto.randomUUID ? crypto.randomUUID() : `set-${Date.now()}`;
+        const setId = uuidRandom();
         this.#fileData.data.tokenSets.push({ id: setId, name: `Set ${this.#fileData.data.tokenSets.length + 1}`, colors: [], typographies: [] });
         enqueueChange({ type: 'set-token-set', id: setId, attrs: { name: `Set ${this.#fileData.data.tokenSets.length}` } });
         break;
       }
       case 'theme': {
         if (!this.#fileData.data.themes) this.#fileData.data.themes = [];
-        const themeId = crypto.randomUUID ? crypto.randomUUID() : `theme-${Date.now()}`;
+        const themeId = uuidRandom();
         this.#fileData.data.themes.push({ id: themeId, name: `Theme ${this.#fileData.data.themes.length + 1}`, groups: [] });
         enqueueChange({ type: 'set-token-theme', id: themeId, theme: this.#fileData.data.themes[this.#fileData.data.themes.length - 1] });
         break;
@@ -2288,7 +2370,7 @@ export class PenpotWorkspace extends PenpotElement {
 
   #handleShapeRotate({ shapeId, rotation }) {
     if (!this.#toolManager) return;
-    this.#toolManager.updateShapeProp(shapeId, 'rotation', rotation * 180 / Math.PI);
+    this.#toolManager.updateShapeProp(shapeId, 'rotation', rotation);
     this.renderCurrentPage();
   }
 
@@ -2321,7 +2403,7 @@ export class PenpotWorkspace extends PenpotElement {
     if (selectedShapes.length < 2) return;
 
     const maskGroup = {
-      id: crypto.randomUUID(),
+      id: uuidRandom(),
       type: 'group',
       name: 'Mask Group',
       'masked-group': true,
@@ -2738,8 +2820,11 @@ export class PenpotWorkspace extends PenpotElement {
       case 'save':
         this.saveFile();
         break;
-      case 'save-as':
+      case 'save-as': {
+        const saveAsName = prompt('Save file as:', this.#fileData?.name || 'Untitled');
+        if (saveAsName) this.saveFile(saveAsName);
         break;
+      }
       case 'import': {
         const importDialog = this.querySelector('#import-dialog');
         if (importDialog) importDialog.open();
@@ -2876,6 +2961,11 @@ export class PenpotWorkspace extends PenpotElement {
         if (ref) ref.open();
         break;
       }
+      case 'show-release-notes': {
+        const rn = this.querySelector('#release-notes');
+        if (rn) rn.open();
+        break;
+      }
     }
   }
 
@@ -2887,16 +2977,7 @@ export class PenpotWorkspace extends PenpotElement {
     if (!page) { scrollbars.viewport = { zoom: canvas.zoom || 1, panX: -(canvas.panX || 0), panY: -(canvas.panY || 0), width: 0, height: 0 }; return; }
     const objects = page.objects || page.children || {};
     const shapes = Array.isArray(objects) ? objects : Object.values(objects);
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const s of shapes) {
-      const sx = s.x || 0, sy = s.y || 0, sw = s.width || 0, sh = s.height || 0;
-      if (sw > 0 && sh > 0) {
-        minX = Math.min(minX, sx);
-        minY = Math.min(minY, sy);
-        maxX = Math.max(maxX, sx + sw);
-        maxY = Math.max(maxY, sy + sh);
-      }
-    }
+    const bounds = computeShapesBounds(shapes);
     const container = canvas.querySelector('.penpot-canvas__canvas-container') || canvas;
     scrollbars.viewport = {
       zoom: canvas.zoom || 1,
@@ -2905,9 +2986,9 @@ export class PenpotWorkspace extends PenpotElement {
       width: container.clientWidth,
       height: container.clientHeight,
     };
-    if (minX < Infinity) {
+    if (bounds.width > 0 || bounds.height > 0) {
       const padding = 200;
-      scrollbars.contentBounds = { x: minX - padding, y: minY - padding, width: (maxX - minX) + padding * 2, height: (maxY - minY) + padding * 2 };
+      scrollbars.contentBounds = { x: bounds.x - padding, y: bounds.y - padding, width: bounds.width + padding * 2, height: bounds.height + padding * 2 };
     }
   }
 
@@ -3104,6 +3185,13 @@ export class PenpotWorkspace extends PenpotElement {
 
     if (leftSidebar) {
       leftSidebar.currentPageIndex = this.#currentPageIndex;
+      const layerPanel = leftSidebar.querySelector('penpot-layer-panel');
+      if (layerPanel) {
+        const objects = page.objects || page.children || {};
+        const shapesArr = Array.isArray(objects) ? objects : Object.values(objects);
+        layerPanel.page = page;
+        layerPanel.shapes = shapesArr;
+      }
     }
   }
 
@@ -3172,9 +3260,14 @@ export class PenpotWorkspace extends PenpotElement {
     try {
       await flushSave();
       await cmd('rename-file', { id: this.#fileData.id, name: fileName });
+      this.#fileData.name = fileName;
+      const toolbar = this.querySelector('#toolbar');
+      if (toolbar) toolbar.fileName = fileName;
       this.#generateThumbnail();
+      notifySuccess('File saved');
     } catch (err) {
       console.error('[workspace] save error:', err);
+      notifyDanger('Failed to save file: ' + (err.hint || err.message || err));
     }
   }
 
@@ -3227,7 +3320,7 @@ export class PenpotWorkspace extends PenpotElement {
 
   #addPage() {
     const pageNum = this.#pages.length + 1;
-    const page = { id: crypto.randomUUID(), name: `Page ${pageNum}`, objects: {}, shapes: [] };
+    const page = { id: uuidRandom(), name: `Page ${pageNum}`, objects: {}, shapes: [] };
     this.#pages.push(page);
     this.#currentPageIndex = this.#pages.length - 1;
     if (this.#toolManager) {
@@ -3244,6 +3337,8 @@ export class PenpotWorkspace extends PenpotElement {
     this.#pages[pageIndex].name = newName;
     this.renderCurrentPage();
     enqueueChange(makeModPageChange(this.#pages[pageIndex].id, { name: newName }));
+    const leftSidebar = this.querySelector('#left-sidebar');
+    if (leftSidebar) leftSidebar.pages = this.#pages;
   }
 
   #deletePage(pageIndex) {
@@ -3270,12 +3365,12 @@ export class PenpotWorkspace extends PenpotElement {
     const idMap = new Map();
     const newObjects = {};
     for (const [oldId, shape] of Object.entries(objects)) {
-      const newId = crypto.randomUUID();
+      const newId = uuidRandom();
       idMap.set(oldId, newId);
       newObjects[newId] = { ...shape, id: newId, shapes: shape.shapes ? shape.shapes.map(cid => idMap.get(cid) || cid) : [] };
     }
     const newShapes = srcShapeIds.map(id => idMap.get(id) || id);
-    const newPage = { id: crypto.randomUUID(), name: `${src.name} copy`, objects: newObjects, shapes: newShapes };
+    const newPage = { id: uuidRandom(), name: `${src.name} copy`, objects: newObjects, shapes: newShapes };
     this.#pages.splice(pageIndex + 1, 0, newPage);
     this.#currentPageIndex = pageIndex + 1;
     if (this.#toolManager) {
@@ -3321,7 +3416,7 @@ export class PenpotWorkspace extends PenpotElement {
       editor.textContent = shape.content || shape.text || '';
     }
 
-    editor.style.cssText = `position:absolute;left:${screenX - canvasRect.left}px;top:${screenY - canvasRect.top}px;width:${screenW}px;min-height:${screenH}px;background:var(--penpot-input-bg,#333);border:2px solid var(--penpot-primary,#31efb8);color:var(--penpot-text,#e6e6e6);font-size:${(shape.fontSize || 14) * zoom}px;font-family:var(--penpot-font-family,sans-serif);padding:2px 4px;outline:none;z-index:100;overflow-wrap:break-word;white-space:pre-wrap;line-height:1.4;`;
+    editor.style.cssText = `position:absolute;left:${screenX - canvasRect.left}px;top:${screenY - canvasRect.top}px;width:${screenW}px;min-height:${screenH}px;background:var(--penpot-input-bg,#333);border:2px solid var(--penpot-primary,#31efb8);color:var(--penpot-text,#e6e6e6);font-size:${(shape.fontSize || 14) * zoom}px;font-family:var(--penpot-font-family,sans-serif);padding:2px 4px;outline:none;z-index:var(--penpot-z-dropdown,400);overflow-wrap:break-word;white-space:pre-wrap;line-height:1.4;`;
 
     const commitEdit = () => {
       const innerHTML = editor.innerHTML;
@@ -3346,7 +3441,7 @@ export class PenpotWorkspace extends PenpotElement {
           'text-direction': shape.textDirection || 'ltr',
           'vertical-align': shape.verticalAlign || 'top',
           fills: shape.fills && shape.fills.length > 0
-            ? shape.fills.map(f => f['fill-color'] ? f : { 'fill-color': `#${Math.round((f.color?.r ?? 0)*255).toString(16).padStart(2,'0')}${Math.round((f.color?.g ?? 0)*255).toString(16).padStart(2,'0')}${Math.round((f.color?.b ?? 0)*255).toString(16).padStart(2,'0')}`, 'fill-opacity': f.opacity ?? 1 })
+            ? shape.fills.map(f => f['fill-color'] ? f : { 'fill-color': _rgbToHex([Math.round((f.color?.r ?? 0) * 255), Math.round((f.color?.g ?? 0) * 255), Math.round((f.color?.b ?? 0) * 255)]), 'fill-opacity': f.opacity ?? 1 })
             : [{ 'fill-color': '#000000', 'fill-opacity': 1 }],
         };
         newContent = htmlToContentTree(innerHTML, baseAttrs);
@@ -3415,7 +3510,8 @@ export class PenpotWorkspace extends PenpotElement {
     }
 
     this.#toolManager.updatePageObjects(objects);
-    enqueueChange(makeModifyChange(firstShape.id, { componentId, componentRoot: true, mainInstance: true }));
+    const pageId = this.#pages[this.#currentPageIndex]?.id;
+    enqueueChange(makeModifyChange(pageId, firstShape.id, { componentId, componentRoot: true, mainInstance: true }));
 
     const assetPanel = this.querySelector('#asset-panel');
     if (assetPanel) {
@@ -3431,6 +3527,7 @@ export class PenpotWorkspace extends PenpotElement {
     const shapes = this.#toolManager.getCurrentPageShapes();
     if (!shapes) return;
 
+    const pageId = this.#pages[this.#currentPageIndex]?.id;
     let objects = { ...shapes };
     const changes = [];
 
@@ -3439,7 +3536,7 @@ export class PenpotWorkspace extends PenpotElement {
       if (shape?.componentId && !shape?.mainInstance) {
         const { shape: detached, objects: updatedObjects } = detachInstanceFromShape(shape, objects);
         objects = { ...objects, ...updatedObjects };
-        changes.push(makeModifyChange(id, { componentId: null, componentRoot: null, shapeRef: null, touched: null }));
+        changes.push(makeModifyChange(pageId, id, { componentId: null, componentRoot: null, shapeRef: null, touched: null }));
       }
     }
 
@@ -3475,7 +3572,8 @@ export class PenpotWorkspace extends PenpotElement {
       if (synced[k] !== instanceShape[k]) changes[k] = synced[k];
     }
     if (Object.keys(changes).length > 0) {
-      enqueueChange(makeModifyChange(selectedId, changes));
+      const pageId = this.#pages[this.#currentPageIndex]?.id;
+      enqueueChange(makeModifyChange(pageId, selectedId, changes));
     }
 
     this.emit('penpot-notification', { type: 'success', message: 'Instance synced to main' });
@@ -3643,7 +3741,8 @@ export class PenpotWorkspace extends PenpotElement {
       const { shape: detached, objects: updatedObjects } = detachInstanceFromShape(mainShape, shapes);
       const objects = { ...shapes, ...updatedObjects };
       this.#toolManager.updatePageObjects(objects);
-      enqueueChange(makeModifyChange(mainShape.id, { componentId: null, componentRoot: null, mainInstance: null }));
+      const pageId = this.#pages[this.#currentPageIndex]?.id;
+      enqueueChange(makeModifyChange(pageId, mainShape.id, { componentId: null, componentRoot: null, mainInstance: null }));
     }
 
     this.#fileData = { ...this.#fileData, data: { ...this.#fileData.data, components: updatedComponents } };
@@ -3700,7 +3799,8 @@ export class PenpotWorkspace extends PenpotElement {
       height: screenH,
     }, (result) => {
       if (shape.id) {
-        enqueueChange(makeModifyChange(shape.id, {
+        const pageId = this.#pages[this.#currentPageIndex]?.id;
+        enqueueChange(makeModifyChange(pageId, shape.id, {
           content: result.content,
           html: result.html,
           fontFamily: result.fontFamily,

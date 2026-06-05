@@ -64,9 +64,7 @@ async function getFileWithData(pool, fileId) {
     if (typeof file.data === 'string') {
       try {
         data = JSON.parse(file.data);
-      } catch {
-        data = await decode(Buffer.from(file.data, 'base64'));
-      }
+      } catch (err) { console.warn('[files_update] JSON parse failed, trying base64 decode:', err.message); data = await decode(Buffer.from(file.data, 'base64')); }
     } else if (Buffer.isBuffer(file.data)) {
       data = await decode(file.data);
     } else {
@@ -204,9 +202,7 @@ async function getLaggedChanges(pool, fileId, revn) {
         sessionId: row.session_id,
         changes,
       });
-    } catch {
-      // Ignore malformed change records
-    }
+    } catch (err) { console.warn('[files_update] malformed change record:', err.message); }
   }
 
   return result;

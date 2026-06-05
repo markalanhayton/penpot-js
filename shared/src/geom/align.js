@@ -4,6 +4,9 @@ import { shapeToCenter, shapesToRect } from './shapes/shapes.js';
 
 export const VALID_ALIGN_AXIS = new Set(['hleft', 'hcenter', 'hright', 'vtop', 'vcenter', 'vbottom']);
 
+/**
+ *
+ */
 export function alignToRect(shape, rect, axis) {
   const wrapperRect = shapesToRect([shape]);
   const alignPos = calcAlignPos(wrapperRect, rect, axis);
@@ -12,6 +15,9 @@ export function alignToRect(shape, rect, axis) {
   return moveShape(shape, { x: dx, y: dy });
 }
 
+/**
+ *
+ */
 export function alignToParent(shape, parent, axis) {
   const wrapperRect = pointsToRect(shape.points ?? []);
   const parentRect = parent.selrect ?? parent;
@@ -21,6 +27,9 @@ export function alignToParent(shape, parent, axis) {
   return moveShape(shape, { x: dx, y: dy });
 }
 
+/**
+ *
+ */
 export function calcAlignPos(wrapperRect, rect, axis) {
   switch (axis) {
     case 'hleft':
@@ -42,6 +51,9 @@ export function calcAlignPos(wrapperRect, rect, axis) {
 
 export const VALID_DIST_AXIS = new Set(['horizontal', 'vertical']);
 
+/**
+ *
+ */
 export function distributeSpace(shapes, axis) {
   const coord = axis === 'horizontal' ? 'x' : 'y';
   const size = axis === 'horizontal' ? 'width' : 'height';
@@ -65,6 +77,9 @@ export function distributeSpace(shapes, axis) {
   });
 }
 
+/**
+ *
+ */
 export function adjustToViewport(viewport, srect, options = {}) {
   const { padding = 0, minZoom = null } = options;
   const srectPadded = {
@@ -116,6 +131,9 @@ export function adjustToViewport(viewport, srect, options = {}) {
   return adjustedRect;
 }
 
+/**
+ *
+ */
 function moveShape(shape, delta) {
   return {
     ...shape,

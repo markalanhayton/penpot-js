@@ -1,6 +1,9 @@
 import { point } from './point.js';
 import { pointsToRect, rectToCenter } from './rect.js';
 
+/**
+ *
+ */
 export function rectToSnapPoints(rect) {
   if (rect == null) return null;
   const { x, y, width: w, height: h } = rect;
@@ -13,6 +16,9 @@ export function rectToSnapPoints(rect) {
   ]);
 }
 
+/**
+ *
+ */
 function frameToSnapPoints(frame) {
   const points = frame.points ?? [];
   const rect = pointsToRect(points);
@@ -26,6 +32,9 @@ function frameToSnapPoints(frame) {
   ]);
 }
 
+/**
+ *
+ */
 export function shapeToSnapPoints(shape) {
   if (shape.type === 'frame') {
     return frameToSnapPoints(shape);
@@ -35,11 +44,17 @@ export function shapeToSnapPoints(shape) {
   return new Set([...points, center]);
 }
 
+/**
+ *
+ */
 function shapeToCenter(shape) {
   const rect = shape.selrect ?? shape;
   return point(rect.x + rect.width / 2, rect.y + rect.height / 2);
 }
 
+/**
+ *
+ */
 export function guideToSnapPoints(guide, frame) {
   if (frame && !frame.rotated && !isDirectChildOfRoot(frame)) {
     return new Set();
@@ -50,6 +65,9 @@ export function guideToSnapPoints(guide, frame) {
   return new Set([point(0, guide.position)]);
 }
 
+/**
+ *
+ */
 function isDirectChildOfRoot(frame) {
   return frame?.['parent-id'] === '00000000-0000-0000-0000-000000000000';
 }

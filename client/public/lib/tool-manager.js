@@ -7,6 +7,7 @@ import { createShape, createBoolShape } from './types.js';
 import { enqueueChange, makeCreateChange, makeModifyChange, makeDeleteChange, makeMoveChange } from './persistence.js';
 import { copyShapesToClipboard, readShapesFromClipboard, readSystemClipboard, deepCloneShape, assignNewIds } from './clipboard.js';
 import { PathEditor } from './path-editor.js';
+import { degrees, radians } from '@penpot/shared/math.js';
 
 export class ToolManager {
   #tools = new Map();
@@ -82,6 +83,13 @@ export class ToolManager {
   get activeToolName() { return this.#activeToolName; }
   get activeTool() { return this.#activeTool; }
   get selectedIds() { return this.#selectedIds; }
+  setSelectedIds(ids) {
+    this.#selectedIds.clear();
+    for (const id of ids) this.#selectedIds.add(id);
+    if (this.#activeTool && typeof this.#activeTool.setSelectedIds === 'function') {
+      this.#activeTool.setSelectedIds(new Set(this.#selectedIds));
+    }
+  }
   get history() { return this.#history; }
   get smallNudge() { return this.#smallNudge; }
   set smallNudge(v) { this.#smallNudge = v; }
@@ -242,7 +250,7 @@ export class ToolManager {
       const shape = this.#findShape(page, id);
       if (shape) this.#clipboard.push(deepCloneShape(shape));
     }
-    copyShapesToClipboard(this.#clipboard).catch(() => {});
+    copyShapesToClipboard(this.#clipboard).catch((err) => { console.warn('[tool-manager] clipboard copy failed:', err.message); });
   }
 
   cutSelected() {
@@ -253,7 +261,7 @@ export class ToolManager {
       const shape = this.#findShape(page, id);
       if (shape) this.#clipboard.push(deepCloneShape(shape));
     }
-    copyShapesToClipboard(this.#clipboard).catch(() => {});
+    copyShapesToClipboard(this.#clipboard).catch((err) => { console.warn('[tool-manager] clipboard copy failed:', err.message); });
     this.deleteSelected();
   }
 
@@ -376,8 +384,8 @@ export class ToolManager {
     this.#workspace.emit('penpot-shape-select', { shapeId, selectedIds: [shapeId] });
   }
 
-  rotateShape(shapeId, radians) {
-    this.updateShapeProp(shapeId, 'rotation', radians * 180 / Math.PI);
+  rotateShape(shapeId, rad) {
+    this.updateShapeProp(shapeId, 'rotation', degrees(rad));
   }
 
   updateShapeProp(shapeId, prop, value) {
@@ -420,7 +428,7 @@ export class ToolManager {
         changed = true;
       }
     } else if (prop === 'rotation') {
-      numericValue = Number(value) * Math.PI / 180;
+      numericValue = Number(value);
       if (!isNaN(numericValue) && shape.rotation !== numericValue) {
         this.#history.push({ type: 'update', shapeId, prop: 'rotation', oldValue: shape.rotation, newValue: numericValue, pageId: page.id });
         shape.rotation = numericValue;
@@ -623,7 +631,7 @@ export class ToolManager {
   }
 
   #bindCanvasEvents() {
-    this.#canvasContainer = this.#canvas.querySelector('.penpot-canvas__container') || this.#canvas;
+    this.#canvasContainer = this.#canvas.querySelector('.penpot-canvas__canvas-container') || this.#canvas.querySelector('#container') || this.#canvas;
     this.#boundPointerDown = (e) => this.#handlePointerDown(e);
     this.#boundPointerMove = (e) => this.#handlePointerMove(e);
     this.#boundPointerUp = (e) => this.#handlePointerUp(e);

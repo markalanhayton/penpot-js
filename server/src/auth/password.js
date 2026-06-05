@@ -66,9 +66,7 @@ export async function verifyPassword(hash, password) {
     const valid = await argon2.verify(hash, password);
     const needsRehash = valid ? await argon2.needsRehash(hash, PASSWORD_OPTIONS) : false;
     return { valid, update: needsRehash };
-  } catch {
-    return { valid: false, update: false };
-  }
+  } catch (err) { console.warn('[password] argon2 verify failed:', err.message); return { valid: false, update: false }; }
 }
 
 /**

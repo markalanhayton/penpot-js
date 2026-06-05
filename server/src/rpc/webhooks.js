@@ -133,7 +133,7 @@ export default function registerWebhooksCommands(register, pool) {
       checkReadPermissions(pool, ctx.profileId, teamId);
 
       const rows = pool.query(
-        `SELECT id, uri, mtype, is_active, error_code, error_count, profile_id
+        `SELECT id, team_id, uri, mtype, is_active, error_code, error_count, profile_id
          FROM webhook WHERE team_id = ? ORDER BY uri`,
         [teamId]
       );

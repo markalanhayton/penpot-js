@@ -101,9 +101,7 @@ export function retrieveObject(objectId) {
   const filePath = resolvePath(objectId);
   try {
     return fs.readFileSync(filePath);
-  } catch {
-    return null;
-  }
+  } catch (err) { console.warn('[storage/fs] retrieveObject failed for', objectId, err.message); return null; }
 }
 
 /**
@@ -117,9 +115,7 @@ export function deleteObject(objectId) {
   try {
     fs.unlinkSync(filePath);
     return true;
-  } catch {
-    return false;
-  }
+  } catch (err) { console.warn('[storage/fs] deleteObject failed for', objectId, err.message); return false; }
 }
 
 /**

@@ -9,6 +9,9 @@ export const permissionsForRole = {
 
 const TEAM_NAME_INVALID_CHARS = /[.:/]/;
 
+/**
+ *
+ */
 export function validTeamName(name) {
   if (typeof name !== 'string' || name.length > 250) return false;
   return !TEAM_NAME_INVALID_CHARS.test(name);

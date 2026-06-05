@@ -14,10 +14,16 @@ const RGB_COLOR_STR_RX = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 export const MAX_SAFE_INT = 2147483647;
 export const MIN_SAFE_INT = -2147483648;
 
+/**
+ *
+ */
 export function isUUID(v) {
   return typeof v === "string" && UUID_RX.test(v);
 }
 
+/**
+ *
+ */
 export function isBoolean(v) {
   if (typeof v === "boolean") return true;
   if (typeof v === "string") {
@@ -27,6 +33,9 @@ export function isBoolean(v) {
   return false;
 }
 
+/**
+ *
+ */
 export function conformBoolean(v) {
   if (typeof v === "boolean") return v;
   if (typeof v === "string") {
@@ -37,10 +46,16 @@ export function conformBoolean(v) {
   return null;
 }
 
+/**
+ *
+ */
 export function isNumber(v) {
   return typeof v === "number" && !Number.isNaN(v);
 }
 
+/**
+ *
+ */
 export function conformNumber(v) {
   if (typeof v === "number") return v;
   if (typeof v === "string") {
@@ -50,10 +65,16 @@ export function conformNumber(v) {
   return null;
 }
 
+/**
+ *
+ */
 export function isInteger(v) {
   return Number.isInteger(v);
 }
 
+/**
+ *
+ */
 export function conformInteger(v) {
   if (Number.isInteger(v)) return v;
   if (typeof v === "string") {
@@ -62,22 +83,37 @@ export function conformInteger(v) {
   return null;
 }
 
+/**
+ *
+ */
 export function isSafeNumber(x) {
   return typeof x === "number" && x >= MIN_SAFE_INT && x <= MAX_SAFE_INT;
 }
 
+/**
+ *
+ */
 export function isSafeInt(x) {
   return Number.isInteger(x) && x >= MIN_SAFE_INT && x <= MAX_SAFE_INT;
 }
 
+/**
+ *
+ */
 export function isSafeFloat(x) {
   return typeof x === "number" && !Number.isInteger(x) && x >= MIN_SAFE_INT && x <= MAX_SAFE_INT;
 }
 
+/**
+ *
+ */
 export function isKeyword(v) {
   return typeof v === "string" && v.startsWith(":");
 }
 
+/**
+ *
+ */
 export function conformKeyword(v) {
   if (typeof v === "string") {
     return v.startsWith(":") ? v : `:${v}`;
@@ -85,24 +121,39 @@ export function conformKeyword(v) {
   return null;
 }
 
+/**
+ *
+ */
 export function parseEmail(s) {
   if (typeof s === "string" && EMAIL_RX.test(s)) return s;
   return null;
 }
 
+/**
+ *
+ */
 export function isEmail(v) {
   return typeof v === "string" && EMAIL_RX.test(v);
 }
 
+/**
+ *
+ */
 export function isRGBColorStr(v) {
   return typeof v === "string" && RGB_COLOR_STR_RX.test(v);
 }
 
+/**
+ *
+ */
 export function isBytes(x) {
   if (x === null || x === undefined) return false;
   return x instanceof Uint8Array || x instanceof ArrayBuffer;
 }
 
+/**
+ *
+ */
 export function conformSetOfKeywords(v) {
   if (typeof v === "string") {
     return new Set(v.split(/[\s,]+/).filter((s) => s.length > 0).map((s) => (s.startsWith(":") ? s : `:${s}`)));
@@ -119,6 +170,9 @@ export function conformSetOfKeywords(v) {
   return null;
 }
 
+/**
+ *
+ */
 export function conformSetOfStrings(v) {
   if (typeof v === "string") {
     return new Set(v.split(/[\s,]+/).filter((s) => s.length > 0 && s.trim().length > 0));
@@ -129,6 +183,9 @@ export function conformSetOfStrings(v) {
   return null;
 }
 
+/**
+ *
+ */
 export function conformVectorOfStrings(v) {
   if (typeof v === "string") {
     return v.split(/[\s,]+/).filter((s) => s.length > 0 && s.trim().length > 0);
@@ -139,6 +196,9 @@ export function conformVectorOfStrings(v) {
   return null;
 }
 
+/**
+ *
+ */
 export function conformSetOfValidEmails(v) {
   if (typeof v === "string") {
     EMAIL_RX_GLOBAL.lastIndex = 0;
@@ -151,10 +211,16 @@ export function conformSetOfValidEmails(v) {
   return null;
 }
 
+/**
+ *
+ */
 export function isNotBlankString(v) {
   return typeof v === "string" && v.trim().length > 0;
 }
 
+/**
+ *
+ */
 export function valid(spec, value) {
   try {
     return validate(spec, value);
@@ -163,6 +229,9 @@ export function valid(spec, value) {
   }
 }
 
+/**
+ *
+ */
 function validate(spec, value) {
   switch (spec) {
     case "uuid":
@@ -204,6 +273,9 @@ function validate(spec, value) {
   }
 }
 
+/**
+ *
+ */
 export function conform(spec, data) {
   const conformer = getConformer(spec);
   if (conformer) {
@@ -217,6 +289,9 @@ export function conform(spec, data) {
   throw new Error(`Spec validation failed: ${spec}`);
 }
 
+/**
+ *
+ */
 function getConformer(spec) {
   switch (spec) {
     case "uuid":
@@ -244,6 +319,9 @@ function getConformer(spec) {
   }
 }
 
+/**
+ *
+ */
 export function assertExpr(expr, hint) {
   if (!expr) {
     throw exceptions.raise({
@@ -254,6 +332,9 @@ export function assertExpr(expr, hint) {
   }
 }
 
+/**
+ *
+ */
 export function assertSpec(spec, value, hint) {
   if (!valid(spec, value)) {
     throw exceptions.raise({
@@ -265,6 +346,9 @@ export function assertSpec(spec, value, hint) {
   return value;
 }
 
+/**
+ *
+ */
 export function assert(specOrExpr, valueOrMsg, hint) {
   const pcnt = arguments.length;
   if (pcnt === 1) {
@@ -280,10 +364,16 @@ export function assert(specOrExpr, valueOrMsg, hint) {
   }
 }
 
+/**
+ *
+ */
 export function verify(spec, value) {
   return assertSpec(spec, value, null);
 }
 
+/**
+ *
+ */
 export function validationError(cause) {
   if (typeof cause === "object" && cause !== null) {
     if (cause.type === "spec-validation" || cause.code === "spec-validation") return cause;

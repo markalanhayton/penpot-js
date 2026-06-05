@@ -22,15 +22,18 @@ template.innerHTML = `<style>
     .penpot-toolbar__toolbar-btn.penpot-toolbar__danger { color: var(--penpot-danger, #f44); }
     .penpot-toolbar__toolbar-btn.penpot-toolbar__danger:hover { background: var(--penpot-danger-bg, rgba(244,67,54,0.08)); }
     .penpot-toolbar__toolbar-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  
+    .penpot-mobile-sidebar-toggle { display: none; background: none; border: 1px solid var(--penpot-border, #444); border-radius: var(--penpot-radius-s, 4px); color: var(--penpot-text, #e6e6e6); padding: var(--penpot-spacing-xs, 4px); cursor: pointer; font-size: 16px; width: 32px; height: 32px; align-items: center; justify-content: center; }
+    .penpot-mobile-sidebar-toggle:hover { background: var(--penpot-surface-high, #333); }
   </style>
   <penpot-main-menu id="main-menu"></penpot-main-menu>
   <div class="penpot-toolbar__separator" role="separator"></div>
   <button class="penpot-toolbar__back-btn" id="back" aria-label="Back to dashboard">&larr; Dashboard</button>
+  <button class="penpot-mobile-sidebar-toggle penpot-visible-mobile" id="mobile-left-toggle" title="Layers panel" aria-label="Toggle layers panel">\u2630</button>
   <div class="penpot-toolbar__separator" role="separator"></div>
   <span class="penpot-toolbar__file-name" id="file-name" aria-label="File name">Untitled file</span>
   <span class="penpot-toolbar__spacer"></span>
   <penpot-presence-bar id="presence"></penpot-presence-bar>
+  <button class="penpot-mobile-sidebar-toggle penpot-visible-mobile" id="mobile-right-toggle" title="Properties panel" aria-label="Toggle properties panel">\u2699</button>
   <div class="penpot-toolbar__toolbar-actions" role="toolbar" aria-label="Toolbar actions">
     <button class="penpot-toolbar__toolbar-btn" id="comment-btn" title="Comments (C)" aria-label="Comments">&#128172;</button>
     <button class="penpot-toolbar__toolbar-btn" id="undo-btn" title="Undo (Ctrl+Z)" aria-label="Undo">&#8630;</button>
@@ -63,6 +66,18 @@ export class PenpotToolbar extends PenpotElement {
     this.querySelector('#back').addEventListener('click', () => {
       this.emit('penpot-back-to-dashboard', {});
     });
+    const mobileLeftBtn = this.querySelector('#mobile-left-toggle');
+    if (mobileLeftBtn) {
+      mobileLeftBtn.addEventListener('click', () => {
+        this.emit('penpot-mobile-left-toggle', {});
+      });
+    }
+    const mobileRightBtn = this.querySelector('#mobile-right-toggle');
+    if (mobileRightBtn) {
+      mobileRightBtn.addEventListener('click', () => {
+        this.emit('penpot-mobile-right-toggle', {});
+      });
+    }
     this.querySelector('#save-btn').addEventListener('click', () => {
       this.emit('penpot-save', { name: this.#fileName });
     });

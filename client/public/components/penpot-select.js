@@ -14,9 +14,9 @@ template.innerHTML = `<style>
     .penpot-select__select-trigger:focus, .penpot-select__select-trigger.penpot-select__open { border-color: var(--penpot-input-border-focused, var(--penpot-primary, #31efb8)); outline: none; }
     .penpot-select__select-trigger:disabled { opacity: 0.5; cursor: not-allowed; }
     .penpot-select__select-arrow { font-size: 10px; opacity: 0.6; margin-left: var(--penpot-spacing-xs, 4px); }
-    .penpot-select__select-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: var(--penpot-z-dropdown, 50); display: none; }
+    .penpot-select__select-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: var(--penpot-z-dropdown, 400); display: none; }
     .penpot-select__select-overlay.penpot-select__open { display: block; }
-    .penpot-select__select-menu { position: absolute; z-index: var(--penpot-z-dropdown, 50); top: 100%; left: 0; min-width: 100%; max-height: 200px; overflow-y: auto; margin-top: 4px; background: var(--penpot-surface-high, #333); border: 1px solid var(--penpot-border, #444); border-radius: var(--penpot-radius-m, 8px); box-shadow: var(--penpot-shadow-m, 0 4px 12px rgba(0,0,0,0.4)); padding: var(--penpot-spacing-xs, 4px) 0; display: none; }
+    .penpot-select__select-menu { position: absolute; z-index: var(--penpot-z-dropdown, 400); top: 100%; left: 0; min-width: 100%; max-height: 200px; overflow-y: auto; margin-top: 4px; background: var(--penpot-surface-high, #333); border: 1px solid var(--penpot-border, #444); border-radius: var(--penpot-radius-m, 8px); box-shadow: var(--penpot-shadow-m, 0 4px 12px rgba(0,0,0,0.4)); padding: var(--penpot-spacing-xs, 4px) 0; display: none; }
     .penpot-select__select-menu.penpot-select__open { display: block; }
     .penpot-select__select-option { padding: var(--penpot-spacing-xs, 4px) var(--penpot-spacing-m, 12px); font-size: var(--penpot-font-size-m, 13px); color: var(--penpot-text, #e6e6e6); cursor: pointer; white-space: nowrap; }
     .penpot-select__select-option:hover { background: var(--penpot-primary-bg, rgba(49,239,184,0.08)); }

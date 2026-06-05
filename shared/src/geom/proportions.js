@@ -1,10 +1,16 @@
 import { notEmpty } from '../data.js';
 
+/**
+ *
+ */
 export function assignProportions(shape) {
   const { width, height } = shape.selrect ?? shape;
   return { ...shape, proportion: width / height };
 }
 
+/**
+ *
+ */
 export function setupProportionsImage(shape) {
   const { width, height } = shape.metadata ?? {};
   return {
@@ -14,6 +20,9 @@ export function setupProportionsImage(shape) {
   };
 }
 
+/**
+ *
+ */
 export function setupProportionsSize(shape) {
   const { width, height } = shape.selrect ?? shape;
   return {
@@ -23,6 +32,9 @@ export function setupProportionsSize(shape) {
   };
 }
 
+/**
+ *
+ */
 export function setupProportionsConst(shape) {
   return {
     ...shape,
@@ -31,6 +43,9 @@ export function setupProportionsConst(shape) {
   };
 }
 
+/**
+ *
+ */
 export function setupProportions(shape) {
   const imageFillQ = notEmpty(shape.fills) && shape.fills?.every((f) => f?.['fill-image'] != null);
   switch (shape.type) {

@@ -9,6 +9,9 @@ const CLOCKWISE = 'clockwise';
 const COUNTER_CLOCKWISE = 'counter-clockwise';
 const COPLANAR = 'coplanar';
 
+/**
+ *
+ */
 export function orientation(p1, p2, p3) {
   const { x: x1, y: y1 } = p1;
   const { x: x2, y: y2 } = p2;
@@ -19,11 +22,17 @@ export function orientation(p1, p2, p3) {
   return COPLANAR;
 }
 
+/**
+ *
+ */
 export function onSegmentQ({ x: qx, y: qy }, { x: px, y: py }, { x: rx, y: ry }) {
   return qx <= Math.max(px, rx) && qx >= Math.min(px, rx) &&
          qy <= Math.max(py, ry) && qy >= Math.min(py, ry);
 }
 
+/**
+ *
+ */
 export function intersectSegmentsQ([p1, q1], [p2, q2]) {
   const o1 = orientation(p1, q1, p2);
   const o2 = orientation(p1, q1, q2);
@@ -39,6 +48,9 @@ export function intersectSegmentsQ([p1, q1], [p2, q2]) {
   );
 }
 
+/**
+ *
+ */
 export function pointsToLines(points, closed = true) {
   const rest = points.slice(1);
   const tail = closed ? [points[0]] : [];
@@ -54,6 +66,9 @@ export function pointsToLines(points, closed = true) {
   return result;
 }
 
+/**
+ *
+ */
 export function intersectsLinesQ(linesA, linesB) {
   for (const curLine of linesA) {
     for (const otherLine of linesB) {
@@ -63,6 +78,9 @@ export function intersectsLinesQ(linesA, linesB) {
   return false;
 }
 
+/**
+ *
+ */
 export function intersectRayQ({ x: px, y: py }, [{ x: x1, y: y1 }, { x: x2, y: y2 }]) {
   if ((y1 <= py && y2 > py) || (y1 > py && y2 <= py)) {
     const vt = (py - y1) / (y2 - y1);
@@ -72,6 +90,9 @@ export function intersectRayQ({ x: px, y: py }, [{ x: x1, y: y1 }, { x: x2, y: y
   return false;
 }
 
+/**
+ *
+ */
 export function isPointInsideEvenoddQ(p, lines) {
   let count = 0;
   for (const line of lines) {
@@ -80,6 +101,9 @@ export function isPointInsideEvenoddQ(p, lines) {
   return count % 2 !== 0;
 }
 
+/**
+ *
+ */
 function nextWindup(wn, { x: px, y: py }, [{ x: x1, y: y1 }, { x: x2, y: y2 }]) {
   const lineSide = (x2 - x1) * (py - y1) - (px - x1) * (y2 - y1);
   if (y1 <= py) {
@@ -90,6 +114,9 @@ function nextWindup(wn, { x: px, y: py }, [{ x: x1, y: y1 }, { x: x2, y: y2 }]) 
   return wn;
 }
 
+/**
+ *
+ */
 export function isPointInsideNonzeroQ(p, lines) {
   let wn = 0;
   for (const line of lines) {
@@ -98,6 +125,9 @@ export function isPointInsideNonzeroQ(p, lines) {
   return wn !== 0;
 }
 
+/**
+ *
+ */
 export function overlapsRectPointsQ(rect, points) {
   const rectPoints = grc.rectToPoints(rect);
   const rectLines = pointsToLines(rectPoints);
@@ -110,6 +140,9 @@ export function overlapsRectPointsQ(rect, points) {
   );
 }
 
+/**
+ *
+ */
 export function overlapsPathQ(shape, rect, includeContentQ) {
   if (!d.notEmpty(shape.content)) return false;
 
@@ -134,6 +167,9 @@ export function overlapsPathQ(shape, rect, includeContentQ) {
   );
 }
 
+/**
+ *
+ */
 function pathSegmentToLines(shape) {
   if (!shape.content || shape.content.length === 0) {
     return pointsToLines(shape.points || []);
@@ -163,6 +199,9 @@ function pathSegmentToLines(shape) {
   return lines;
 }
 
+/**
+ *
+ */
 export function isPointInsideEllipseQ(point, { cx, cy, rx, ry, transform: tx }) {
   const center = gpt.point(cx, cy);
   const transform = tx != null ? gmt.transformIn(center, tx) : null;
@@ -176,6 +215,9 @@ export function isPointInsideEllipseQ(point, { cx, cy, rx, ry, transform: tx }) 
   return v <= 1;
 }
 
+/**
+ *
+ */
 export function intersectsLineEllipseQ([{ x: x1, y: y1 }, { x: x2, y: y2 }], { cx, cy, rx, ry }) {
   const a = mth.sq(x2 - x1) / mth.sq(rx) + mth.sq(y2 - y1) / mth.sq(ry);
   const b = (2 * x1 * (x2 - x1) - 2 * cx * (x2 - x1)) / mth.sq(rx) +
@@ -196,6 +238,9 @@ export function intersectsLineEllipseQ([{ x: x1, y: y1 }, { x: x2, y: y2 }], { c
   return (t1 >= 0 && t1 <= 1) || (t2 >= 0 && t2 <= 1);
 }
 
+/**
+ *
+ */
 export function intersectsLinesEllipseQ(rectLines, ellipseData) {
   const { cx, cy, transform: tx, rx, ry } = ellipseData;
   const center = gpt.point(cx, cy);
@@ -210,6 +255,9 @@ export function intersectsLinesEllipseQ(rectLines, ellipseData) {
   return false;
 }
 
+/**
+ *
+ */
 export function overlapsEllipseQ(shape, rect) {
   const rectPoints = grc.rectToPoints(rect);
   const rectLines = pointsToLines(rectPoints);
@@ -229,6 +277,9 @@ export function overlapsEllipseQ(shape, rect) {
   );
 }
 
+/**
+ *
+ */
 export function overlapsTextQ(shape, rect) {
   if (shape['position-data'] && d.notEmpty(shape['position-data'])) {
     const center = gco.shapeToCenter(shape);
@@ -248,6 +299,9 @@ export function overlapsTextQ(shape, rect) {
   return overlapsRectPointsQ(rect, shape.points);
 }
 
+/**
+ *
+ */
 export function overlapsQ(shape, rect) {
   if (!shape) return true;
 
@@ -273,6 +327,9 @@ export function overlapsQ(shape, rect) {
   return overlapsRectPointsQ(adjusted, shape.points);
 }
 
+/**
+ *
+ */
 function overlapsTextQSimple(shape, rect) {
   if (shape['position-data'] && d.notEmpty(shape['position-data'])) {
     const center = gco.shapeToCenter(shape);
@@ -285,16 +342,25 @@ function overlapsTextQSimple(shape, rect) {
   return overlapsRectPointsQ(rect, shape.points);
 }
 
+/**
+ *
+ */
 export function hasPointRectQ(rect, point) {
   const lines = grc.rectToLines(rect);
   return isPointInsideEvenoddQ(point, lines);
 }
 
+/**
+ *
+ */
 export function slowHasPointQ(shape, point) {
   const lines = pointsToLines(shape.points);
   return isPointInsideEvenoddQ(point, lines);
 }
 
+/**
+ *
+ */
 export function fastHasPointQ(shape, point) {
   const x1 = shape.x;
   const y1 = shape.y;
@@ -303,6 +369,9 @@ export function fastHasPointQ(shape, point) {
   return point.x >= x1 && point.x <= x2 && point.y >= y1 && point.y <= y2;
 }
 
+/**
+ *
+ */
 export function hasPointQ(shape, point) {
   const type = shape.type;
   if (type === 'path' || type === 'bool' || type === 'circle') {
@@ -311,10 +380,16 @@ export function hasPointQ(shape, point) {
   return fastHasPointQ(shape, point);
 }
 
+/**
+ *
+ */
 export function rectContainsShapeQ(rect, shape) {
   return shape.points?.every((p) => hasPointRectQ(rect, p)) ?? false;
 }
 
+/**
+ *
+ */
 export function lineLineIntersect(a, b, c, d) {
   const a1 = b.y - a.y;
   const b1 = a.x - b.x;

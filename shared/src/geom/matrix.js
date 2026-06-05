@@ -3,7 +3,13 @@ import * as mth from '../math.js';
 
 const PRECISION = 6;
 
+/**
+ *
+ */
 export class Matrix {
+  /**
+   *
+   */
   constructor(a, b, c, d, e, f) {
     this.a = a;
     this.b = b;
@@ -13,15 +19,24 @@ export class Matrix {
     this.f = f;
   }
 
+  /**
+   *
+   */
   toString() {
     return formatPrecision(this, PRECISION);
   }
 }
 
+/**
+ *
+ */
 export function isMatrix(v) {
   return v instanceof Matrix;
 }
 
+/**
+ *
+ */
 export function matrix(a, b, c, d, e, f) {
   if (a === undefined) return new Matrix(1, 0, 0, 1, 0, 0);
   return new Matrix(a, b, c, d, e, f);
@@ -29,21 +44,33 @@ export function matrix(a, b, c, d, e, f) {
 
 export const base = matrix();
 
+/**
+ *
+ */
 export function isBase(v) {
   return v === base;
 }
 
+/**
+ *
+ */
 export function formatPrecision(mtx, prec) {
   if (!mtx) return undefined;
   return `matrix(${mth.toFixed(mtx.a, prec)}, ${mth.toFixed(mtx.b, prec)}, ${mth.toFixed(mtx.c, prec)}, ${mth.toFixed(mtx.d, prec)}, ${mth.toFixed(mtx.e, prec)}, ${mth.toFixed(mtx.f, prec)})`;
 }
 
+/**
+ *
+ */
 export function close(m1, m2) {
   return mth.close(m1.a, m2.a) && mth.close(m1.b, m2.b) &&
          mth.close(m1.c, m2.c) && mth.close(m1.d, m2.d) &&
          mth.close(m1.e, m2.e) && mth.close(m1.f, m2.f);
 }
 
+/**
+ *
+ */
 export function isUnit(m1) {
   return m1 != null &&
          mth.close(m1.a, 1) && mth.close(m1.b, 0) &&
@@ -51,6 +78,9 @@ export function isUnit(m1) {
          mth.close(m1.e, 0) && mth.close(m1.f, 0);
 }
 
+/**
+ *
+ */
 export function multiply(m1, m2, ...others) {
   if (others.length > 0) {
     return others.reduce((acc, m) => multiplyMutable(acc, m), multiply(m1, m2));
@@ -70,6 +100,9 @@ export function multiply(m1, m2, ...others) {
   );
 }
 
+/**
+ *
+ */
 export function multiplyMutable(m1, m2) {
   const m1a = m1.a, m1b = m1.b, m1c = m1.c, m1d = m1.d, m1e = m1.e, m1f = m1.f;
   const m2a = m2.a, m2b = m2.b, m2c = m2.c, m2d = m2.d, m2e = m2.e, m2f = m2.f;
@@ -83,6 +116,9 @@ export function multiplyMutable(m1, m2) {
   );
 }
 
+/**
+ *
+ */
 export function addTranslate(m1, m2, ...others) {
   if (others.length > 0) {
     return others.reduce((acc, m) => addTranslate(acc, m), addTranslate(m1, m2));
@@ -90,6 +126,9 @@ export function addTranslate(m1, m2, ...others) {
   return new Matrix(1, 0, 0, 1, m1.e + m2.e, m1.f + m2.f);
 }
 
+/**
+ *
+ */
 export function substract(m1, m2) {
   return new Matrix(
     m1.a - m2.a, m1.b - m2.b, m1.c - m2.c,
@@ -97,16 +136,25 @@ export function substract(m1, m2) {
   );
 }
 
+/**
+ *
+ */
 export function translateMatrix(pt, y) {
   if (typeof pt === 'number') return new Matrix(1, 0, 0, 1, pt, y);
   return new Matrix(1, 0, 0, 1, pt.x, pt.y);
 }
 
+/**
+ *
+ */
 export function translateMatrixNeg(pt, y) {
   if (typeof pt === 'number') return new Matrix(1, 0, 0, 1, -pt, -y);
   return new Matrix(1, 0, 0, 1, -pt.x, -pt.y);
 }
 
+/**
+ *
+ */
 export function scaleMatrix(pt, center) {
   if (center === undefined) {
     return new Matrix(pt.x, 0, 0, pt.y, 0, 0);
@@ -115,6 +163,9 @@ export function scaleMatrix(pt, center) {
   return new Matrix(sx, 0, 0, sy, -cx * sx + cx, -cy * sy + cy);
 }
 
+/**
+ *
+ */
 export function rotateMatrix(angle, center) {
   if (center === undefined) {
     const a = mth.radians(angle);
@@ -130,6 +181,9 @@ export function rotateMatrix(angle, center) {
   return new Matrix(c, s, ns, c, tx, ty);
 }
 
+/**
+ *
+ */
 export function skewMatrix(angleX, angleY, point) {
   if (point !== undefined) {
     return multiply(
@@ -143,25 +197,40 @@ export function skewMatrix(angleX, angleY, point) {
   return new Matrix(1, m2, m1, 1, 0, 0);
 }
 
+/**
+ *
+ */
 export function rotate(m, angle, center) {
   if (center !== undefined) return multiply(m, rotateMatrix(angle, center));
   return multiply(m, rotateMatrix(angle));
 }
 
+/**
+ *
+ */
 export function scale(m, pt, center) {
   if (center !== undefined) return multiply(m, scaleMatrix(pt, center));
   return multiply(m, scaleMatrix(pt));
 }
 
+/**
+ *
+ */
 export function translate(m, pt) {
   return multiply(m, translateMatrix(pt));
 }
 
+/**
+ *
+ */
 export function skew(m, angleX, angleY, pt) {
   if (pt !== undefined) return multiply(m, skewMatrix(angleX, angleY, pt));
   return multiply(m, skewMatrix(angleX, angleY));
 }
 
+/**
+ *
+ */
 export function mEqual(m1, m2, threshold) {
   const thEq = (a, b) => mth.abs(a - b) <= threshold;
   return thEq(m1.a, m2.a) && thEq(m1.b, m2.b) &&
@@ -169,6 +238,9 @@ export function mEqual(m1, m2, threshold) {
          thEq(m1.e, m2.e) && thEq(m1.f, m2.f);
 }
 
+/**
+ *
+ */
 export function transformIn(pt, mtx) {
   if (pt != null && mtx != null) {
     return multiply(
@@ -180,10 +252,16 @@ export function transformIn(pt, mtx) {
   return mtx;
 }
 
+/**
+ *
+ */
 export function determinant(mtx) {
   return mtx.a * mtx.d - mtx.c * mtx.b;
 }
 
+/**
+ *
+ */
 export function inverse(mtx) {
   const det = determinant(mtx);
   if (mth.almostZero(det)) return undefined;
@@ -195,6 +273,9 @@ export function inverse(mtx) {
   );
 }
 
+/**
+ *
+ */
 export function roundMatrix(mtx) {
   return new Matrix(
     mth.precision(mtx.a, 4), mth.precision(mtx.b, 4),
@@ -203,6 +284,9 @@ export function roundMatrix(mtx) {
   );
 }
 
+/**
+ *
+ */
 export function transformPointCenter(point, center, m) {
   if (point != null && m != null && center != null) {
     return gpt.transform(
@@ -213,16 +297,25 @@ export function transformPointCenter(point, center, m) {
   return point;
 }
 
+/**
+ *
+ */
 export function isMove(m) {
   return mth.almostZero(m.a - 1) && mth.almostZero(m.b) &&
          mth.almostZero(m.c) && mth.almostZero(m.d - 1);
 }
 
+/**
+ *
+ */
 export function matrixToString(o) {
   if (!isMatrix(o)) return o;
   return `${o.a},${o.b},${o.c},${o.d},${o.e},${o.f}`;
 }
 
+/**
+ *
+ */
 export function matrixToJSON(o) {
   if (!isMatrix(o)) return o;
   return { a: o.a, b: o.b, c: o.c, d: o.d, e: o.e, f: o.f };
@@ -230,6 +323,9 @@ export function matrixToJSON(o) {
 
 const NUMBER_REGEX = /[+-]?\d*(\.\d+)?([eE][+-]?\d+)?/g;
 
+/**
+ *
+ */
 export function strToMatrix(str) {
   const params = [...str.matchAll(NUMBER_REGEX)]
     .map(m => m[0])
@@ -238,6 +334,9 @@ export function strToMatrix(str) {
   return matrix(...params);
 }
 
+/**
+ *
+ */
 export function decodeMatrix(o) {
   if (o instanceof Matrix) return o;
   if (typeof o === 'object' && o !== null) return new Matrix(o.a, o.b, o.c, o.d, o.e, o.f);

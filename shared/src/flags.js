@@ -1,4 +1,4 @@
-export let current = new Set();
+export const current = new Set();
 
 export const login = new Set([
   'registration',
@@ -115,6 +115,9 @@ export const defaultFlags = [
   'enable-token-import-from-library'
 ];
 
+/**
+ *
+ */
 export function parse(...flagArrays) {
   const flags = flagArrays.flat();
   const result = new Set();

@@ -33,7 +33,7 @@ template.innerHTML = `<style>
     .penpot-tm__member-actions { position: relative; }
     .penpot-tm__member-menu-btn { background: none; border: none; color: var(--penpot-text-dim, #999); cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: var(--penpot-radius-s, 4px); }
     .penpot-tm__member-menu-btn:hover { background: var(--penpot-surface-high, #333); color: var(--penpot-text, #e6e6e6); }
-    .penpot-tm__dropdown { position: absolute; right: 0; top: 100%; background: var(--penpot-surface-high, #333); border: 1px solid var(--penpot-border, #444); border-radius: var(--penpot-radius-s, 4px); box-shadow: 0 4px 12px rgba(0,0,0,0.4); z-index: 100; min-width: 140px; padding: 4px 0; }
+    .penpot-tm__dropdown { position: absolute; right: 0; top: 100%; background: var(--penpot-surface-high, #333); border: 1px solid var(--penpot-border, #444); border-radius: var(--penpot-radius-s, 4px); box-shadow: 0 4px 12px rgba(0,0,0,0.4); z-index: var(--penpot-z-dropdown, 400); min-width: 140px; padding: 4px 0; }
     .penpot-tm__dropdown-item { display: block; width: 100%; padding: 6px 12px; font-size: 11px; color: var(--penpot-text, #e6e6e6); background: none; border: none; cursor: pointer; text-align: left; font-family: inherit; }
     .penpot-tm__dropdown-item:hover { background: var(--penpot-primary-bg, rgba(49,239,184,0.08)); }
     .penpot-tm__dropdown-item.penpot-tm__danger { color: var(--penpot-danger, #f44); }

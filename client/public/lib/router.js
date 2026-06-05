@@ -19,6 +19,7 @@ const ROUTE_MAP = [
   { pattern: /^\/dashboard\/search$/, name: 'dashboard-search' },
   { pattern: /^\/dashboard\/fonts$/, name: 'dashboard-fonts' },
   { pattern: /^\/dashboard\/libraries$/, name: 'dashboard-libraries' },
+  { pattern: /^\/workspace\/?$|^\/workspace\/+$/, name: 'dashboard' },
   { pattern: /^\/workspace\/([^/]+)\/([^/]+)$/, name: 'workspace', paramNames: ['projectId', 'fileId'] },
   { pattern: /^\/view\/(.+)$/, name: 'viewer', paramNames: ['fileId'] },
   { pattern: /^\/settings\/profile$/, name: 'settings-profile' },
@@ -67,7 +68,13 @@ export function unsubscribe(fn) {
 export function init() {
   currentRoute = parseRoute(location.pathname, location.search);
   window.addEventListener('popstate', () => {
-    currentRoute = parseRoute(location.pathname, location.search);
+    const route = parseRoute(location.pathname, location.search);
+    if (AUTH_REQUIRED.has(route.name) && !document.cookie.match(/(?:^|;\s*)auth-token=/)) {
+      currentRoute = { name: 'login', params: {}, query: {} };
+      history.replaceState(null, '', '/auth/login');
+    } else {
+      currentRoute = route;
+    }
     for (const fn of listeners) fn(currentRoute);
   });
 }
@@ -82,7 +89,13 @@ function routeToPath(name, params = {}) {
     case 'dashboard-search': return '/dashboard/search';
     case 'dashboard-fonts': return '/dashboard/fonts';
     case 'dashboard-libraries': return '/dashboard/libraries';
-    case 'workspace': return `/workspace/${params.projectId || ''}/${params.fileId || ''}`;
+    case 'workspace': {
+      if (!params.fileId) {
+        console.warn('[router] workspace route requires fileId, redirecting to dashboard');
+        return '/dashboard';
+      }
+      return `/workspace/${params.projectId || ''}/${params.fileId}`;
+    }
     case 'viewer': return `/view/${params.fileId || ''}`;
     case 'settings-profile': return '/settings/profile';
     case 'settings-password': return '/settings/password';

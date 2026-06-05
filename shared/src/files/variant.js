@@ -3,6 +3,9 @@ import { isVariantQ } from '../types/component.js';
 import { getComponent } from '../types/components_list.js';
 import { validVariantComponentQ, propertiesToName } from '../types/variant.js';
 
+/**
+ *
+ */
 export function findVariantComponents(data, objects, variantId) {
   if (!objects) {
     const pageId = Object.values(data.components ?? {})
@@ -23,12 +26,18 @@ export function findVariantComponents(data, objects, variantId) {
   return result;
 }
 
+/**
+ *
+ */
 export function extractPropertiesNames(shape, data) {
   const comp = getComponent(data, shape['component-id'], true);
   if (!comp) return [];
   return (comp['variant-properties'] ?? []).map((p) => p.name);
 }
 
+/**
+ *
+ */
 export function extractPropertiesValues(data, objects, variantId) {
   const comps = findVariantComponents(data, objects, variantId);
   const grouped = {};
@@ -49,6 +58,9 @@ export function extractPropertiesValues(data, objects, variantId) {
   });
 }
 
+/**
+ *
+ */
 export function getVariantMains(component, data) {
   if (!validVariantComponentQ(component)) return undefined;
   const variantId = component['variant-id'];
@@ -59,11 +71,17 @@ export function getVariantMains(component, data) {
   return objects?.[variantId]?.shapes;
 }
 
+/**
+ *
+ */
 export function isSecondaryVariantQ(component, data) {
   const shapes = getVariantMains(component, data);
   return shapes && shapes.length > 0 && shapes[shapes.length - 1] !== component['main-instance-id'];
 }
 
+/**
+ *
+ */
 export function getPrimaryVariant(data, component) {
   const pageId = component['main-instance-page'];
   const objects = getIn(data, ['pages-index', pageId, 'objects']);
@@ -73,6 +91,9 @@ export function getPrimaryVariant(data, component) {
   return objects?.[shapes[0]];
 }
 
+/**
+ *
+ */
 export function getPrimaryComponent(data, componentId) {
   const component = getComponent(data, componentId);
   if (!component) return undefined;

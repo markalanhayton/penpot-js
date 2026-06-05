@@ -18,32 +18,50 @@ export const IMAGE_U8_SIZE = 36;
 export const METADATA_U8_SIZE = 36;
 export const FILL_U8_SIZE = 4 + Math.max(GRADIENT_U8_SIZE, IMAGE_U8_SIZE, SOLID_U8_SIZE);
 
+/**
+ *
+ */
 function hexToRgb(hex) {
   const h = hex.slice(1);
   return parseInt(h, 16);
 }
 
+/**
+ *
+ */
 function rgbToRgba(n, alpha) {
   const result = Math.floor(alpha * 0xff);
   return (result << 24) | n;
 }
 
+/**
+ *
+ */
 function getColorHex(n) {
   const v = n & 0x00ffffff;
   return '#' + v.toString(16).padStart(6, '0');
 }
 
+/**
+ *
+ */
 function getColorAlpha(rgb) {
   const n = (rgb >>> 24) & 0xff;
   return math.precision(n / 0xff, 2);
 }
 
+/**
+ *
+ */
 export function writeSolidFill(offset, buffer, opacity, color) {
   buf.writeByte(buffer, offset + 0, 0x00);
   writeInt32(buffer, offset + 4, rgbToRgba(hexToRgb(color), opacity));
   return offset + FILL_U8_SIZE;
 }
 
+/**
+ *
+ */
 export function writeGradientFill(offset, buffer, opacity, gradient) {
   const startX = gradient['start-x'];
   const startY = gradient['start-y'];
@@ -73,6 +91,9 @@ export function writeGradientFill(offset, buffer, opacity, gradient) {
   return offset + FILL_U8_SIZE;
 }
 
+/**
+ *
+ */
 export function writeImageFill(offset, buffer, opacity, image) {
   const imageId = image.id;
   const imageWidth = image.width;
@@ -91,6 +112,9 @@ export function writeImageFill(offset, buffer, opacity, image) {
   return offset + FILL_U8_SIZE;
 }
 
+/**
+ *
+ */
 function readStop(buffer, offset) {
   const rgba = readInt32(buffer, offset + 0);
   const stopOffset = readFloat32(buffer, offset + 4);
@@ -101,6 +125,9 @@ function readStop(buffer, offset) {
   };
 }
 
+/**
+ *
+ */
 function readFill(dbuffer, mbuffer, index) {
   const doffset = 4 + index * FILL_U8_SIZE;
   const moffset = index * METADATA_U8_SIZE;
@@ -167,6 +194,9 @@ function readFill(dbuffer, mbuffer, index) {
   return fill;
 }
 
+/**
+ *
+ */
 export function fromPlain(fills) {
   const fillsArr = fills.slice(0, MAX_FILLS);
   const total = fillsArr.length;
@@ -198,6 +228,9 @@ export function fromPlain(fills) {
   return { size: total, dbuffer, mbuffer, imageIds };
 }
 
+/**
+ *
+ */
 function writeMetadata(offset, buffer, fill) {
   const refId = fill['fill-color-ref-id'];
   const refFile = fill['fill-color-ref-file'];
@@ -217,11 +250,17 @@ function writeMetadata(offset, buffer, fill) {
   }
 }
 
+/**
+ *
+ */
 export function fillsFromPlain(fillsArr) {
   if (!fillsArr || fillsArr.length === 0) return fromPlain([]);
   return fromPlain(fillsArr);
 }
 
+/**
+ *
+ */
 export function fillsToPlain(fillsData) {
   if (!fillsData || !fillsData.dbuffer) return [];
   const { size, dbuffer, mbuffer } = fillsData;
@@ -232,6 +271,9 @@ export function fillsToPlain(fillsData) {
   return result;
 }
 
+/**
+ *
+ */
 export function fillsQ(o) {
   return o != null && typeof o === 'object' && o.dbuffer != null;
 }

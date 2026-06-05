@@ -19,6 +19,9 @@ export const defaultRect = { x: 0, y: 0, width: 1, height: 1 };
 const MAX_SAFE_INT = Number.MAX_SAFE_INTEGER;
 const MIN_SAFE_INT = Number.MIN_SAFE_INTEGER;
 
+/**
+ *
+ */
 function assertValidNum(attr, num) {
   if (typeof num !== 'number' || Number.isNaN(num) || num > MAX_SAFE_INT || num < MIN_SAFE_INT) {
     throw new Error(`invalid numeric value for "${attr}": ${num}`);
@@ -28,6 +31,9 @@ function assertValidNum(attr, num) {
   return num;
 }
 
+/**
+ *
+ */
 function assertValidPosNum(attr, num) {
   if (num <= 0) {
     throw new Error(`invalid numeric value for "${attr}": ${num} (should be positive)`);
@@ -35,6 +41,9 @@ function assertValidPosNum(attr, num) {
   return num;
 }
 
+/**
+ *
+ */
 function assertValidBlendMode(mode) {
   const value = typeof mode === 'string' ? mode.trim().toLowerCase() : mode;
   if (!cts.BLEND_MODES.has(value)) {
@@ -43,6 +52,9 @@ function assertValidBlendMode(mode) {
   return value;
 }
 
+/**
+ *
+ */
 function svgDimensions(data) {
   const attrs = data.attrs || {};
   const width = attrs.width ?? 100;
@@ -57,6 +69,9 @@ function svgDimensions(data) {
   ];
 }
 
+/**
+ *
+ */
 function strokeOnlySvgPathQ(attrs) {
   const attrFill = (attrs.fill ?? '').trim();
   const styleFill = (attrs.style?.fill ?? '').trim();
@@ -64,18 +79,27 @@ function strokeOnlySvgPathQ(attrs) {
   return fill === 'none';
 }
 
+/**
+ *
+ */
 export function processGradientStops(stops) {
   return csvg.processGradientStops(stops);
 }
 
+/**
+ *
+ */
 export function resolveGradientHref(defs) {
   return csvg.resolveGradientHref(defs);
 }
 
+/**
+ *
+ */
 export function createSvgShapes(id, svgData, pos, objects, frameId, parentId, selected, centerQ) {
   const [vbX, vbY, vbWidth, vbHeight] = svgDimensions(svgData);
 
-  let unames = cfh.getUsedNames(objects);
+  const unames = cfh.getUsedNames(objects);
   const svgName = (svgData.name || '').replace('.svg', '');
 
   svgData = {
@@ -142,6 +166,9 @@ export function createSvgShapes(id, svgData, pos, objects, frameId, parentId, se
   return [rootShapeWithDefs, children];
 }
 
+/**
+ *
+ */
 function createSvgChildren(objects, selected, frameId, parentId, svgData, acc, svgElements) {
   let [unames, children] = acc;
 
@@ -178,6 +205,9 @@ function createSvgChildren(objects, selected, frameId, parentId, svgData, acc, s
   return [unames, children];
 }
 
+/**
+ *
+ */
 export function createRawSvg(name, frameId, svgData, data) {
   const props = csvg.attrsToProps(data.attrs || {});
   const vbox = grc.makeRect(svgData['offset-x'], svgData['offset-y'], svgData.width, svgData.height);
@@ -196,6 +226,9 @@ export function createRawSvg(name, frameId, svgData, data) {
   });
 }
 
+/**
+ *
+ */
 export function createSvgRoot(id, frameId, parentId, svgData) {
   const attrs = svgData.attrs || {};
   const props = csvg.attrsToProps(
@@ -220,6 +253,9 @@ export function createSvgRoot(id, frameId, parentId, svgData) {
   });
 }
 
+/**
+ *
+ */
 function createGroup(name, frameId, svgData, data) {
   const attrs = data.attrs || {};
   const transform = csvg.parseTransform(attrs.transform);
@@ -253,6 +289,9 @@ function createGroup(name, frameId, svgData, data) {
   });
 }
 
+/**
+ *
+ */
 function calculateRectMetadata(rect, transform) {
   const points = gsh.transformPoints(grc.rectToPoints(rect), transform);
   const center = gsc.pointsToCenter(points);
@@ -271,6 +310,9 @@ function calculateRectMetadata(rect, transform) {
   };
 }
 
+/**
+ *
+ */
 function parseRectAttrs(attrs) {
   return grc.makeRect(
     d.parseDouble(attrs.x ?? 0),
@@ -280,6 +322,9 @@ function parseRectAttrs(attrs) {
   );
 }
 
+/**
+ *
+ */
 function parseRadiusAttrs(attrs) {
   if (attrs.rx != null || attrs.ry != null) {
     const rxVal = d.parseDouble(attrs.rx ?? 0);
@@ -297,6 +342,9 @@ function parseRadiusAttrs(attrs) {
   return {};
 }
 
+/**
+ *
+ */
 function createRectShape(name, frameId, svgData, data) {
   const attrs = data.attrs || {};
   const transform = gmt.transformIn(
@@ -327,6 +375,9 @@ function createRectShape(name, frameId, svgData, data) {
   });
 }
 
+/**
+ *
+ */
 function parseCircleAttrs(attrs) {
   return [
     d.parseDouble(attrs.cx),
@@ -337,6 +388,9 @@ function parseCircleAttrs(attrs) {
   ];
 }
 
+/**
+ *
+ */
 function createCircleShape(name, frameId, svgData, data) {
   const attrs = data.attrs || {};
   let [cx, cy, r, rx, ry] = parseCircleAttrs(attrs);
@@ -376,6 +430,9 @@ function createCircleShape(name, frameId, svgData, data) {
   });
 }
 
+/**
+ *
+ */
 function createPathShape(name, frameId, svgData, data) {
   const attrs = data.attrs || {};
   if (!attrs.d || attrs.d.length === 0) return null;
@@ -416,6 +473,9 @@ function createPathShape(name, frameId, svgData, data) {
   return gsh.translateToFrame(shape, origin);
 }
 
+/**
+ *
+ */
 function createImageShape(name, frameId, svgData, data) {
   const attrs = data.attrs || {};
   const transform = gmt.transformIn(
@@ -459,6 +519,9 @@ function createImageShape(name, frameId, svgData, data) {
   });
 }
 
+/**
+ *
+ */
 export function setupFill(shape) {
   let colorAttr = (shape.svgAttrs?.fill ?? '').trim();
   if (colorAttr === 'currentColor') colorAttr = clr.black;
@@ -526,6 +589,9 @@ export function setupFill(shape) {
   return result;
 }
 
+/**
+ *
+ */
 export function setupStroke(shape) {
   let attrs = { ...(shape.svgAttrs || {}) };
   const style = attrs.style;
@@ -584,6 +650,9 @@ export function setupStroke(shape) {
   return result;
 }
 
+/**
+ *
+ */
 export function setupOpacity(shape) {
   let result = { ...shape };
 
@@ -628,6 +697,9 @@ export function setupOpacity(shape) {
   return result;
 }
 
+/**
+ *
+ */
 export function setupOther(shape) {
   let result = { ...shape };
 
@@ -654,16 +726,25 @@ export function setupOther(shape) {
   return result;
 }
 
+/**
+ *
+ */
 export function tagToName(tag) {
   if (typeof tag === 'string') return `svg-${tag}`;
   if (tag == null) return 'svg-node';
   return `svg-${tag}`;
 }
 
+/**
+ *
+ */
 export function resolveElementName(tag, attrs) {
   return attrs?.['inkscape:label'] || attrs?.['sodipodi:label'] || attrs?.id || tagToName(tag);
 }
 
+/**
+ *
+ */
 export function parseSvgElement(frameId, svgData, element, unames) {
   const { tag, attrs, hidden } = element;
   const name = resolveElementName(tag, attrs);

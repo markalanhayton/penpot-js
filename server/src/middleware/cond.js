@@ -89,9 +89,6 @@ export function withConditional(handler, opts = {}) {
       }
 
       return result;
-    } catch {
-      // If key computation fails, just return the result as-is
-      return result;
-    }
+    } catch (err) { console.warn('[cond] ETag computation failed:', err.message); return result; }
   };
 }

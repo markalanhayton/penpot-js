@@ -1,6 +1,6 @@
 # Parity Audit: JS Port vs Upstream
 
-> Last updated: 2026-05-28
+> Last updated: 2026-05-30
 
 This document tracks the functional parity between the upstream Penpot codebase (Clojure/ClojureScript) and the JS port (penpot-js). It covers all major modules and identifies what is ported, what is intentionally skipped, and what gaps remain.
 
@@ -303,6 +303,7 @@ This document tracks the functional parity between the upstream Penpot codebase 
 | Flex/Grid layout editor | `penpot-layout-panel.js` | Full |
 | Boolean operations | `lib/bool-ops.js` | Full (convex decomposition + SH clipping for concave shapes) |
 | MCP panel | `penpot-mcp-panel.js` | Full (Streamable HTTP, tool discovery, invocation, resources, prompts) |
+| Release notes | `penpot-release-notes.js` | Full |
 
 ### 2.4 Drawing Tools
 
@@ -329,22 +330,24 @@ This document tracks the functional parity between the upstream Penpot codebase 
 | Text v3 (per-range inline styles) | **Complete** — `lib/content-tree.js` (399 lines) for content tree ↔ HTML conversion; `shared/src/types/text.js` extended with `createDefaultContent`, `updateTextRange`, `updateTextAttrs`, `updateParagraphAttrs`, `updateRootAttrs`, `currentTextNodeAttrs`, `currentParagraphAttrs`, `decorateRangeInfo`, `isContentTree`, `contentToPlainText`; SVG rendering with `<tspan>` per style run; Canvas2D per-segment rendering; rich text editor commits content trees; workspace property changes update both shape-level and content tree; 10 new unit tests | P1 ✅ |
 | MCP (Model Context Protocol) integration | **Complete** — `penpot-mcp-panel.js` (538 lines) for tool discovery, invocation, resource browsing, prompt execution via Streamable HTTP transport | P3 ✅ |
 | Advanced SVG filter editing | **Complete** — drop shadow, color matrix, turbulence, flood fill with per-type editors, filter stacking via `shape.filters` array, SVG `<filter>` rendering with multiple primitives | P3 ✅ |
+| Mobile/responsive layout (PA-16) | **Complete** — `styles/responsive.css` (230 lines) three-tier breakpoints (mobile <768px, tablet 768–1023px, desktop ≥1024px), `lib/responsive.js` (170 lines) viewport detection + sidebar overlay management + touch gestures, mobile sidebar slide-in panels with backdrop dismiss, pinch-to-zoom and two-finger pan, responsive dashboard grids, token discrepancy fix | P4 ✅ |
 
 ### 2.6 client/ Parity Summary
 
 | Category | Status |
 |---|---|
-| Core infrastructure (37 lib files) | 37/37 ported (100%) |
+| Core infrastructure (39 lib/utility files) | 39/39 ported (100%) |
 | Design system (21 components) | 21/21 ported (100%) |
 | Application components (55 files) | All major features ported (~100%) |
 | Drawing tools (8 tools) | 8/8 ported (100%) |
 | Path editor | Full (anchor editing, toolbar, shortcuts) |
 | Text v3 (per-range styles) | Full (content tree model, tspan rendering, contentEditable commit) |
-| E2E tests | 490+ tests, 32 spec files, all passing |
-| Unit tests | 55 tests |
+| Mobile/responsive layout | Full (3-tier breakpoints, sidebar overlay, touch gestures) |
+| E2E tests | 42 spec files, 605+ tests, all passing |
+| Unit tests | 55 |
 | **Overall** | **~100% functional parity** |
 
-Lines comparison: ~34,500 lines (JS) vs ~129,000 lines (cljs + scss). The JS port achieves functional parity with approximately 3.7x fewer lines of code.
+Lines comparison: ~35,000 lines (JS + CSS) vs ~129,000 lines (cljs + scss). The JS port achieves functional parity with approximately 3.7x fewer lines of code.
 
 ---
 
@@ -435,7 +438,7 @@ Lines comparison: ~34,500 lines (JS) vs ~129,000 lines (cljs + scss). The JS por
 | RPC commands | 149/143 = 104% (6 JS-specific) |
 | Database schema | Full (21 migrations, PG parity) |
 | Middleware | 8/8 layers |
-| Test coverage | 78 files, 909 tests, 0 failures |
+| Test coverage | 79 files, 1,070 tests, 0 failures |
 | **Overall** | **~95%** (all major features functional, all RPC commands implemented) |
 
 Remaining gaps:
@@ -483,9 +486,9 @@ Coverage spans: geometry (point, rect, matrix, shapes, flex_layout bounds, grid 
 
 | Metric | Value |
 |---|---|
-| Test files | 78 |
-| Test cases | 909 |
-| Test suites | 296 |
+| Test files | 80 |
+| Test cases | 1,201 |
+| Test suites | 413 |
 | Failures | 0 |
 
 Coverage spans: config, auth, tokens, password, permissions, quotes, rate-limit, transit, dispatcher, SQLite, storage (FS, S3), media, RPC modules (files, teams, comments, webhooks, profile, fonts, access_token, viewer, search, binfile, files_share, files_snapshots, files_thumbnails, management, demo, feedback, export, email-filter, feature-flags, verify_token, oidc, ldap, nitrate), SSE, metrics, logging, scheduler, worker, setup, integration, wire-compat, blob, changes, file-gc.
@@ -494,13 +497,12 @@ Coverage spans: config, auth, tokens, password, permissions, quotes, rate-limit,
 
 | Metric | Value |
 |---|---|
-| E2E spec files | 32 |
-| E2E tests | 490+ |
+| E2E spec files | 55 |
+| E2E tests | 767 |
 | Unit tests | 55 |
-| Atomic E2E scenarios | 550+ |
 | Failures | 0 |
 
-Categories: auth (6), P0 flow (11), workspace shell (14), components (18), tools (21), extended (10), enhanced (9), snap+text (6), layer+asset (24), collaboration (11), export (17), page management (5), settings (8), drawing cycle (28), file persistence (20), interaction prototyping (17), ruler guides (16), SVG filters (15), MCP panel (14), binary file import (17), registration (18), recovery (18), dashboard navigation (23), context menu (9), WebSocket reconnect (12), binary file export (14), SVG import (15), visual regression (17), accessibility (19), gradient editor (10), shadow editor (11), library drag-drop (16).
+Categories: auth (6), P0 flow (11), workspace shell (14), components (18), tools (21), extended (10), enhanced (9), snap+text (6), layer+asset (24), collaboration (11), export (17), page management (5), settings (8), drawing cycle (28), file persistence (20), interaction prototyping (17), ruler guides (16), SVG filters (15), MCP panel (14), binary file import (17), registration (18), recovery (18), dashboard navigation (23), context menu (9), WebSocket reconnect (12), binary file export (14), SVG import (15), visual regression (25), accessibility (52), gradient editor (10), shadow editor (11), library drag-drop (16), design tokens (10), clipboard (9), share dialog (9), comment panel (10), layout panel (12), variant panel (10), plugin panel (7), form components (15), release notes (12), performance (13), onboarding (13), path-toolbar (13), scrollbars (8), shortcuts-reference (12), team-management (13), version-panel (9), webhook-list (6), project-card (10), file-grid (8), notification (11), text-toolbar (11), color-picker (11), viewer (9).
 
 ### 5.4 server/exporter/ Tests
 
@@ -517,9 +519,9 @@ Categories: auth (6), P0 flow (11), workspace shell (14), components (18), tools
 
 | Module | Upstream Lines | JS Port Lines | Port Completion | Test Coverage |
 |---|---|---|---|---|
-| **shared/** | ~67,000 | ~29,600 | **100%** (0 stubs, 0 missing) | 1,596 pass, 232 suites |
-| **client/** | ~129,000 | ~34,500 | **~100%** | 32 spec files, 490+ E2E, 55 unit |
-| **server/** | ~48,000 | ~19,000 | **~95%** | 909 pass, 296 suites, 0 fail |
+| **shared/** | ~67,000 | ~29,600 | **100%** (0 stubs, 0 missing) | 1,596 pass, 297 suites |
+| **client/** | ~129,000 | ~35,000 | **~100%** | 55 spec files, 767 E2E, 55 unit |
+| **server/** | ~48,000 | ~19,000 | **~95%** | 1,201 pass, 413 suites, 0 fail |
 | **server/exporter/** | ~4,000 | ~1,500 | **100%** (+ WebP) | 22 tests, 6 suites |
 
 ## 7. Intentional Skips

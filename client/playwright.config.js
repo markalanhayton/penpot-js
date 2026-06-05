@@ -3,6 +3,7 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e',
   timeout: 30000,
+  snapshotPathTemplate: '{testFileDir}/screenshots/{projectName}/{testFilePath}/{arg}{ext}',
   use: {
     headless: true,
     baseURL: 'http://localhost:3449',

@@ -104,17 +104,23 @@
   --penpot-z-guides: 200;
   --penpot-z-set: 300;
   --penpot-z-dropdown: 400;
-  --penpot-z-modal: 300;
-  --penpot-z-tooltip: 500;
-  --penpot-z-notification: 500;
-  --penpot-z-context-menu: 400;
-  --penpot-z-loaders: 600;
+  --penpot-z-context-menu: 500;
+  --penpot-z-modal: 600;
+  --penpot-z-tooltip: 700;
+  --penpot-z-notification: 800;
+  --penpot-z-loaders: 900;
+  --penpot-z-overlay: 1000;
 
   /* Layout — Workspace */
   --penpot-topbar-height: 44px;
-  --penpot-toolsbar-height: 32px;
+  --penpot-toolsbar-height: 36px;
   --penpot-sidebar-width: 260px;
   --penpot-rulers-size: 20px;
+
+  /* Responsive breakpoints (JS reads these via getComputedStyle) */
+  --penpot-breakpoint-mobile: 480px;
+  --penpot-breakpoint-tablet: 768px;
+  --penpot-breakpoint-desktop: 1024px;
 
   /* Component Sizes (matches original $sz-* tokens) */
   --penpot-size-s: 12px;

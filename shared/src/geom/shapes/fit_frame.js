@@ -6,12 +6,18 @@ import * as gco from './common.js';
 import * as gtr from './transforms.js';
 import * as ctm from '../../modifiers.js';
 
+/**
+ *
+ */
 function getImmediateChildren(objects, parentId) {
   const parent = objects[parentId];
   if (!parent || !parent.shapes) return [];
   return parent.shapes.map((id) => objects[id]).filter(Boolean);
 }
 
+/**
+ *
+ */
 function getChildrenIds(objects, parentId) {
   const ids = [];
   const stack = [parentId];
@@ -28,10 +34,16 @@ function getChildrenIds(objects, parentId) {
   return ids;
 }
 
+/**
+ *
+ */
 function getShapeBounds(objects, shape) {
   return shape.selrect;
 }
 
+/**
+ *
+ */
 export function fitFrameModifiers(objects, frame) {
   const { id, transform, 'transform-inverse': transformInverse, selrect, points, 'show-content': showContent } = frame;
   const children = getImmediateChildren(objects, id);

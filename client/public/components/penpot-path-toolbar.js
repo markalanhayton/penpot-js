@@ -27,7 +27,7 @@ export class PenpotPathToolbar extends HTMLElement {
   render() {
     this.innerHTML = `
       <style>
-        :host { display: block; }
+        penpot-path-toolbar { display: block; }
         .penpot-path-toolbar {
           display: flex;
           align-items: center;
@@ -40,7 +40,7 @@ export class PenpotPathToolbar extends HTMLElement {
           top: 44px;
           left: 50%;
           transform: translateX(-50%);
-          z-index: 100;
+          z-index: var(--penpot-z-dropdown, 400);
           box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         }
         .penpot-path-toolbar__btn {

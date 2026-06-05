@@ -8,7 +8,7 @@ template.innerHTML = `<style>
     penpot-cursor-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
     .penpot-cursor__cursor-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
     .penpot-cursor__selection { position: absolute; border: 2px dashed; border-radius: 2px; pointer-events: none; opacity: 0.7; }
-    .penpot-cursor__selection-label { position: absolute; font-size: 10px; padding: 1px 4px; border-radius: 2px; white-space: nowrap; font-family: -apple-system, BlinkMacSystemFont, sans-serif; pointer-events: none; z-index: 1001; opacity: 0.9; }
+    .penpot-cursor__selection-label { position: absolute; font-size: 10px; padding: 1px 4px; border-radius: 2px; white-space: nowrap; font-family: -apple-system, BlinkMacSystemFont, sans-serif; pointer-events: none; z-index: var(--penpot-z-dropdown, 400); opacity: 0.9; }
   
   </style>
   <div class="penpot-cursor__cursor-container" id="cursors"></div>`;
@@ -122,7 +122,7 @@ export class PenpotCursorOverlay extends PenpotElement {
 
   #createCursorElement(cursor) {
     const el = document.createElement('div');
-    el.style.cssText = `position:absolute;pointer-events:none;transition:left 0.08s ease-out,top 0.08s ease-out;z-index:1000;`;
+    el.style.cssText = `position:absolute;pointer-events:none;transition:left 0.08s ease-out,top 0.08s ease-out;z-index:var(--penpot-z-panels,100);`;
     el.innerHTML = `
       <svg width="16" height="20" viewBox="0 0 16 20" style="filter:drop-shadow(1px 1px 1px rgba(0,0,0,0.4))">
         <path d="M0 0L16 12L7 12L4 20L0 0Z" fill="${cursor.color || '#31efb8'}"/>

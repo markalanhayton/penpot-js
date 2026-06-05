@@ -14,8 +14,8 @@ const template = document.createElement('template');
 template.innerHTML = `<style>
 
     penpot-export-dialog { --export-bg: #2a2a2a; --export-border: #444; --export-primary: #31efb8; --export-danger: #f44336; }
-    .penpot-export__overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-    .penpot-export__dialog { background: var(--export-bg); border: 1px solid var(--export-border); border-radius: 8px; min-width: 420px; max-width: 520px; color: #e6e6e6; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+    .penpot-export__overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: var(--penpot-z-overlay, 1000); }
+    .penpot-export__dialog { background: var(--export-bg); border: 1px solid var(--export-border); border-radius: 8px; min-width: 420px; max-width: min(520px, calc(100% - 2 * var(--penpot-spacing-l, 16px))); color: #e6e6e6; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
     .penpot-export__dialog-header { padding: 16px 20px; border-bottom: 1px solid var(--export-border); display: flex; align-items: center; justify-content: space-between; }
     .penpot-export__dialog-title { font-size: 15px; font-weight: 600; }
     .penpot-export__dialog-close { background: none; border: none; color: #999; font-size: 20px; cursor: pointer; padding: 4px; line-height: 1; }

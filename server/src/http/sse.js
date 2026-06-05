@@ -110,9 +110,7 @@ export function registerSSEEndpoint(fastify) {
     const heartbeat = setInterval(() => {
       try {
         reply.raw.write(':heartbeat\n\n');
-      } catch {
-        clearInterval(heartbeat);
-      }
+      } catch (err) { console.warn('[sse] heartbeat write failed:', err.message); clearInterval(heartbeat); }
     }, 30000);
 
     // Clean up on disconnect
@@ -157,9 +155,7 @@ function subscribeSSE(client, topic) {
 function sendSSEEvent(res, event, data) {
   try {
     res.write(`event:${event}\ndata:${JSON.stringify(data)}\n\n`);
-  } catch {
-    // Client disconnected
-  }
+  } catch (err) { console.warn('[sse] event write failed (client disconnected):', err.message); }
 }
 
 /**

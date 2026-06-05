@@ -1,0 +1,207 @@
+name: JS Port CI
+
+on:
+  push:
+    branches: [develop, staging, main]
+    paths:
+      - 'shared/**'
+      - 'server/**'
+      - 'client/**'
+      - '.github/workflows/js-port-ci.yml'
+  pull_request:
+    branches: [develop, staging, main]
+    paths:
+      - 'shared/**'
+      - 'server/**'
+      - 'client/**'
+      - '.github/workflows/js-port-ci.yml'
+
+concurrency:
+  group: js-port-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shared-tests:
+    name: Shared Module Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: shared
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run shared tests
+        run: pnpm test
+
+  server-tests:
+    name: Server Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run server tests
+        run: pnpm test
+
+  exporter-tests:
+    name: Exporter Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server/exporter
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run exporter tests
+        run: pnpm test
+
+  shared-syntax-check:
+    name: Shared Syntax Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: shared
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check syntax
+        run: pnpm run check
+
+  server-lint:
+    name: Server Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run lint
+        run: pnpm run lint
+
+  client-e2e:
+    name: Client E2E Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium
+
+      - name: Start server
+        run: |
+          node ../server/src/index.js &
+          until curl -sf http://localhost:6060/api/rpc/command/get-enabled-flags >/dev/null 2>&1; do
+            echo "Waiting for server..."
+            sleep 1
+          done
+          echo "Server is ready"
+        env:
+          PENPOT_SECRET_KEY: ${{ secrets.PENPOT_CI_SECRET_KEY || 'ci-test-secret-key-must-be-32-bytes!!' }}
+          PENPOT_DATABASE_PATH: ':memory:'
+          PENPOT_HTTP_PORT: '6060'
+          PENPOT_INITIAL_ADMIN_EMAIL: admin@penpot.local
+          PENPOT_INITIAL_ADMIN_PASSWORD: penpot123
+
+      - name: Start dev server
+        run: |
+          node server.js &
+          until curl -sf http://localhost:3449 >/dev/null 2>&1; do
+            echo "Waiting for dev server..."
+            sleep 1
+          done
+          echo "Dev server is ready"
+        env:
+          PORT: '3449'
+          API_PROXY: 'http://localhost:6060'
+
+      - name: Run E2E tests
+        run: npx playwright test
+        env:
+          PLAYWRIGHT_BASE_URL: 'http://localhost:3449'
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: client-e2e-results
+          path: client/e2e/results/
+          retention-days: 7

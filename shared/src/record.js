@@ -7,9 +7,15 @@
 const BASE_KEYS = Symbol("baseKeys");
 const META_KEY = Symbol("meta");
 
+/**
+ *
+ */
 export function defineRecord(name, baseFields) {
   const fieldNames = Object.freeze([...baseFields]);
 
+  /**
+   *
+   */
   function create(values = {}) {
     const obj = {};
     for (const key of baseFields) {
@@ -19,6 +25,9 @@ export function defineRecord(name, baseFields) {
     return obj;
   }
 
+  /**
+   *
+   */
   function createFromMap(params) {
     const obj = {};
     for (const key of baseFields) {
@@ -28,6 +37,9 @@ export function defineRecord(name, baseFields) {
     return Object.freeze(obj);
   }
 
+  /**
+   *
+   */
   function get(obj, key, notFound) {
     if (baseFields.includes(key)) {
       return obj[key] !== undefined ? obj[key] : notFound;
@@ -38,6 +50,9 @@ export function defineRecord(name, baseFields) {
     return notFound;
   }
 
+  /**
+   *
+   */
   function set(obj, key, value) {
     if (baseFields.includes(key)) {
       return Object.freeze({ ...obj, [key]: value, [META_KEY]: obj[META_KEY] });
@@ -45,6 +60,9 @@ export function defineRecord(name, baseFields) {
     return Object.freeze({ ...obj, [META_KEY]: { ...(obj[META_KEY] || {}), [key]: value } });
   }
 
+  /**
+   *
+   */
   function equiv(obj, other, exceptions = []) {
     if (obj === other) return true;
     if (!other || typeof other !== "object") return false;
@@ -62,10 +80,16 @@ export function defineRecord(name, baseFields) {
     return true;
   }
 
+  /**
+   *
+   */
   function count(obj) {
     return baseFields.length + Object.keys(obj[META_KEY] || {}).length;
   }
 
+  /**
+   *
+   */
   function toMap(obj) {
     const result = {};
     for (const key of baseFields) {
@@ -77,12 +101,18 @@ export function defineRecord(name, baseFields) {
     return result;
   }
 
+  /**
+   *
+   */
   function containsKey(obj, key) {
     if (baseFields.includes(key)) return true;
     if (obj[META_KEY] && key in obj[META_KEY]) return true;
     return false;
   }
 
+  /**
+   *
+   */
   function dissoc(obj, key) {
     if (baseFields.includes(key)) {
       return set(obj, key, null);
@@ -92,10 +122,16 @@ export function defineRecord(name, baseFields) {
     return Object.freeze({ ...obj, [META_KEY]: Object.keys(extmap).length > 0 ? extmap : null });
   }
 
+  /**
+   *
+   */
   function clone(obj) {
     return Object.freeze({ ...obj, [META_KEY]: obj[META_KEY] ? { ...obj[META_KEY] } : null });
   }
 
+  /**
+   *
+   */
   function assocBang(obj, key, value) {
     if (baseFields.includes(key)) {
       obj[key] = value;
@@ -108,6 +144,9 @@ export function defineRecord(name, baseFields) {
     return obj;
   }
 
+  /**
+   *
+   */
   function defineProperties(obj, properties) {
     for (const { name: propName, get: getFn, set: setFn } of properties) {
       const descriptor = {

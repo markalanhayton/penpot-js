@@ -6,14 +6,23 @@ import * as gtr from './transforms.js';
 import * as gsc from './corners.js';
 import * as mth from '../../math.js';
 
+/**
+ *
+ */
 export function translateToFrame(shape, frame) {
   return gtr.move(shape, gpt.point(-frame.x, -frame.y));
 }
 
+/**
+ *
+ */
 export function translateFromFrame(shape, frame) {
   return gtr.move(shape, gpt.point(frame.x, frame.y));
 }
 
+/**
+ *
+ */
 export function shapeToRect(shape) {
   const { x, y, width, height } = shape;
   if (typeof x === 'number' && typeof y === 'number' &&
@@ -23,23 +32,38 @@ export function shapeToRect(shape) {
   return undefined;
 }
 
+/**
+ *
+ */
 export function boundingBox(shape) {
   return grc.pointsToRect(shape.points);
 }
 
+/**
+ *
+ */
 export function leftBound(shape) {
   return shape.x ?? shape.selrect?.x;
 }
 
+/**
+ *
+ */
 export function topBound(shape) {
   return shape.y ?? shape.selrect?.y;
 }
 
+/**
+ *
+ */
 export function fullyContainedQ(rect, other) {
   return rect.x1 <= other.x1 && rect.x2 >= other.x2 &&
          rect.y1 <= other.y1 && rect.y2 >= other.y2;
 }
 
+/**
+ *
+ */
 export function padSelrec(selrect, size = 1) {
   const inc = (v) => v + size;
   const dec = (v) => v - size;
@@ -56,6 +80,9 @@ export function padSelrec(selrect, size = 1) {
   };
 }
 
+/**
+ *
+ */
 export function getAreas(bounds, selrect) {
   return {
     left: grc.cornersToRect(bounds.x1, selrect.y1, selrect.x1, selrect.y2),
@@ -65,6 +92,9 @@ export function getAreas(bounds, selrect) {
   };
 }
 
+/**
+ *
+ */
 export function distanceSelrect(selrect, other) {
   const x1 = other.x1;
   const y1 = other.y1;
@@ -73,13 +103,22 @@ export function distanceSelrect(selrect, other) {
   return gpt.point(x1 - x2, y1 - y2);
 }
 
+/**
+ *
+ */
 export function distanceShapes(shape, other) {
   return distanceSelrect(shape.selrect, other.selrect);
 }
 
+/**
+ *
+ */
 export function closeAttrsQ(attr, val1, val2, precision) {
   if (precision === undefined) precision = mth.FLOAT_EQUAL_PRECISION;
 
+  /**
+   *
+   */
   function closeValQ(num1, num2) {
     if (typeof num1 === 'number' && typeof num2 === 'number') {
       return mth.abs(num1 - num2) < precision;

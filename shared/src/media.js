@@ -21,6 +21,9 @@ const FORMAT_TO_EXTENSION = new Map([
   ['svg', '.svg'],
 ]);
 
+/**
+ *
+ */
 export function formatToExtension(format) {
   return FORMAT_TO_EXTENSION.get(format);
 }
@@ -34,6 +37,9 @@ const FORMAT_TO_MTYPE = new Map([
   ['svg', 'image/svg+xml'],
 ]);
 
+/**
+ *
+ */
 export function formatToMtype(format) {
   return FORMAT_TO_MTYPE.get(format) ?? 'application/octet-stream';
 }
@@ -46,6 +52,9 @@ const MTYPE_TO_FORMAT = new Map([
   ['image/svg+xml', 'svg'],
 ]);
 
+/**
+ *
+ */
 export function mtypeToFormat(mtype) {
   return MTYPE_TO_FORMAT.get(mtype);
 }
@@ -69,6 +78,9 @@ const MTYPE_TO_EXTENSION = new Map([
   ['application/octet-stream', '.bin'],
 ]);
 
+/**
+ *
+ */
 export function mtypeToExtension(mtype) {
   return MTYPE_TO_EXTENSION.get(mtype);
 }
@@ -86,16 +98,25 @@ const FONT_WEIGHT_TO_NAME = new Map([
   [950, 'Extra Black'],
 ]);
 
+/**
+ *
+ */
 export function fontWeightToName(weight) {
   return FONT_WEIGHT_TO_NAME.get(weight) ?? 'Regular';
 }
 
 const IMAGE_EXT_RE = /(\.png)|(\.jpg)|(\.jpeg)|(\.webp)|(\.gif)|(\.svg)$/;
 
+/**
+ *
+ */
 export function stripImageExtension(filename) {
   return filename.replace(IMAGE_EXT_RE, '');
 }
 
+/**
+ *
+ */
 export function parseFontWeight(variant) {
   if (/(?:^|[-_\s])(hairline|thin)(?=(?:[-_\s]|$|italic\b))/i.test(variant))             return 100;
   if (/(?:^|[-_\s])(extra\s*light|ultra\s*light)(?=(?:[-_\s]|$|italic\b))/i.test(variant)) return 200;
@@ -110,6 +131,9 @@ export function parseFontWeight(variant) {
   return 400;
 }
 
+/**
+ *
+ */
 export function parseFontStyle(variant) {
   if (/(?:^|[-_\s])italic(?:[-_\s]|$)/i.test(variant) || /italic$/i.test(variant)) {
     return 'italic';
@@ -117,6 +141,9 @@ export function parseFontStyle(variant) {
   return 'normal';
 }
 
+/**
+ *
+ */
 export function fontDisplayVariant(variantName, weight, style) {
   if (typeof variantName === 'string' && variantName.trim() !== '') {
     return variantName.trim();

@@ -6,11 +6,17 @@ import * as gco from './common.js';
 import * as mth from '../../math.js';
 import * as ctm from '../../modifiers.js';
 
+/**
+ *
+ */
 function validPointQ(o) {
   return gpt.isPoint(o) &&
          typeof o.x === 'number' && typeof o.y === 'number';
 }
 
+/**
+ *
+ */
 function moveSelrect(selrect, pt) {
   if (selrect == null || !validPointQ(pt)) return selrect;
   const x = selrect.x;
@@ -28,11 +34,17 @@ function moveSelrect(selrect, pt) {
   );
 }
 
+/**
+ *
+ */
 function movePoints(points, moveVec) {
   if (!validPointQ(moveVec)) return points;
   return points.map((p) => gpt.add(p, moveVec));
 }
 
+/**
+ *
+ */
 export function movePositionData(positionData, delta) {
   if (positionData == null) return positionData;
   const dx = delta.x;
@@ -45,6 +57,9 @@ export function movePositionData(positionData, delta) {
   }));
 }
 
+/**
+ *
+ */
 export function transformPositionData(positionData, transform) {
   if (positionData == null) return positionData;
   const dx = transform?.e;
@@ -57,13 +72,16 @@ export function transformPositionData(positionData, transform) {
   }));
 }
 
+/**
+ *
+ */
 export function move(shape, point) {
   const type = shape.type;
   const dx = point.x ?? 0;
   const dy = point.y ?? 0;
   const mvec = gpt.point(dx, dy);
 
-  let result = { ...shape };
+  const result = { ...shape };
 
   if (result.selrect != null) {
     result.selrect = moveSelrect(result.selrect, mvec);
@@ -84,6 +102,9 @@ export function move(shape, point) {
   return result;
 }
 
+/**
+ *
+ */
 export function absoluteMove(shape, pos) {
   if (!shape) return shape;
   const x = pos.x;
@@ -96,6 +117,9 @@ export function absoluteMove(shape, pos) {
   return move(shape, gpt.point(dx, dy));
 }
 
+/**
+ *
+ */
 export function transformMatrix(shape, params, shapeCenter) {
   if (shapeCenter === undefined) {
     shapeCenter = gco.shapeToCenter(shape) ?? gpt.point(0, 0);
@@ -123,6 +147,9 @@ export function transformMatrix(shape, params, shapeCenter) {
   return m;
 }
 
+/**
+ *
+ */
 export function inverseTransformMatrix(shape, params, shapeCenter) {
   if (shapeCenter === undefined) {
     shapeCenter = gco.shapeToCenter(shape) ?? gpt.point(0, 0);
@@ -150,6 +177,9 @@ export function inverseTransformMatrix(shape, params, shapeCenter) {
   return m;
 }
 
+/**
+ *
+ */
 export function transformStr(shape, params) {
   if (shape == null) return '';
   const { transform, flipX, flipY } = shape;
@@ -160,11 +190,17 @@ export function transformStr(shape, params) {
   return String(transformMatrix(shape, params));
 }
 
+/**
+ *
+ */
 export function transformRect(rect, matrix) {
   const points = gco.transformPoints(grc.rectToPoints(rect), matrix);
   return grc.pointsToRect(points);
 }
 
+/**
+ *
+ */
 function transformPointsMatrix(selrect, [d1, d2, , d4]) {
   const x1 = mth.roundToZero(selrect.x1);
   const y1 = mth.roundToZero(selrect.y1);
@@ -203,6 +239,9 @@ function transformPointsMatrix(selrect, [d1, d2, , d4]) {
   );
 }
 
+/**
+ *
+ */
 export function calculateSelrect(points, center) {
   const p1 = points[0];
   const p2 = points[1];
@@ -214,6 +253,9 @@ export function calculateSelrect(points, center) {
   return grc.centerToRect(center, width, height);
 }
 
+/**
+ *
+ */
 export function calculateTransform(points, center, selrect) {
   let transform = transformPointsMatrix(selrect, points);
 
@@ -235,6 +277,9 @@ export function calculateTransform(points, center, selrect) {
   return undefined;
 }
 
+/**
+ *
+ */
 export function calculateGeometry(points) {
   const center = gco.pointsToCenter(points);
   const selrect = calculateSelrect(points, center);
@@ -242,6 +287,9 @@ export function calculateGeometry(points) {
   return [selrect, transform, transform != null ? gmt.inverse(transform) : undefined];
 }
 
+/**
+ *
+ */
 function adjustShapeFlips(shape, points) {
   const oldPoints = shape.points;
   const p0Old = oldPoints[0];
@@ -255,7 +303,7 @@ function adjustShapeFlips(shape, points) {
   const yv2 = gpt.toVec(p0New, points[3]);
   const dotY = gpt.dot(yv1, yv2);
 
-  let result = { ...shape };
+  const result = { ...shape };
   if (dotX < 0) result.flipX = !result.flipX;
   if (dotY < 0) result.flipY = !result.flipY;
   if ((dotX < 0) !== (dotY < 0)) {
@@ -264,12 +312,15 @@ function adjustShapeFlips(shape, points) {
   return result;
 }
 
+/**
+ *
+ */
 function applyTransformMove(shape, transformMtx) {
   const type = shape.type;
   const points = gco.transformPoints(shape.points, transformMtx);
   const selrect = gco.transformSelrect(shape.selrect, transformMtx);
 
-  let result = { ...shape };
+  const result = { ...shape };
   if (type === 'text') {
     result['position-data'] = transformPositionData(result['position-data'], transformMtx);
   }
@@ -285,10 +336,13 @@ function applyTransformMove(shape, transformMtx) {
   return result;
 }
 
+/**
+ *
+ */
 function applyTransformGeneric(shape, transformMtx) {
   const points = gco.transformPoints(shape.points, transformMtx);
 
-  let result = adjustShapeFlips(shape, points);
+  const result = adjustShapeFlips(shape, points);
 
   const center = gco.pointsToCenter(points);
   const selrect = calculateSelrect(points, center);
@@ -321,15 +375,21 @@ function applyTransformGeneric(shape, transformMtx) {
   return result;
 }
 
+/**
+ *
+ */
 export function applyTransform(shape, transformMtx) {
   if (transformMtx == null) return shape;
   if (gmt.isMove(transformMtx)) return applyTransformMove(shape, transformMtx);
   return applyTransformGeneric(shape, transformMtx);
 }
 
+/**
+ *
+ */
 function updateGroupViewbox(group, newSelrect) {
   const { selrect, 'svg-viewbox': svgViewbox } = group;
-  let result = { ...group };
+  const result = { ...group };
   if (svgViewbox != null && selrect != null && newSelrect != null) {
     const deltas = {
       x: (newSelrect.x ?? 0) - (selrect.x ?? 0),
@@ -347,6 +407,9 @@ function updateGroupViewbox(group, newSelrect) {
   return result;
 }
 
+/**
+ *
+ */
 export function updateGroupSelrect(group, children) {
   let points = children.flatMap((c) => c.points ?? []);
   const shapeCenter = gco.pointsToCenter(points);
@@ -366,7 +429,7 @@ export function updateGroupSelrect(group, children) {
   const srTransform = gmt.transformIn(gco.pointsToCenter(newPoints), transformInverse);
   const newSelrect = grc.pointsToRect(gco.transformPoints(newPoints, srTransform));
 
-  let result = updateGroupViewbox(group, newSelrect);
+  const result = updateGroupViewbox(group, newSelrect);
   result.selrect = newSelrect;
   result.points = newPoints;
   result.flipX = false;
@@ -374,6 +437,9 @@ export function updateGroupSelrect(group, children) {
   return applyTransform(result, gmt.matrix());
 }
 
+/**
+ *
+ */
 export function updateMaskSelrect(maskedGroup, children) {
   const mask = children[0];
   if (!mask) return maskedGroup;
@@ -390,6 +456,9 @@ export function updateMaskSelrect(maskedGroup, children) {
   };
 }
 
+/**
+ *
+ */
 export function updateShapesGeometry(objects, ids) {
   let result = { ...objects };
   for (const id of ids) {
@@ -412,32 +481,53 @@ export function updateShapesGeometry(objects, ids) {
   return result;
 }
 
+/**
+ *
+ */
 function getImmediateChildren(objects, parentId) {
   const parent = objects[parentId];
   if (!parent || !parent.shapes) return [];
   return parent.shapes.map((id) => objects[id]).filter(Boolean);
 }
 
+/**
+ *
+ */
 function maskShapeQ(shape) {
   return shape.type === 'mask';
 }
 
+/**
+ *
+ */
 function boolShapeQ(shape) {
   return shape.type === 'bool';
 }
 
+/**
+ *
+ */
 function groupShapeQ(shape) {
   return shape.type === 'group' || shape.type === 'mask' || shape.type === 'bool';
 }
 
+/**
+ *
+ */
 function rootQ(shape) {
   return shape.parentId == null || shape.parentId === '00000000-0000-0000-0000-000000000000';
 }
 
+/**
+ *
+ */
 function groupLikeShapeQ(shape) {
   return shape.type === 'group' || shape.type === 'mask' || shape.type === 'bool' || shape.type === 'frame';
 }
 
+/**
+ *
+ */
 export function transformShape(shape, modifiers) {
   if (arguments.length === 1) {
     modifiers = shape.modifiers;
@@ -462,6 +552,9 @@ export function transformShape(shape, modifiers) {
   return result;
 }
 
+/**
+ *
+ */
 export function applyObjectsModifiers(objects, modifiers, ids) {
   if (ids === undefined) ids = Object.keys(modifiers);
   let result = { ...objects };
@@ -472,6 +565,9 @@ export function applyObjectsModifiers(objects, modifiers, ids) {
   return result;
 }
 
+/**
+ *
+ */
 export function transformBounds(points, center, modifiers) {
   if (center === undefined && modifiers == null) return points;
   const transform = ctm.modifiersToTransform(modifiers);
@@ -479,18 +575,27 @@ export function transformBounds(points, center, modifiers) {
   return gco.transformPoints(points, center, transform);
 }
 
+/**
+ *
+ */
 export function transformSelrect(selrect, modifiers) {
   return grc.pointsToRect(
     transformBounds(grc.rectToPoints(selrect), modifiers)
   );
 }
 
+/**
+ *
+ */
 export function transformSelrectMatrix(selrect, mtx) {
   return grc.pointsToRect(
     gco.transformPoints(grc.rectToPoints(selrect), mtx)
   );
 }
 
+/**
+ *
+ */
 export function applyChildrenModifiers(objects, modifTree, parentModifiers, children, propagateQ) {
   return children.map((child) => {
     let modifiers = modifTree?.[child.id]?.modifiers;
@@ -505,6 +610,9 @@ export function applyChildrenModifiers(objects, modifTree, parentModifiers, chil
   });
 }
 
+/**
+ *
+ */
 export function applyGroupModifiers(group, objects, modifTree, propagateQ) {
   if (propagateQ === undefined) propagateQ = true;
   if (!group || !group.shapes) return group;

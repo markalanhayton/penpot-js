@@ -1,3 +1,6 @@
+/**
+ *
+ */
 export function readKebabKey(k) {
   if (typeof k === 'string' && !k.includes('/')) {
     return camelToKebab(k);
@@ -5,6 +8,9 @@ export function readKebabKey(k) {
   return k;
 }
 
+/**
+ *
+ */
 export function writeCamelKey(k) {
   if (typeof k === 'string') {
     return kebabToCamel(k);
@@ -12,6 +18,9 @@ export function writeCamelKey(k) {
   return String(k);
 }
 
+/**
+ *
+ */
 export function toJs(x, { keyFn = writeCamelKey } = {}) {
   if (x == null) return null;
   if (x instanceof Date) return x;
@@ -34,7 +43,13 @@ export function toJs(x, { keyFn = writeCamelKey } = {}) {
   return String(x);
 }
 
+/**
+ *
+ */
 export function toClj(o, { keyFn = readKebabKey, valFn = (v) => v, recursive = true } = {}) {
+  /**
+   *
+   */
   function convert(x) {
     x = valFn(x);
     if (x == null) return x;
@@ -62,6 +77,9 @@ export function toClj(o, { keyFn = readKebabKey, valFn = (v) => v, recursive = t
   return convert(o);
 }
 
+/**
+ *
+ */
 export function encode(data, opts = {}) {
   if (opts.keyFn) {
     return JSON.stringify(toJs(data, { keyFn: opts.keyFn }), null, opts.indent);
@@ -69,6 +87,9 @@ export function encode(data, opts = {}) {
   return JSON.stringify(data, null, opts.indent);
 }
 
+/**
+ *
+ */
 export function decode(data, opts = {}) {
   const parsed = JSON.parse(data);
   if (opts.keyFn || opts.valFn) {
@@ -81,10 +102,16 @@ export function decode(data, opts = {}) {
   return parsed;
 }
 
+/**
+ *
+ */
 function kebabToCamel(s) {
   return s.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
 }
 
+/**
+ *
+ */
 function camelToKebab(s) {
   return s.replace(/([A-Z])/g, '-$1').toLowerCase();
 }

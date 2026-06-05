@@ -11,7 +11,7 @@ const THUMB_HOVER_COLOR = 'rgba(255,255,255,0.6)';
 
 const template = document.createElement('template');
 template.innerHTML = `<style>
-  :host { display: block; position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 4; }
+  penpot-scrollbars { display: block; position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: var(--penpot-z-canvas-overlay, 1); }
   .penpot-scrollbars__track { position: absolute; pointer-events: auto; }
   .penpot-scrollbars__track--vertical { right: 0; top: 0; width: ${TRACK_SIZE}px; height: 100%; }
   .penpot-scrollbars__track--horizontal { bottom: 0; left: 0; height: ${TRACK_SIZE}px; width: 100%; }

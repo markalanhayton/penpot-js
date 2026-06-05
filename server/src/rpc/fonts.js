@@ -512,7 +512,7 @@ export default function registerFontCommands(register, pool) {
       });
 
       // Clean up temp file
-      try { await fs.unlink(tmpPath); } catch { /* ignore */ }
+      try { await fs.unlink(tmpPath); } catch (err) { console.warn('[fonts] temp file cleanup failed:', err.message); }
 
       const ffamily = variants[0].font_family;
       return {

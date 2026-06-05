@@ -102,6 +102,9 @@ for (const [key, val] of Object.entries(SYNC_ATTRS)) {
   }
 }
 
+/**
+ *
+ */
 export function resolveSyncGroup(type, attr) {
   const group = SYNC_ATTRS[attr];
   if (group == null) return null;
@@ -109,6 +112,9 @@ export function resolveSyncGroup(type, attr) {
   return group;
 }
 
+/**
+ *
+ */
 export function componentAttrQ(attr) {
   return attr in SYNC_ATTRS ||
          attr === 'shape-ref' ||
@@ -118,22 +124,37 @@ export function componentAttrQ(attr) {
          attr === 'component-root';
 }
 
+/**
+ *
+ */
 export function instanceRootQ(shape) {
   return shape['component-root'] === true;
 }
 
+/**
+ *
+ */
 export function instanceHeadQ(shape) {
   return shape['component-id'] != null;
 }
 
+/**
+ *
+ */
 export function subinstanceHeadQ(shape) {
   return shape['component-id'] != null && shape['component-root'] == null;
 }
 
+/**
+ *
+ */
 export function subcopyHeadQ(shape) {
   return shape['component-id'] != null && shape['component-root'] == null && shape['shape-ref'] != null;
 }
 
+/**
+ *
+ */
 export function instanceOfQ(shape, fileId, componentId) {
   return shape['component-id'] != null &&
          shape['component-file'] != null &&
@@ -141,38 +162,65 @@ export function instanceOfQ(shape, fileId, componentId) {
          shape['component-file'] === fileId;
 }
 
+/**
+ *
+ */
 export function isMainOfQ(shapeMain, shapeInst) {
   return shapeInst['shape-ref'] === shapeMain.id;
 }
 
+/**
+ *
+ */
 export function mainInstanceQ(shape) {
   return shape['main-instance'] === true;
 }
 
+/**
+ *
+ */
 export function inComponentCopyQ(shape) {
   return shape['shape-ref'] != null;
 }
 
+/**
+ *
+ */
 export function inComponentCopyNotHeadQ(shape) {
   return shape['shape-ref'] != null && shape['component-id'] == null;
 }
 
+/**
+ *
+ */
 export function inComponentCopyNotRootQ(shape) {
   return shape['shape-ref'] != null && shape['component-root'] == null;
 }
 
+/**
+ *
+ */
 export function mainInstanceOfQ(shapeId, pageId, component) {
   return shapeId === component['main-instance-id'] && pageId === component['main-instance-page'];
 }
 
+/**
+ *
+ */
 export function isVariantQ(item) {
   return item['variant-id'] != null;
 }
 
+/**
+ *
+ */
 export function isVariantContainerQ(shape) {
   return !!shape['is-variant-container'];
 }
 
+/**
+ *
+ */
 export function setTouchedGroup(touched, group) {
   if (group == null) return touched;
   const s = touched ?? new Set();
@@ -180,20 +228,32 @@ export function setTouchedGroup(touched, group) {
   return s;
 }
 
+/**
+ *
+ */
 export function touchedGroupQ(shape, group) {
   const touched = shape.touched ?? new Set();
   return touched.has(group);
 }
 
+/**
+ *
+ */
 export function buildSwapSlotGroup(swapSlot) {
   if (swapSlot == null) return null;
   return `swap-slot-${swapSlot}`;
 }
 
+/**
+ *
+ */
 export function swapSlotQ(group) {
   return typeof group === 'string' && group.startsWith('swap-slot-');
 }
 
+/**
+ *
+ */
 export function normalTouchedGroups(shape) {
   const touched = shape.touched ?? new Set();
   const result = new Set();
@@ -203,6 +263,9 @@ export function normalTouchedGroups(shape) {
   return result;
 }
 
+/**
+ *
+ */
 export function groupToSwapSlot(group) {
   if (typeof group === 'string' && group.startsWith('swap-slot-')) {
     const uuidStr = group.slice(10);
@@ -211,12 +274,18 @@ export function groupToSwapSlot(group) {
   return null;
 }
 
+/**
+ *
+ */
 export function getSwapSlot(shape) {
   const touched = shape.touched ?? new Set();
   const group = seek(swapSlotQ, [...touched]);
   return group ? groupToSwapSlot(group) : null;
 }
 
+/**
+ *
+ */
 export function setSwapSlot(shape, swapSlot) {
   if (swapSlot == null) return shape;
   const touched = shape.touched ?? new Set();
@@ -225,6 +294,9 @@ export function setSwapSlot(shape, swapSlot) {
   return { ...shape, touched };
 }
 
+/**
+ *
+ */
 export function matchSwapSlotQ(shapeMain, shapeInst) {
   const slotMain = getSwapSlot(shapeMain);
   const slotInst = getSwapSlot(shapeInst);
@@ -232,6 +304,9 @@ export function matchSwapSlotQ(shapeMain, shapeInst) {
   return slotMain === slotInst || shapeMain.id === slotInst;
 }
 
+/**
+ *
+ */
 export function removeSwapSlot(shape) {
   const touched = shape.touched ?? new Set();
   const newTouched = new Set();
@@ -241,16 +316,25 @@ export function removeSwapSlot(shape) {
   return { ...shape, touched: newTouched };
 }
 
+/**
+ *
+ */
 export function getDeletedComponentRoot(component) {
   const mainId = component['main-instance-id'];
   if (mainId != null) return component.objects?.[mainId];
   return component.objects?.[component.id];
 }
 
+/**
+ *
+ */
 export function usesLibraryComponentsQ(shape, libraryId) {
   return shape['component-id'] != null && shape['component-file'] === libraryId;
 }
 
+/**
+ *
+ */
 export function detachShape(shape) {
   const result = { ...shape };
   delete result['component-id'];
@@ -263,6 +347,9 @@ export function detachShape(shape) {
   return result;
 }
 
+/**
+ *
+ */
 export function unheadShape(shape) {
   const result = { ...shape };
   delete result['component-root'];
@@ -272,11 +359,20 @@ export function unheadShape(shape) {
   return result;
 }
 
+/**
+ *
+ */
 export function reheadShape(shape, componentFile, componentId) {
   return { ...shape, 'component-file': componentFile, 'component-id': componentId };
 }
 
+/**
+ *
+ */
 export function diffComponents(comp1, comp2) {
+  /**
+   *
+   */
   function extractIds(shape) {
     if (typeof shape !== 'object' || shape == null) return [];
     const result = [shape.id];
@@ -301,12 +397,18 @@ export function diffComponents(comp1, comp2) {
   return result;
 }
 
+/**
+ *
+ */
 export function allowDuplicateQ(objects, shape) {
   const parent = objects[shape['parent-id']];
   return !inComponentCopyNotHeadQ(shape) &&
          (!instanceHeadQ(shape) || !inComponentCopyQ(parent));
 }
 
+/**
+ *
+ */
 export function validTouchedGroupQ(group) {
   if (ALL_TOUCHED_GROUPS.has(group)) return true;
   if (swapSlotQ(group) && groupToSwapSlot(group) != null) return true;

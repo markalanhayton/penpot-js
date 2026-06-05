@@ -229,9 +229,7 @@ export async function deleteS3Object(objectId) {
       Key: key,
     }));
     return true;
-  } catch {
-    return false;
-  }
+  } catch (err) { console.warn('[storage/s3] deleteObject failed for', key, err.message); return false; }
 }
 
 /**
@@ -314,9 +312,7 @@ export async function s3ObjectExists(objectId) {
       Key: key,
     }));
     return true;
-  } catch {
-    return false;
-  }
+  } catch (err) { console.warn('[storage/s3] objectExists check failed for', key, err.message); return false; }
 }
 
 /**

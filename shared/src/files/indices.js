@@ -2,6 +2,9 @@ import * as d from '../data.js';
 import * as cfh from './helpers.js';
 import * as uuid from '../uuid.js';
 
+/**
+ *
+ */
 function generateIndex(index, objects, shapeId, parents) {
   const shape = objects[shapeId];
   index = { ...index, [shapeId]: parents };
@@ -12,6 +15,9 @@ function generateIndex(index, objects, shapeId, parents) {
   return index;
 }
 
+/**
+ *
+ */
 export function generateChildAllParentsIndex(objects, shapes) {
   if (shapes) {
     const result = {};
@@ -23,7 +29,13 @@ export function generateChildAllParentsIndex(objects, shapes) {
   return generateIndex({}, objects, uuid.zero, []);
 }
 
+/**
+ *
+ */
 export function createClipIndex(objects, parentsIndex) {
+  /**
+   *
+   */
   function getClipParents(shape) {
     const shapeId = shape.id;
     const result = [];
@@ -43,6 +55,9 @@ export function createClipIndex(objects, parentsIndex) {
     return result;
   }
 
+  /**
+   *
+   */
   function populateWithClips(parents) {
     const result = [];
     for (const parentId of parents) {

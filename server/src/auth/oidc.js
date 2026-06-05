@@ -154,10 +154,10 @@ async function resolveProvider(pool, providerId) {
   if (!row) return null;
 
   let scopes = 'openid profile email';
-  try { scopes = typeof row.scopes === 'string' ? row.scopes : JSON.parse(row.scopes || '[]').join(' '); } catch { /* use default */ }
+  try { scopes = typeof row.scopes === 'string' ? row.scopes : JSON.parse(row.scopes || '[]').join(' '); } catch (err) { console.warn('[oidc] scopes parse failed, using default:', err.message); }
 
   let roles = null;
-  try { roles = typeof row.roles === 'string' ? row.roles.split(',').map(r => r.trim()) : JSON.parse(row.roles || '[]'); } catch { /* null */ }
+  try { roles = typeof row.roles === 'string' ? row.roles.split(',').map(r => r.trim()) : JSON.parse(row.roles || '[]'); } catch (err) { console.warn('[oidc] roles parse failed:', err.message); }
 
   return {
     id: row.id,
@@ -263,7 +263,7 @@ async function getUserInfo(provider, accessToken, idToken) {
     try {
       const parts = idToken.split('.');
       claims = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
-    } catch { /* ID token not parseable */ }
+    } catch (err) { console.warn('[oidc] ID token claims extraction failed:', err.message); }
   }
 
   const source = provider.userInfoSource || 'auto';

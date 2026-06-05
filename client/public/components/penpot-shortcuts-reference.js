@@ -5,8 +5,8 @@ import { getShortcuts } from '../lib/shortcuts.js';
 const template = document.createElement('template');
 template.innerHTML = `<style>
 
-    penpot-shortcuts-reference { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 2000; }
-    .penpot-sc__dialog { background: var(--penpot-bg, #1c1c1c); border: 1px solid var(--penpot-border, #444); border-radius: 8px; min-width: 480px; max-width: 600px; max-height: 80vh; color: var(--penpot-text, #e6e6e6); display: flex; flex-direction: column; }
+    penpot-shortcuts-reference { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: var(--penpot-z-overlay, 1000); }
+    .penpot-sc__dialog { background: var(--penpot-bg, #1c1c1c); border: 1px solid var(--penpot-border, #444); border-radius: 8px; min-width: min(480px, 100%); max-width: min(600px, calc(100% - 2 * var(--penpot-spacing-l, 16px))); max-height: 80vh; color: var(--penpot-text, #e6e6e6); display: flex; flex-direction: column; }
     .penpot-sc__header { padding: 16px 20px; border-bottom: 1px solid var(--penpot-border, #444); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
     .penpot-sc__title { font-size: 15px; font-weight: 600; color: var(--penpot-text, #e6e6e6); }
     .penpot-sc__close { background: none; border: none; color: #999; font-size: 20px; cursor: pointer; padding: 4px; line-height: 1; }

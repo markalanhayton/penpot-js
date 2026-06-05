@@ -638,9 +638,7 @@ export function getMigrationFiles() {
       path: path.join(dir, f),
       sql: readFileSync(path.join(dir, f), 'utf-8')
     }));
-  } catch {
-    return [];
-  }
+  } catch (err) { console.warn('[db] migration file listing failed for', dir, err.message); return []; }
 }
 
 /**

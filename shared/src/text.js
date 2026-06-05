@@ -9,20 +9,32 @@ import * as transit from "./transit.js";
 const STYLE_SEPARATOR = "$$$";
 const PENPOT_PREFIX = "PENPOT";
 
+/**
+ *
+ */
 export function encodeStyleValue(v) {
   return transit.encodeStr(v);
 }
 
+/**
+ *
+ */
 export function decodeStyleValue(v) {
   return transit.decodeStr(v);
 }
 
+/**
+ *
+ */
 export function encodeStyle(key, val) {
   const k = typeof key === "string" ? key : key.name || String(key);
   const v = encodeStyleValue(val);
   return `${PENPOT_PREFIX}${STYLE_SEPARATOR}${k}${STYLE_SEPARATOR}${v}`;
 }
 
+/**
+ *
+ */
 export function decodeStyle(style) {
   const parts = style.split(STYLE_SEPARATOR);
   if (parts.length >= 3) {
@@ -31,6 +43,9 @@ export function decodeStyle(style) {
   return [null, null];
 }
 
+/**
+ *
+ */
 export function attrsToStyles(attrs) {
   const result = new Set();
   for (const [k, v] of Object.entries(attrs)) {
@@ -41,6 +56,9 @@ export function attrsToStyles(attrs) {
   return result;
 }
 
+/**
+ *
+ */
 export function stylesToAttrs(styles) {
   const result = {};
   for (const style of styles) {
@@ -58,6 +76,9 @@ export function stylesToAttrs(styles) {
   return result;
 }
 
+/**
+ *
+ */
 function parseDraftStyles(styles) {
   return styles
     .filter((item) => item.style && item.style.startsWith(`${PENPOT_PREFIX}${STYLE_SEPARATOR}`))
@@ -72,6 +93,9 @@ function parseDraftStyles(styles) {
     });
 }
 
+/**
+ *
+ */
 function buildStyleIndex(length, ranges) {
   const result = new Array(length).fill(null).map(() => ({}));
   for (const item of ranges) {
@@ -82,14 +106,23 @@ function buildStyleIndex(length, ranges) {
   return result;
 }
 
+/**
+ *
+ */
 function textToCodePoints(text) {
   return Array.from(text);
 }
 
+/**
+ *
+ */
 function codePointsToText(cpoints, start, end) {
   return cpoints.slice(start, end).join("");
 }
 
+/**
+ *
+ */
 function fixGradients(data) {
   if (data && data.fills) {
     data = {
@@ -105,7 +138,13 @@ function fixGradients(data) {
   return data;
 }
 
+/**
+ *
+ */
 export function convertFromDraft(content) {
+  /**
+   *
+   */
   function extractText(cpoints, part) {
     const start = part[0][1].offset;
     const end = part[part.length - 1].offset + 1;
@@ -115,6 +154,9 @@ export function convertFromDraft(content) {
     return { ...fixedData, text };
   }
 
+  /**
+   *
+   */
   function splitTexts(text, styles, data) {
     const cpoints = textToCodePoints(text);
     const parsed = parseDraftStyles(styles);
@@ -145,6 +187,9 @@ export function convertFromDraft(content) {
     return children;
   }
 
+  /**
+   *
+   */
   function buildParagraph(block) {
     const key = block.key;
     const text = block.text;
@@ -169,7 +214,13 @@ export function convertFromDraft(content) {
   };
 }
 
+/**
+ *
+ */
 export function convertToDraft(root) {
+  /**
+   *
+   */
   function processAttr(children, ranges, kv) {
     const [k, v] = kv;
     let start = null;
@@ -194,6 +245,9 @@ export function convertToDraft(root) {
     return ranges;
   }
 
+  /**
+   *
+   */
   function calcRanges(paragraph) {
     const attrs = Object.entries(paragraph)
       .filter(([k]) => k !== "key" && k !== "children" && k !== "type" && k !== "text")
@@ -206,6 +260,9 @@ export function convertToDraft(root) {
     return styles;
   }
 
+  /**
+   *
+   */
   function buildBlock(paragraph) {
     return {
       key: paragraph.key,
@@ -218,6 +275,9 @@ export function convertToDraft(root) {
     };
   }
 
+  /**
+   *
+   */
   function* nodeSeq(pred, node) {
     if (pred(node)) yield node;
     if (node.children) {
@@ -249,7 +309,13 @@ export const TEXT_ALL_ATTRS = [
   "fillOpacity",
 ];
 
+/**
+ *
+ */
 export function contentToTextWithStyles(node) {
+  /**
+   *
+   */
   function recStyleTextMap(acc, node, style) {
     const nodeStyle = { ...style };
     for (const attr of TEXT_ALL_ATTRS) {
@@ -292,6 +358,9 @@ export function contentToTextWithStyles(node) {
   return recStyleTextMap([], node, {}).reverse();
 }
 
+/**
+ *
+ */
 export function indexContent(content, path, index) {
   const curPath = path ? `${path}-` : "";
   const curPath2 = `${curPath}${content.type || "text"}-${index}`;

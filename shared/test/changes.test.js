@@ -2,6 +2,9 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import * as cfc from '../src/files/changes.js';
 
+/**
+ *
+ */
 function makeFileData() {
   return {
     id: 'file-1',

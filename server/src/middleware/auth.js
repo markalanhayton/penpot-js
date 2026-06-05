@@ -195,9 +195,7 @@ export function registerAuthHooks(fastify, pool) {
           sameSite: 'lax',
           maxAge: config.auth.cookieMaxAge,
         });
-      } catch {
-        // Session renewal failure should not block the response
-      }
+      } catch (err) { console.warn('[auth] session renewal failed:', err.message); }
     }
     return payload;
   });
@@ -222,9 +220,7 @@ export function validateOutboundUrl(urlStr) {
   let url;
   try {
     url = new URL(urlStr);
-  } catch {
-    return { safe: false, reason: 'Invalid URL' };
-  }
+  } catch (err) { console.warn('[auth] URL validation failed for', urlStr, err.message); return { safe: false, reason: 'Invalid URL' }; }
 
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     return { safe: false, reason: 'Only HTTP and HTTPS schemes are allowed' };

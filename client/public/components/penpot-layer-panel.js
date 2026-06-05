@@ -307,6 +307,7 @@ export class PenpotLayerPanel extends PenpotElement {
         const isHidden = shape.visible === false;
         const isLocked = shape.locked === true;
         const badgeHtml = buildBadgeHtml(shape, this.escHtml.bind(this));
+        const icon = SHAPE_ICONS[shape.type] || '\u25A1';
         const indent = `padding-left: ${8 + depth * INDENT}px;`;
 
         const classes = [

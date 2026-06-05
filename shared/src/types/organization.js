@@ -1,5 +1,8 @@
 export const ORG_TO_TEAM_KEYS = ['id', 'name', 'custom-photo', 'slug', 'avatar-bg-url', 'owner-id', 'permissions'];
 
+/**
+ *
+ */
 export function applyOrganization(team, organization) {
   const id = organization?.id;
   if (!id) {

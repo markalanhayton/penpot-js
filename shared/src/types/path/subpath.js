@@ -1,10 +1,16 @@
 import * as gpt from '../../geom/point.js';
 import * as helpers from './helpers.js';
 
+/**
+ *
+ */
 export function ptEq(p1, p2) {
   return gpt.distance(p1, p2) < 0.1;
 }
 
+/**
+ *
+ */
 export function makeSubpath(commandOrFrom, to, data) {
   if (to === undefined) {
     const p = helpers.segmentToPoint(commandOrFrom);
@@ -13,6 +19,9 @@ export function makeSubpath(commandOrFrom, to, data) {
   return { from: commandOrFrom, to, data };
 }
 
+/**
+ *
+ */
 export function addSubpathCommand(subpath, command) {
   const cmd = command.command === 'close-path'
     ? helpers.makeLineTo(subpath.from)
@@ -21,6 +30,9 @@ export function addSubpathCommand(subpath, command) {
   return { ...subpath, to: p, data: [...subpath.data, cmd] };
 }
 
+/**
+ *
+ */
 export function reverseCommand(command, prev) {
   const { x, y } = prev.params;
   const { c1x, c1y, c2x, c2y } = command.params;
@@ -34,7 +46,13 @@ export function reverseCommand(command, prev) {
   return { ...command, params: newParams };
 }
 
+/**
+ *
+ */
 export function reverseSubpath(subpath) {
+  /**
+   *
+   */
   function reverseCommands(result, [command, prev]) {
     if (prev) result.push(reverseCommand(command, prev));
     return result;
@@ -44,6 +62,9 @@ export function reverseSubpath(subpath) {
   return makeSubpath(subpath.to, subpath.from, newCmds);
 }
 
+/**
+ *
+ */
 export function getSubpaths(content) {
   return content.reduce((subpaths, current) => {
     const isMove = current.command === 'move-to';
@@ -60,6 +81,9 @@ export function getSubpaths(content) {
   }, []);
 }
 
+/**
+ *
+ */
 export function subpathsJoin(subpath, other) {
   return {
     ...subpath,
@@ -68,8 +92,11 @@ export function subpathsJoin(subpath, other) {
   };
 }
 
+/**
+ *
+ */
 function mergePaths(candidate, subpaths) {
-  let result = [];
+  const result = [];
   for (const current of subpaths) {
     if (ptEq(current.to, current.from)) {
       result.push(current);
@@ -96,10 +123,16 @@ function mergePaths(candidate, subpaths) {
   return [candidate, result];
 }
 
+/**
+ *
+ */
 export function isClosedQ(subpath) {
   return ptEq(subpath.from, subpath.to);
 }
 
+/**
+ *
+ */
 function joinAdjacent(acc, subpath) {
   const prev = acc.length > 0 ? acc[acc.length - 1] : null;
   if (prev && !isClosedQ(prev) && !isClosedQ(subpath) && ptEq(prev.to, subpath.from)) {
@@ -109,12 +142,18 @@ function joinAdjacent(acc, subpath) {
   return [...acc, subpath];
 }
 
+/**
+ *
+ */
 export function mergeTouchingSubpaths(content) {
   const subpaths = getSubpaths(content);
   const merged = subpaths.reduce(joinAdjacent, []);
   return merged.flatMap(s => s.data);
 }
 
+/**
+ *
+ */
 export function closeSubpaths(content) {
   const subpaths = getSubpaths(content);
   const closedSubpaths = [];
@@ -122,7 +161,7 @@ export function closeSubpaths(content) {
   let remaining = subpaths.slice(1);
 
   while (current) {
-    let [newCurrent, newSubpaths] = isClosedQ(current)
+    const [newCurrent, newSubpaths] = isClosedQ(current)
       ? [current, remaining]
       : mergePaths(current, remaining);
 
@@ -139,6 +178,9 @@ export function closeSubpaths(content) {
   return closedSubpaths.flatMap(s => s.data);
 }
 
+/**
+ *
+ */
 export function reverseContent(content) {
   return getSubpaths(content)
     .map(reverseSubpath)
@@ -146,6 +188,9 @@ export function reverseContent(content) {
     .flatMap(s => s.data);
 }
 
+/**
+ *
+ */
 export function clockwiseQ(content) {
   const subpath = getSubpaths(content)[0]?.data;
   if (!subpath) return false;
@@ -162,6 +207,9 @@ export function clockwiseQ(content) {
   return signedArea > 0;
 }
 
+/**
+ *
+ */
 function withPrev(coll) {
   return coll.map((item, i) => [item, i > 0 ? coll[i - 1] : null]);
 }

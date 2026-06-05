@@ -59,24 +59,24 @@ function collectStats(pool) {
       avgUsersPerTeam: count("SELECT AVG(cnt) AS cnt FROM (SELECT COUNT(*) AS cnt FROM team_profile_rel WHERE is_member = '1' GROUP BY team_id)"),
       maxUsersPerTeam: count("SELECT MAX(cnt) AS cnt FROM (SELECT COUNT(*) AS cnt FROM team_profile_rel WHERE is_member = '1' GROUP BY team_id)"),
     };
-  } catch {
-    // Averages may fail if tables are empty
+  } catch (err) {
+    console.warn('[telemetry] stats collection query failed:', err.message);
   }
 
   let emailDomains = [];
   try {
     const rows = pool.query("SELECT DISTINCT SUBSTR(email, INSTR(email, '@') + 1) AS domain FROM profile WHERE deleted_at IS NULL AND email LIKE '%@%'");
     emailDomains = rows.map(r => r.domain).filter(Boolean);
-  } catch {
-    // Ignore if email column structure differs
+  } catch (err) {
+    console.warn('[telemetry] email domain query failed:', err.message);
   }
 
   let authProviders = [];
   try {
     const rows = pool.query("SELECT auth_source, COUNT(*) AS cnt FROM profile WHERE deleted_at IS NULL GROUP BY auth_source");
     authProviders = rows.map(r => ({ source: r.auth_source || 'unknown', count: r.cnt }));
-  } catch {
-    // Ignore
+  } catch (err) {
+    console.warn('[telemetry] auth provider query failed:', err.message);
   }
 
   const eventCounters = {};
@@ -88,8 +88,8 @@ function collectStats(pool) {
     for (const row of rows) {
       eventCounters[row.name] = row.cnt;
     }
-  } catch {
-    // Ignore
+  } catch (err) {
+    console.warn('[telemetry] audit log event query failed:', err.message);
   }
 
   return {
@@ -157,9 +157,7 @@ function gcTelemetryEvents(pool) {
   const cutoff = new Date(Date.now() - GC_MAX_AGE_DAYS * 24 * 60 * 60 * 1000).toISOString();
   try {
     pool.run("DELETE FROM audit_log WHERE source LIKE 'telemetry:%' AND created_at < ?", [cutoff]);
-  } catch {
-    // Ignore errors during GC
-  }
+  } catch (err) { console.warn('[telemetry] GC audit log cleanup failed:', err.message); }
 }
 
 /**

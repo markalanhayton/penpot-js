@@ -1,6 +1,9 @@
 import * as d from '../data.js';
 import { next as uuidNext } from '../uuid.js';
 
+/**
+ *
+ */
 export function makeTypography(opts = {}) {
   const result = {
     id: opts.id || uuidNext(),
@@ -19,6 +22,9 @@ export function makeTypography(opts = {}) {
   return d.withoutNils(result);
 }
 
+/**
+ *
+ */
 export function usesLibraryTypographies(shape, libraryId) {
   if (shape.type !== 'text') return false;
   const content = shape.content;
@@ -28,6 +34,9 @@ export function usesLibraryTypographies(shape, libraryId) {
   ).length > 0;
 }
 
+/**
+ *
+ */
 export function usesLibraryTypography(shape, libraryId, typographyId) {
   if (shape.type !== 'text') return false;
   const content = shape.content;
@@ -37,6 +46,9 @@ export function usesLibraryTypography(shape, libraryId, typographyId) {
   ).length > 0;
 }
 
+/**
+ *
+ */
 export function remapTypographies(shape, libraryId, typography) {
   return {
     ...shape,
@@ -48,11 +60,17 @@ export function remapTypographies(shape, libraryId, typography) {
   };
 }
 
+/**
+ *
+ */
 export function removeTypographyFromNode(node) {
   const { 'typography-ref-file': _, 'typography-ref-id': __, ...rest } = node;
   return rest;
 }
 
+/**
+ *
+ */
 export function removeExternalTypographies(shape, fileId) {
   return {
     ...shape,
@@ -64,6 +82,9 @@ export function removeExternalTypographies(shape, fileId) {
   };
 }
 
+/**
+ *
+ */
 function nodeSeq(content, pred) {
   const results = [];
   if (!content) return results;
@@ -76,6 +97,9 @@ function nodeSeq(content, pred) {
   return results;
 }
 
+/**
+ *
+ */
 export function transformNodes(content, pred, fn) {
   if (!content) return content;
   let result = pred(content) ? fn(content) : content;

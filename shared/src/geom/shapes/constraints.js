@@ -8,56 +8,86 @@ import * as mth from '../../math.js';
 import * as ctm from '../../modifiers.js';
 import { zero as uuidZero } from '../../uuid.js';
 
+/**
+ *
+ */
 export function otherAxis(axis) {
   return axis === 'x' ? 'y' : 'x';
 }
 
+/**
+ *
+ */
 export function getDeltaStart(axis, rect, trRect) {
   return axis === 'x'
     ? trRect.x1 - rect.x1
     : trRect.y1 - rect.y1;
 }
 
+/**
+ *
+ */
 export function getDeltaEnd(axis, rect, trRect) {
   return axis === 'x'
     ? trRect.x2 - rect.x2
     : trRect.y2 - rect.y2;
 }
 
+/**
+ *
+ */
 export function getDeltaSize(axis, rect, trRect) {
   return axis === 'x'
     ? trRect.width - rect.width
     : trRect.height - rect.height;
 }
 
+/**
+ *
+ */
 export function getDeltaScale(axis, rect, trRect) {
   return axis === 'x'
     ? trRect.width / rect.width
     : trRect.height / rect.height;
 }
 
+/**
+ *
+ */
 export function getDeltaCenter(axis, center, trCenter) {
   return axis === 'x'
     ? trCenter.x - center.x
     : trCenter.y - center.y;
 }
 
+/**
+ *
+ */
 export function getDisplacement(axis, delta, initX = 0, initY = 0) {
   return axis === 'x'
     ? gpt.point(initX + delta, initY)
     : gpt.point(initX, initY + delta);
 }
 
+/**
+ *
+ */
 export function getScale(axis, scale) {
   return axis === 'x'
     ? gpt.point(scale, 1)
     : gpt.point(1, scale);
 }
 
+/**
+ *
+ */
 export function getSize(axis, rect) {
   return axis === 'x' ? rect.width : rect.height;
 }
 
+/**
+ *
+ */
 export function rightVector(childPoints, parentPoints) {
   const [, p1, p2] = parentPoints;
   const [, c1] = childPoints;
@@ -66,6 +96,9 @@ export function rightVector(childPoints, parentPoints) {
   return gpt.toVec(c1, cp);
 }
 
+/**
+ *
+ */
 export function leftVector(childPoints, parentPoints) {
   const [p0, , , p3] = parentPoints;
   const [, , , c3] = childPoints;
@@ -74,6 +107,9 @@ export function leftVector(childPoints, parentPoints) {
   return gpt.toVec(c3, cp);
 }
 
+/**
+ *
+ */
 export function topVector(childPoints, parentPoints) {
   const [p0, p1, , p3] = parentPoints;
   const [c0] = childPoints;
@@ -82,6 +118,9 @@ export function topVector(childPoints, parentPoints) {
   return gpt.toVec(c0, cp);
 }
 
+/**
+ *
+ */
 export function bottomVector(childPoints, parentPoints) {
   const [p0, , p2, p3] = parentPoints;
   const [, , c2] = childPoints;
@@ -90,6 +129,9 @@ export function bottomVector(childPoints, parentPoints) {
   return gpt.toVec(c2, cp);
 }
 
+/**
+ *
+ */
 export function centerHorizontalVector(childPoints, parentPoints) {
   const [p0, p1, , p3] = parentPoints;
   const [, c1] = childPoints;
@@ -102,6 +144,9 @@ export function centerHorizontalVector(childPoints, parentPoints) {
   return gpt.toVec(c1, cp);
 }
 
+/**
+ *
+ */
 export function centerVerticalVector(childPoints, parentPoints) {
   const [p0, p1, p2] = parentPoints;
   const [, c1] = childPoints;
@@ -114,24 +159,36 @@ export function centerVerticalVector(childPoints, parentPoints) {
   return gpt.toVec(c1, cp);
 }
 
+/**
+ *
+ */
 export function startVector(axis, childPoints, parentPoints) {
   return axis === 'x'
     ? leftVector(childPoints, parentPoints)
     : topVector(childPoints, parentPoints);
 }
 
+/**
+ *
+ */
 export function endVector(axis, childPoints, parentPoints) {
   return axis === 'x'
     ? rightVector(childPoints, parentPoints)
     : bottomVector(childPoints, parentPoints);
 }
 
+/**
+ *
+ */
 export function centerVector(axis, childPoints, parentPoints) {
   return axis === 'x'
     ? centerHorizontalVector(childPoints, parentPoints)
     : centerVerticalVector(childPoints, parentPoints);
 }
 
+/**
+ *
+ */
 export function displacement(beforeV, afterV, beforeParentSideV, afterParentSideV) {
   const beforeAngl = gpt.angleWithOther(beforeV, beforeParentSideV);
   const afterAngl = gpt.angleWithOther(afterV, afterParentSideV);
@@ -142,12 +199,18 @@ export function displacement(beforeV, afterV, beforeParentSideV, afterParentSide
   return gpt.subtract(afterV, gpt.scale(gpt.unit(afterV), len));
 }
 
+/**
+ *
+ */
 export function sideVector(axis, [c0, c1, , c3]) {
   return axis === 'x'
     ? gpt.toVec(c0, c1)
     : gpt.toVec(c0, c3);
 }
 
+/**
+ *
+ */
 export function sideVectorResize(axis, [c0, c1, , c3], startVec, endVec) {
   return axis === 'x'
     ? gpt.toVec(gpt.add(c0, startVec), gpt.add(c1, endVec))
@@ -165,16 +228,25 @@ export const CONST_TO_TYPE_AXIS = new Map([
   ['scale', 'scale'],
 ]);
 
+/**
+ *
+ */
 export function defaultConstraintsH(shape) {
   if (shape.parentId === uuidZero) return undefined;
   return shape.parentId === shape.frameId ? 'left' : 'scale';
 }
 
+/**
+ *
+ */
 export function defaultConstraintsV(shape) {
   if (shape.parentId === uuidZero) return undefined;
   return shape.parentId === shape.frameId ? 'top' : 'scale';
 }
 
+/**
+ *
+ */
 export function normalizeModifiers(constraintsH, constraintsV, modifiers, childBounds, transformedChildBounds, parentBounds, transformedParentBounds) {
   const childBBBefore = gpo.parentCoordsBounds(childBounds, parentBounds);
   const childBBAfter = gpo.parentCoordsBounds(transformedChildBounds, transformedParentBounds);
@@ -198,6 +270,9 @@ export function normalizeModifiers(constraintsH, constraintsV, modifiers, childB
   return ctm.resize(modifiers, resizeVector, resizeOrigin, transform, transformInverse);
 }
 
+/**
+ *
+ */
 export function calcChildModifiers(parent, child, modifiers, ignoreConstraints, childBounds, parentBounds, transformedParentBounds) {
   modifiers = ctm.selectChild(modifiers);
 

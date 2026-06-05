@@ -11,7 +11,7 @@ const GUIDE_DELETE_MARGIN = 30;
 
 const template = document.createElement('template');
 template.innerHTML = `<style>
-  :host { display: block; pointer-events: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+  penpot-guide-overlay { display: block; pointer-events: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
   .guide-line { stroke: ${GUIDE_COLOR}; stroke-width: 1; pointer-events: stroke; cursor: ns-resize; }
   .guide-line.horizontal { cursor: ew-resize; }
   .guide-line.vertical { cursor: ns-resize; }

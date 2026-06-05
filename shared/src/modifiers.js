@@ -3,7 +3,13 @@ import { close as mtClose, matrix, multiply as mtMultiply, translateMatrix, scal
 import { almostZero } from './math.js';
 import { notEmpty, concatVec } from './data.js';
 
+/**
+ *
+ */
 export class Modifiers {
+  /**
+   *
+   */
   constructor(lastOrder = 0, geometryParent = [], geometryChild = [], structureParent = [], structureChild = []) {
     this.lastOrder = lastOrder;
     this.geometryParent = geometryParent;
@@ -13,7 +19,13 @@ export class Modifiers {
   }
 }
 
+/**
+ *
+ */
 export class GeometricOperation {
+  /**
+   *
+   */
   constructor(order, type, vector, origin, transform, transformInverse, rotation, center) {
     this.order = order;
     this.type = type;
@@ -26,7 +38,13 @@ export class GeometricOperation {
   }
 }
 
+/**
+ *
+ */
 export class StructureOperation {
+  /**
+   *
+   */
   constructor(type, property, value, index) {
     this.type = type;
     this.property = property;
@@ -35,58 +53,100 @@ export class StructureOperation {
   }
 }
 
+/**
+ *
+ */
 function moveOp(order, vector) {
   return new GeometricOperation(order, 'move', vector, null, null, null, null, null);
 }
 
+/**
+ *
+ */
 function resizeOp(order, vector, origin, transform, transformInverse) {
   return new GeometricOperation(order, 'resize', vector, origin, transform ?? null, transformInverse ?? null, null, null);
 }
 
+/**
+ *
+ */
 function rotationGeomOp(order, center, angle) {
   return new GeometricOperation(order, 'rotation', null, null, null, null, angle, center);
 }
 
+/**
+ *
+ */
 function rotationStructOp(angle) {
   return new StructureOperation('rotation', null, angle, null);
 }
 
+/**
+ *
+ */
 function removeChildrenOp(shapes) {
   return new StructureOperation('remove-children', null, shapes, null);
 }
 
+/**
+ *
+ */
 function addChildrenOp(shapes, index) {
   return new StructureOperation('add-children', null, shapes, index);
 }
 
+/**
+ *
+ */
 function reflowOp() {
   return new StructureOperation('reflow', null, null, null);
 }
 
+/**
+ *
+ */
 function scaleContentOp(value) {
   return new StructureOperation('scale-content', null, value, null);
 }
 
+/**
+ *
+ */
 function changePropertyOp(property, value) {
   return new StructureOperation('change-property', property, value, null);
 }
 
+/**
+ *
+ */
 function moveVecQ(vector) {
   return !almostZero(vector.x) || !almostZero(vector.y);
 }
 
+/**
+ *
+ */
 function resizeVecQ(vector) {
   return !almostZero(vector.x - 1) || !almostZero(vector.y - 1);
 }
 
+/**
+ *
+ */
 function validVectorQ(vector) {
   return typeof vector.x === 'number' && typeof vector.y === 'number';
 }
 
+/**
+ *
+ */
 function mergeableMoveQ(op1, op2) {
   return op1.type === 'move' && op2.type === 'move';
 }
 
+/**
+ *
+ */
 function mergeableResizeQ(op1, op2) {
   if (op1.type !== 'resize' || op2.type !== 'resize') return false;
   const tf1 = op1.transform ?? matrix();
@@ -96,14 +156,23 @@ function mergeableResizeQ(op1, op2) {
   return ptClose(op1.origin, op2.origin) && mtClose(tf1, tf2) && mtClose(tfi1, tfi2);
 }
 
+/**
+ *
+ */
 function mergeMove(op1, op2) {
   return new GeometricOperation(op1.order, 'move', point(op1.vector.x + op2.vector.x, op1.vector.y + op2.vector.y), null, null, null, null, null);
 }
 
+/**
+ *
+ */
 function mergeResize(op1, op2) {
   return new GeometricOperation(op1.order, 'resize', point(op1.vector.x * op2.vector.x, op1.vector.y * op2.vector.y), op1.origin, op1.transform, op1.transformInverse, null, null);
 }
 
+/**
+ *
+ */
 function maybeAddMove(operations, op) {
   if (operations.length === 0) return [op];
   const head = operations[operations.length - 1];
@@ -115,6 +184,9 @@ function maybeAddMove(operations, op) {
   return [...operations, op];
 }
 
+/**
+ *
+ */
 function maybeAddResize(operations, op, precise) {
   if (operations.length === 0) return [op];
   const head = operations[operations.length - 1];
@@ -126,14 +198,23 @@ function maybeAddResize(operations, op, precise) {
   return [...operations, op];
 }
 
+/**
+ *
+ */
 function ensureModifiers(modifiers) {
   return modifiers ?? empty();
 }
 
+/**
+ *
+ */
 export function empty() {
   return new Modifiers(0, [], [], [], []);
 }
 
+/**
+ *
+ */
 export function moveParent(modifiers, xOrVector, y) {
   const vector = y !== undefined ? point(xOrVector, y) : xOrVector;
   if (!validVectorQ(vector)) throw new Error(`Invalid move vector: ${vector.x},${vector.y}`);
@@ -146,6 +227,9 @@ export function moveParent(modifiers, xOrVector, y) {
   return new Modifiers(order, gp, modifiers.geometryChild, modifiers.structureParent, modifiers.structureChild);
 }
 
+/**
+ *
+ */
 export function resizeParent(modifiers, vector, origin, transform, transformInverse) {
   if (!validVectorQ(vector)) throw new Error(`Invalid resize vector: ${vector.x},${vector.y}`);
   modifiers = ensureModifiers(modifiers);
@@ -157,6 +241,9 @@ export function resizeParent(modifiers, vector, origin, transform, transformInve
   return new Modifiers(order, gp, modifiers.geometryChild, modifiers.structureParent, modifiers.structureChild);
 }
 
+/**
+ *
+ */
 export function move(modifiers, xOrVector, y) {
   const vector = y !== undefined ? point(xOrVector, y) : xOrVector;
   if (!validVectorQ(vector)) throw new Error(`Invalid move vector: ${vector.x},${vector.y}`);
@@ -169,6 +256,9 @@ export function move(modifiers, xOrVector, y) {
   return new Modifiers(order, modifiers.geometryParent, gc, modifiers.structureParent, modifiers.structureChild);
 }
 
+/**
+ *
+ */
 export function resize(modifiers, vector, origin, transform, transformInverse, options) {
   if (!validVectorQ(vector)) throw new Error(`Invalid resize vector: ${vector.x},${vector.y}`);
   modifiers = ensureModifiers(modifiers);
@@ -180,6 +270,9 @@ export function resize(modifiers, vector, origin, transform, transformInverse, o
   return new Modifiers(order, modifiers.geometryParent, gc, modifiers.structureParent, modifiers.structureChild);
 }
 
+/**
+ *
+ */
 export function rotation(modifiers, center, angle) {
   modifiers = ensureModifiers(modifiers);
   const order = modifiers.lastOrder + 1;
@@ -193,33 +286,51 @@ export function rotation(modifiers, center, angle) {
   );
 }
 
+/**
+ *
+ */
 export function removeChildren(modifiers, shapes) {
   modifiers = ensureModifiers(modifiers);
   if (!notEmpty(shapes)) return modifiers;
   return new Modifiers(modifiers.lastOrder, modifiers.geometryParent, modifiers.geometryChild, [...modifiers.structureParent, removeChildrenOp(shapes)], modifiers.structureChild);
 }
 
+/**
+ *
+ */
 export function addChildren(modifiers, shapes, index) {
   modifiers = ensureModifiers(modifiers);
   if (!notEmpty(shapes)) return modifiers;
   return new Modifiers(modifiers.lastOrder, modifiers.geometryParent, modifiers.geometryChild, [...modifiers.structureParent, addChildrenOp(shapes, index)], modifiers.structureChild);
 }
 
+/**
+ *
+ */
 export function reflow(modifiers) {
   modifiers = ensureModifiers(modifiers);
   return new Modifiers(modifiers.lastOrder, modifiers.geometryParent, modifiers.geometryChild, [...modifiers.structureParent, reflowOp()], modifiers.structureChild);
 }
 
+/**
+ *
+ */
 export function scaleContent(modifiers, value) {
   modifiers = ensureModifiers(modifiers);
   return new Modifiers(modifiers.lastOrder, modifiers.geometryParent, modifiers.geometryChild, modifiers.structureParent, [...modifiers.structureChild, scaleContentOp(value)]);
 }
 
+/**
+ *
+ */
 export function changeProperty(modifiers, property, value) {
   modifiers = ensureModifiers(modifiers);
   return new Modifiers(modifiers.lastOrder, modifiers.geometryParent, modifiers.geometryChild, [...modifiers.structureParent, changePropertyOp(property, value)], modifiers.structureChild);
 }
 
+/**
+ *
+ */
 function concatGeometry(operations, other, merge) {
   if (operations.length === 0) return other;
   if (other.length === 0) return operations;
@@ -236,10 +347,16 @@ function concatGeometry(operations, other, merge) {
   return result;
 }
 
+/**
+ *
+ */
 function increaseOrder(operations, lastOrder) {
   return operations.map((op) => ({ ...op, order: op.order + lastOrder }));
 }
 
+/**
+ *
+ */
 export function addModifiers(modifiers, newModifiers) {
   modifiers = ensureModifiers(modifiers);
   newModifiers = ensureModifiers(newModifiers);
@@ -262,19 +379,31 @@ export function addModifiers(modifiers, newModifiers) {
   );
 }
 
+/**
+ *
+ */
 export function moveModifiers(xOrVector, y) {
   const vector = y !== undefined ? point(xOrVector, y) : xOrVector;
   return move(empty(), vector);
 }
 
+/**
+ *
+ */
 export function resizeModifiers(vector, origin, transform, transformInverse) {
   return resize(empty(), vector, origin, transform, transformInverse);
 }
 
+/**
+ *
+ */
 export function reflowModifiers() {
   return reflow(empty());
 }
 
+/**
+ *
+ */
 export function isEmpty(modifiers) {
   modifiers = ensureModifiers(modifiers);
   return modifiers.geometryChild.length === 0 &&
@@ -283,26 +412,41 @@ export function isEmpty(modifiers) {
          modifiers.structureChild.length === 0;
 }
 
+/**
+ *
+ */
 export function hasChildModifiers(modifiers) {
   modifiers = ensureModifiers(modifiers);
   return notEmpty(modifiers.geometryChild) || notEmpty(modifiers.structureChild);
 }
 
+/**
+ *
+ */
 export function hasGeometry(modifiers) {
   modifiers = ensureModifiers(modifiers);
   return notEmpty(modifiers.geometryParent) || notEmpty(modifiers.geometryChild);
 }
 
+/**
+ *
+ */
 export function hasStructure(modifiers) {
   modifiers = ensureModifiers(modifiers);
   return notEmpty(modifiers.structureParent) || notEmpty(modifiers.structureChild);
 }
 
+/**
+ *
+ */
 export function hasStructureChild(modifiers) {
   modifiers = ensureModifiers(modifiers);
   return notEmpty(modifiers.structureChild);
 }
 
+/**
+ *
+ */
 export function onlyMove(modifiers) {
   modifiers = ensureModifiers(modifiers);
   if (hasStructure(modifiers)) return false;
@@ -310,30 +454,48 @@ export function onlyMove(modifiers) {
   return modifiers.geometryChild.every(moveOpQ) && modifiers.geometryParent.every(moveOpQ);
 }
 
+/**
+ *
+ */
 export function selectChild(modifiers) {
   modifiers = ensureModifiers(modifiers);
   return new Modifiers(modifiers.lastOrder, [], modifiers.geometryChild, [], modifiers.structureChild);
 }
 
+/**
+ *
+ */
 export function selectParent(modifiers) {
   modifiers = ensureModifiers(modifiers);
   return new Modifiers(modifiers.lastOrder, modifiers.geometryParent, [], modifiers.structureParent, []);
 }
 
+/**
+ *
+ */
 export function selectStructure(modifiers) {
   modifiers = ensureModifiers(modifiers);
   return new Modifiers(modifiers.lastOrder, [], [], modifiers.structureParent, modifiers.structureChild);
 }
 
+/**
+ *
+ */
 export function selectGeometry(modifiers) {
   modifiers = ensureModifiers(modifiers);
   return new Modifiers(modifiers.lastOrder, modifiers.geometryParent, modifiers.geometryChild, [], []);
 }
 
+/**
+ *
+ */
 export function selectChildStructureModifiers(modifiers) {
   return selectStructure(selectChild(modifiers));
 }
 
+/**
+ *
+ */
 export function addedChildrenFrames(modifTree) {
   const result = [];
   for (const [frameId, val] of Object.entries(modifTree)) {
@@ -351,10 +513,16 @@ export function addedChildrenFrames(modifTree) {
   return result;
 }
 
+/**
+ *
+ */
 function transformMoveOp(m, modifier) {
   return mtMultiply(translateMatrix(modifier.vector), m);
 }
 
+/**
+ *
+ */
 function transformResizeOp(m, modifier) {
   let origin = modifier.origin;
   if (modifier.transformInverse) {
@@ -369,6 +537,9 @@ function transformResizeOp(m, modifier) {
   return mtMultiply(result, m);
 }
 
+/**
+ *
+ */
 function transformRotateOp(m, modifier) {
   const center = modifier.center;
   const rot = modifier.rotation;
@@ -384,11 +555,17 @@ const TRANSFORM_DISPATCH = new Map([
   ['rotation', transformRotateOp],
 ]);
 
+/**
+ *
+ */
 function transformOp(m, modifier) {
   const fn = TRANSFORM_DISPATCH.get(modifier.type);
   return fn ? fn(m, modifier) : m;
 }
 
+/**
+ *
+ */
 export function modifiersToTransform(modifiers) {
   modifiers = ensureModifiers(modifiers);
   const all = [...modifiers.geometryParent, ...modifiers.geometryChild]
@@ -417,11 +594,17 @@ const APPLY_MODIFIER_DISPATCH = new Map([
   ['change-property', (shape, op) => ({ ...shape, [op.property]: op.value })],
 ]);
 
+/**
+ *
+ */
 export function applyModifier(shape, operation) {
   const fn = APPLY_MODIFIER_DISPATCH.get(operation.type);
   return fn ? fn(shape, operation) : shape;
 }
 
+/**
+ *
+ */
 export function applyStructureModifiers(shape, modifiers) {
   modifiers = ensureModifiers(modifiers);
   let result = shape;

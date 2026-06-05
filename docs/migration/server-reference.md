@@ -122,7 +122,7 @@ exporter/                         # Standalone Playwright-based export service
 - **Storage**: Dual backend — filesystem (`storage/fs.js`) or S3 (`storage/s3.js`),
   selected via `PENPOT_STORAGE_BACKEND` env var.
 - **Migrations**: Numbered SQL files in `migrations/`. Auto-run on startup.
-  21 migrations (0001–0021) achieve full PG schema parity:
+  22 migrations (0001–0023, no 0012) achieve full PG schema parity:
   - 0001–0009: Core tables, media, snapshots, email, full parity, tasks, indexes, welcome file, FTS5
   - 0010: Audit gap remediation (40+ indexes, 5 constraints, 1 column, 3 data migrations)
   - 0011: Critical schema fixes (`team_invitation` restructure, `team_profile_rel` RESTRICT FK, `sso_provider` CHECKs)
@@ -175,7 +175,7 @@ node --test test/**/*.test.js
 npm run lint
 ```
 
-Tests run with `node --test test/**/*.test.js` (78 test files, 909 tests, 296 suites, 0 fail). Exporter tests run with `node --test test/exporter.test.js` (22 tests, 0 fail). When adding tests, use the built-in `node:test` and `node:assert` modules.
+Tests run with `node --test test/**/*.test.js` (80 test files, 1,201 tests, 413 suites, 0 fail). Exporter tests run with `node --test test/exporter.test.js` (23 tests, 0 fail). When adding tests, use the built-in `node:test` and `node:assert` modules.
 
 ## Environment
 

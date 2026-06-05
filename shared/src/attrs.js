@@ -4,6 +4,9 @@ import * as txt from './types/text.js';
 
 const UNSET = Symbol('unset');
 
+/**
+ *
+ */
 function getAttr(obj, attr) {
   const direct = obj[attr];
   if (direct === 'multiple') return 'multiple';
@@ -28,6 +31,9 @@ function getAttr(obj, attr) {
   return obj[attr] ?? UNSET;
 }
 
+/**
+ *
+ */
 function defaultEqual(val1, val2) {
   if (typeof val1 === 'number' && typeof val2 === 'number') {
     return mth.close(val1, val2);
@@ -35,6 +41,9 @@ function defaultEqual(val1, val2) {
   return val1 === val2;
 }
 
+/**
+ *
+ */
 export function getAttrsMulti(objs, attrs, eqfn, sel) {
   if (eqfn === undefined) eqfn = defaultEqual;
   if (sel === undefined) sel = (v) => v;
@@ -64,6 +73,9 @@ export function getAttrsMulti(objs, attrs, eqfn, sel) {
   return result;
 }
 
+/**
+ *
+ */
 export function getTextAttrsMulti({ content }, defaults, attrs) {
   const rootAttrsList = attrs.filter((a) => txt.rootAttrs.includes(a));
   const paragraphAttrsList = attrs.filter((a) => txt.paragraphAttrs.includes(a));

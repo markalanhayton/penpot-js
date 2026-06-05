@@ -1,10 +1,16 @@
 import * as mth from '../../math.js';
 
+/**
+ *
+ */
 function zeroDiv(a, b) {
   if (mth.almostZero(b)) return Infinity;
   return a / b;
 }
 
+/**
+ *
+ */
 export function fixRadius(width, height, r1, r2, r3, r4) {
   if (r2 === undefined) {
     const r = r1;
@@ -22,6 +28,9 @@ export function fixRadius(width, height, r1, r2, r3, r4) {
   return [r1, r2, r3, r4];
 }
 
+/**
+ *
+ */
 export function shapeCorners1(shape) {
   const { width, height, r1 } = shape;
   if (r1 != null && !mth.almostZero(r1)) {
@@ -30,6 +39,9 @@ export function shapeCorners1(shape) {
   return 0;
 }
 
+/**
+ *
+ */
 export function shapeCorners4(shape) {
   const { width, height, r1, r2, r3, r4 } = shape;
   if (r1 != null && r2 != null && r3 != null && r4 != null) {
@@ -38,6 +50,9 @@ export function shapeCorners4(shape) {
   return [r1, r2, r3, r4];
 }
 
+/**
+ *
+ */
 export function updateCornersScale(shape, scale) {
   return {
     ...shape,

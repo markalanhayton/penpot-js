@@ -1,11 +1,20 @@
+/**
+ *
+ */
 export function now() {
   return new Date();
 }
 
+/**
+ *
+ */
 export function isInst(o) {
   return o instanceof Date;
 }
 
+/**
+ *
+ */
 export function inst(s) {
   if (s == null) return s;
   if (isInst(s)) return s;
@@ -14,32 +23,53 @@ export function inst(s) {
   throw new Error('invalid parameters for inst');
 }
 
+/**
+ *
+ */
 export function instMs(d) {
   if (d == null) return 0;
   const date = isInst(d) ? d : inst(d);
   return date.getTime();
 }
 
+/**
+ *
+ */
 export function isAfter(da, db) {
   return da > db;
 }
 
+/**
+ *
+ */
 export function isBefore(da, db) {
   return da < db;
 }
 
+/**
+ *
+ */
 export function isAfterOrEqual(da, db) {
   return da >= db;
 }
 
+/**
+ *
+ */
 export function isBeforeOrEqual(da, db) {
   return da <= db;
 }
 
+/**
+ *
+ */
 export function seconds(d) {
   return Math.floor(instMs(d) / 1000);
 }
 
+/**
+ *
+ */
 export function formatInst(v, fmt = 'iso') {
   if (v == null) return null;
   const date = isInst(v) ? v : inst(v);
@@ -67,37 +97,58 @@ export function formatInst(v, fmt = 'iso') {
   }
 }
 
+/**
+ *
+ */
 export function plus(d, duration) {
   const date = isInst(d) ? d : inst(d);
   const ms = durationToMs(duration);
   return new Date(date.getTime() + ms);
 }
 
+/**
+ *
+ */
 export function minus(d, duration) {
   const date = isInst(d) ? d : inst(d);
   const ms = durationToMs(duration);
   return new Date(date.getTime() - ms);
 }
 
+/**
+ *
+ */
 export function diffMs(t1, t2) {
   const d1 = isInst(t1) ? t1 : inst(t1);
   const d2 = isInst(t2) ? t2 : inst(t2);
   return d2.getTime() - d1.getTime();
 }
 
+/**
+ *
+ */
 export function inFuture(duration) {
   return plus(now(), duration);
 }
 
+/**
+ *
+ */
 export function inPast(duration) {
   return minus(now(), duration);
 }
 
+/**
+ *
+ */
 export function tpointMs() {
   const p1 = performance.now();
   return () => performance.now() - p1;
 }
 
+/**
+ *
+ */
 function durationToMs(d) {
   if (typeof d === 'number') return d;
   if (typeof d === 'string') return parseDurationString(d);
@@ -113,6 +164,9 @@ function durationToMs(d) {
   throw new Error('invalid duration');
 }
 
+/**
+ *
+ */
 function parseDurationString(s) {
   const m = s.match(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/);
   if (!m) throw new Error(`invalid duration string: ${s}`);
@@ -123,6 +177,9 @@ function parseDurationString(s) {
   return ms;
 }
 
+/**
+ *
+ */
 function formatDateCustom(date, fmt) {
   const pad = (n, len = 2) => String(n).padStart(len, '0');
   const tokens = {

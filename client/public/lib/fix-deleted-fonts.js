@@ -31,7 +31,7 @@ function isSystemFontFamily(fontFamily) {
   return SYSTEM_FONT_FAMILIES.has(lower);
 }
 
-function buildFontRegistry(teamFonts) {
+export function buildFontRegistry(teamFonts) {
   const registry = new Map();
   if (Array.isArray(teamFonts)) {
     for (const family of teamFonts) {

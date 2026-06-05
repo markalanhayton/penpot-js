@@ -5,6 +5,9 @@ import * as cts from '../types/shape.js';
 
 const repairHandlers = {};
 
+/**
+ *
+ */
 export function registerRepairHandler(code, handler) {
   repairHandlers[code] = handler;
 }
@@ -12,6 +15,9 @@ export function registerRepairHandler(code, handler) {
 registerRepairHandler('invalid-geometry', (_code, error, fileData, _libraries) => {
   const { shape, 'page-id': pageId } = error;
 
+  /**
+   *
+   */
   function repairShape(s) {
     return {
       ...s,
@@ -39,6 +45,9 @@ registerRepairHandler('invalid-geometry', (_code, error, fileData, _libraries) =
 registerRepairHandler('parent-not-found', (_code, error, fileData, _libraries) => {
   const { shape, 'page-id': pageId } = error;
 
+  /**
+   *
+   */
   function repairShape(s) {
     return { ...s, 'parent-id': uuid.zero };
   }
@@ -53,6 +62,9 @@ registerRepairHandler('parent-not-found', (_code, error, fileData, _libraries) =
 registerRepairHandler('child-not-in-parent', (_code, error, fileData, _libraries) => {
   const { shape, 'page-id': pageId } = error;
 
+  /**
+   *
+   */
   function repairShape(parent) {
     const shapes = parent.shapes ?? [];
     if (shapes.includes(shape.id)) return parent;
@@ -69,6 +81,9 @@ registerRepairHandler('child-not-in-parent', (_code, error, fileData, _libraries
 registerRepairHandler('duplicated-children', (_code, error, fileData, _libraries) => {
   const { shape, 'page-id': pageId } = error;
 
+  /**
+   *
+   */
   function repairShape(s) {
     const shapes = s.shapes ?? [];
     return { ...s, shapes: [...new Set(shapes)] };
@@ -84,6 +99,9 @@ registerRepairHandler('duplicated-children', (_code, error, fileData, _libraries
 registerRepairHandler('child-not-found', (_code, error, fileData, _libraries) => {
   const { shape, 'page-id': pageId, args } = error;
 
+  /**
+   *
+   */
   function repairShape(parent) {
     const shapes = parent.shapes ?? [];
     return { ...parent, shapes: shapes.filter(id => id !== args['child-id']) };
@@ -110,6 +128,9 @@ registerRepairHandler('invalid-parent', (_code, error, fileData, _libraries) => 
 registerRepairHandler('frame-not-found', (_code, error, fileData, _libraries) => {
   const { shape, 'page-id': pageId } = error;
 
+  /**
+   *
+   */
   function repairShape(s) {
     return { ...s, 'frame-id': uuid.zero };
   }
@@ -124,6 +145,9 @@ registerRepairHandler('frame-not-found', (_code, error, fileData, _libraries) =>
 registerRepairHandler('invalid-frame', (_code, error, fileData, _libraries) => {
   const { shape, 'page-id': pageId } = error;
 
+  /**
+   *
+   */
   function repairShape(s) {
     return { ...s, 'frame-id': uuid.zero };
   }
@@ -138,6 +162,9 @@ registerRepairHandler('invalid-frame', (_code, error, fileData, _libraries) => {
 registerRepairHandler('component-not-main', (_code, error, fileData, _libraries) => {
   const { shape, 'page-id': pageId } = error;
 
+  /**
+   *
+   */
   function repairShape(s) {
     const { 'component-id': _, 'component-root': __, 'main-instance-id': ___, ...rest } = s;
     return rest;
@@ -153,6 +180,9 @@ registerRepairHandler('component-not-main', (_code, error, fileData, _libraries)
 registerRepairHandler('component-main-external', (_code, error, fileData, _libraries) => {
   const { shape, 'page-id': pageId } = error;
 
+  /**
+   *
+   */
   function repairShape(s) {
     const { 'component-id': _, 'component-root': __, 'main-instance-id': ___, ...rest } = s;
     return rest;
@@ -168,6 +198,9 @@ registerRepairHandler('component-main-external', (_code, error, fileData, _libra
 registerRepairHandler('component-not-found', (_code, error, fileData, _libraries) => {
   const { shape, 'page-id': pageId } = error;
 
+  /**
+   *
+   */
   function repairShape(s) {
     const { 'component-id': _, 'component-root': __, ...rest } = s;
     return rest;
@@ -183,6 +216,9 @@ registerRepairHandler('component-not-found', (_code, error, fileData, _libraries
 registerRepairHandler('invalid-main-instance-id', (_code, error, fileData, _libraries) => {
   const { shape, 'page-id': pageId } = error;
 
+  /**
+   *
+   */
   function repairShape(s) {
     const { 'main-instance-id': _, ...rest } = s;
     return rest;
@@ -198,6 +234,9 @@ registerRepairHandler('invalid-main-instance-id', (_code, error, fileData, _libr
 registerRepairHandler('invalid-text-touched', (_code, error, fileData, _libraries) => {
   const { shape, 'page-id': pageId } = error;
 
+  /**
+   *
+   */
   function repairShape(s) {
     const { 'touched': _, ...rest } = s;
     return rest;
@@ -214,11 +253,17 @@ registerRepairHandler('default', (_code, error, _fileData, _libraries) => {
   return null;
 });
 
+/**
+ *
+ */
 export function repairError(code, error, fileData, libraries) {
   const handler = repairHandlers[code] ?? repairHandlers['default'];
   return handler(code, error, fileData, libraries);
 }
 
+/**
+ *
+ */
 export function repairFile(fileData, libraries, errors) {
   if (!errors || errors.length === 0) {
     return { changes: null, hasChanges: false };

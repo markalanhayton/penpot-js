@@ -93,4 +93,18 @@ export class PenpotElement extends HTMLElement {
     el.textContent = str || '';
     return el.innerHTML;
   }
+
+  /**
+   * Escape an attribute value for safe interpolation into HTML.
+   * @param {string} str
+   * @returns {string}
+   */
+  escAttr(str) {
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
 }

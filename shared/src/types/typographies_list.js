@@ -1,14 +1,23 @@
 import * as d from '../data.js';
 import * as dt from '../time.js';
 
+/**
+ *
+ */
 export function typographiesSeq(fileData) {
   return Object.values(fileData.typographies ?? {});
 }
 
+/**
+ *
+ */
 function touch(typography) {
   return { ...typography, modifiedAt: dt.now() };
 }
 
+/**
+ *
+ */
 export function addTypography(fileData, typography) {
   return {
     ...fileData,
@@ -16,10 +25,16 @@ export function addTypography(fileData, typography) {
   };
 }
 
+/**
+ *
+ */
 export function getTypography(fileData, typographyId) {
   return fileData.typographies?.[typographyId];
 }
 
+/**
+ *
+ */
 export function getRefTypography(libraryData, typography) {
   if (typography['typography-ref-file'] === libraryData.id) {
     return getTypography(libraryData, typography['typography-ref-id']);
@@ -27,6 +42,9 @@ export function getRefTypography(libraryData, typography) {
   return undefined;
 }
 
+/**
+ *
+ */
 export function setTypography(fileData, typography) {
   const current = fileData.typographies?.[typography.id];
   if (current === undefined) return fileData;
@@ -36,15 +54,24 @@ export function setTypography(fileData, typography) {
   };
 }
 
+/**
+ *
+ */
 export function updateTypography(fileData, typographyId, f, ...args) {
   return d.updateInWhen(fileData, ['typographies', typographyId], (t) => touch(f(t, ...args)));
 }
 
+/**
+ *
+ */
 export function deleteTypography(fileData, typographyId) {
   const { [typographyId]: _, ...rest } = fileData.typographies ?? {};
   return { ...fileData, typographies: rest };
 }
 
+/**
+ *
+ */
 export function usedTypographiesChangedSince(shape, library, sinceDate) {
   const results = [];
   const content = shape.content;
@@ -60,6 +87,9 @@ export function usedTypographiesChangedSince(shape, library, sinceDate) {
   return results;
 }
 
+/**
+ *
+ */
 function nodeSeq(root) {
   const result = [];
   const stack = [root];

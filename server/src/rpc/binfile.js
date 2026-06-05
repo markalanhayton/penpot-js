@@ -119,9 +119,7 @@ function remapIds(data, idMap) {
   );
   try {
     return JSON.parse(remapped);
-  } catch {
-    return data;
-  }
+  } catch (err) { console.warn('[binfile] remapped JSON parse failed:', err.message); return data; }
 }
 
 function cleanShapePreDecode(shape) {
@@ -336,12 +334,11 @@ async function loadFileData(pool, fileId) {
     return typeof fileData.data === 'string' || Buffer.isBuffer(fileData.data)
       ? await decode(fileData.data)
       : fileData.data;
-  } catch {
+  } catch (err) {
+    console.warn('[binfile] file data decode failed, trying JSON:', err.message);
     try {
       return JSON.parse(typeof fileData.data === 'string' ? fileData.data : fileData.data.toString());
-    } catch {
-      return null;
-    }
+    } catch (err2) { console.warn('[binfile] JSON parse also failed:', err2.message); return null; }
   }
 }
 
@@ -609,7 +606,7 @@ export default function registerBinfileCommands(register, pool) {
           } catch (readErr) {
             throw new RpcError('validation', 'validation-error', `Could not read uploaded file: ${readErr.message}`);
           }
-          try { await rm(session.file_path).catch(() => {}); } catch {}
+          try { await rm(session.file_path).catch((err) => { console.warn('[binfile] temp file removal failed:', err.message); }); } catch (err) { console.warn('[binfile] temp file removal error:', err.message); }
         } else {
           throw new RpcError('validation', 'validation-error', 'Upload session has no file data');
         }
@@ -687,7 +684,7 @@ async function importParsedFiles(pool, parsed, opts) {
     let data = entry.data || { pages: [], pagesIndex: {}, components: {}, media: {}, colors: {}, typographies: {} };
 
     if (typeof data === 'string') {
-      try { data = JSON.parse(data); } catch { /* keep as is */ }
+      try { data = JSON.parse(data); } catch (err) { console.warn('[binfile] JSON parse of import data failed:', err.message); }
     }
 
     data = remapIds(data, createIdMap(data));
@@ -773,7 +770,7 @@ async function importParsedFiles(pool, parsed, opts) {
       for (const [oldId, newId] of Object.entries(mediaRefMap)) {
         remappedMediaStr = remappedMediaStr.replaceAll(oldId, newId);
       }
-      try { data.media = JSON.parse(remappedMediaStr); } catch { /* keep as is */ }
+      try { data.media = JSON.parse(remappedMediaStr); } catch (err) { console.warn('[binfile] JSON parse of remapped media failed:', err.message); }
     }
 
     const encoded = await encode(data, { version: 5 });
@@ -909,7 +906,8 @@ async function parseImportBuffer(buffer) {
       storageObjects: new Map(),
       relations: [],
     };
-  } catch {
+  } catch (err) {
+    console.warn('[binfile] ZIP parse failed, trying JSON:', err.message);
     try {
       const data = JSON.parse(buffer.toString('utf8'));
       return {
@@ -919,9 +917,7 @@ async function parseImportBuffer(buffer) {
         storageObjects: new Map(),
         relations: [],
       };
-    } catch {
-      throw new RpcError('validation', 'validation-error', 'Could not parse file data');
-    }
+    } catch (err2) { console.warn('[binfile] JSON parse also failed:', err2.message); throw new RpcError('validation', 'validation-error', 'Could not parse file data'); }
   }
 }
 

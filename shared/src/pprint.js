@@ -10,11 +10,17 @@ export const DEFAULT_LEVEL = 8;
 export const DEFAULT_LENGTH = 25;
 export const DEFAULT_WIDTH = 120;
 
+/**
+ *
+ */
 export function pprint(expr, { width = DEFAULT_WIDTH, level = DEFAULT_LEVEL, length = DEFAULT_LENGTH } = {}) {
   const opts = { maxDepth: level, maxLength: length };
   console.log(formatValue(expr, opts));
 }
 
+/**
+ *
+ */
 export function pprintStr(expr, opts = {}) {
   return formatValue(expr, {
     maxDepth: opts.level ?? DEFAULT_LEVEL,
@@ -22,6 +28,9 @@ export function pprintStr(expr, opts = {}) {
   });
 }
 
+/**
+ *
+ */
 function formatValue(value, opts, depth = 0) {
   if (depth > opts.maxDepth) {
     return "...";

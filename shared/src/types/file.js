@@ -23,6 +23,9 @@ export const EMPTY_FILE_DATA = {
   'pages-index': {},
 };
 
+/**
+ *
+ */
 export function makeFileData(fileId, pageId) {
   if (pageId === undefined) pageId = next();
   const page = pageId ? makeEmptyPage({ id: pageId, name: 'Page 1' }) : undefined;
@@ -40,6 +43,9 @@ export function makeFileData(fileId, pageId) {
   return result;
 }
 
+/**
+ *
+ */
 export function makeFile(params) {
   const {
     id, 'project-id': projectId, name, revn, 'is-shared': isShared,
@@ -76,27 +82,42 @@ export function makeFile(params) {
   });
 }
 
+/**
+ *
+ */
 export function fileData(file) {
   return file?.data;
 }
 
+/**
+ *
+ */
 export function updateFileData(file, f) {
   if (!file) return undefined;
   return { ...file, data: f(file.data) };
 }
 
+/**
+ *
+ */
 export function containersSeqFromFile(fileData) {
   const pages = pagesSeq(fileData).map((p) => makeContainer(p, 'page'));
   const comps = componentsSeq(fileData).map((c) => makeContainer(c, 'component'));
   return [...pages, ...comps];
 }
 
+/**
+ *
+ */
 export function objectContainersSeqFromFile(fileData) {
   const pages = pagesSeq(fileData).map((p) => makeContainer(p, 'page'));
   const deleted = componentsSeq(fileData).filter((c) => c.deleted).map((c) => makeContainer(c, 'component'));
   return [...pages, ...deleted];
 }
 
+/**
+ *
+ */
 export function updateContainer(fileData, container, f) {
   if (pageQ(container)) {
     return updatePage(fileData, container.id, f);
@@ -107,6 +128,9 @@ export function updateContainer(fileData, container, f) {
   return { ...fileData, components: { ...comps, [container.id]: f(comp) } };
 }
 
+/**
+ *
+ */
 export function updatePages(fileData, f) {
   const pagesIndex = fileData['pages-index'] ?? {};
   const newPagesIndex = {};
@@ -119,6 +143,9 @@ export function updatePages(fileData, f) {
   return { ...fileData, 'pages-index': newPagesIndex };
 }
 
+/**
+ *
+ */
 export function updateComponents(fileData, f) {
   const comps = fileData.components;
   if (!comps) return fileData;
@@ -132,21 +159,33 @@ export function updateComponents(fileData, f) {
   return { ...fileData, components: newComps };
 }
 
+/**
+ *
+ */
 export function updateContainers(fileData, f) {
   return updateComponents(updatePages(fileData, f), f);
 }
 
+/**
+ *
+ */
 export function findComponentFile(file, libraries, componentFile) {
   if (file && componentFile === file.id) return file;
   return libraries?.[componentFile];
 }
 
+/**
+ *
+ */
 export function getComponentFromLibraries(libraries, libraryId, componentId, includeDeleted = false) {
   const libData = libraries?.[libraryId]?.data;
   if (!libData) return undefined;
   return getComponentById(libData, componentId, includeDeleted);
 }
 
+/**
+ *
+ */
 export function resolveComponent(shape, file, libraries, includeDeleted = false) {
   if (shape['component-file'] === file?.id) {
     return getComponentById(file.data ?? file, shape['component-id'], includeDeleted);
@@ -154,14 +193,23 @@ export function resolveComponent(shape, file, libraries, includeDeleted = false)
   return getComponentFromLibraries(libraries, shape['component-file'], shape['component-id'], includeDeleted);
 }
 
+/**
+ *
+ */
 export function getComponentLibrary(libraries, instanceRoot) {
   return libraries?.[instanceRoot?.['component-file']];
 }
 
+/**
+ *
+ */
 export function getComponentPage(fileData, component) {
   return getPage(fileData, component?.['main-instance-page']);
 }
 
+/**
+ *
+ */
 export function getComponentRoot(fileData, component) {
   if (!component.deleted) {
     const page = getComponentPage(fileData, component);
@@ -172,10 +220,16 @@ export function getComponentRoot(fileData, component) {
   return component.objects?.[component.id];
 }
 
+/**
+ *
+ */
 export function getBaseFontSize(fileData) {
   return fileData?.options?.['base-font-size'] ?? BASE_FONT_SIZE;
 }
 
+/**
+ *
+ */
 export function setBaseFontSize(fileData, fontSize) {
   return {
     ...fileData,
@@ -183,17 +237,26 @@ export function setBaseFontSize(fileData, fontSize) {
   };
 }
 
+/**
+ *
+ */
 export function updateAllShapes(fileData, f) {
   if (!fileData) return fileData;
   return updateContainers(fileData, (container) => updateObjectsTree(container, f));
 }
 
+/**
+ *
+ */
 export function updateObjectsTree(container, f) {
   const objects = container.objects ?? {};
   if (Object.keys(objects).length === 0) return container;
 
   const rootId = pageQ(container) ? zero : container['main-instance-id'];
 
+  /**
+   *
+   */
   function updateShapeRecursive(currentContainer, shapeId) {
     const shape = currentContainer.objects?.[shapeId];
     if (!shape) {
@@ -225,6 +288,9 @@ export function updateObjectsTree(container, f) {
   return updateShapeRecursive(container, rootId);
 }
 
+/**
+ *
+ */
 export function getComponentContainer(fileData, component) {
   if (!component.deleted) {
     const componentPage = getComponentPage(fileData, component);
@@ -233,6 +299,9 @@ export function getComponentContainer(fileData, component) {
   return makeContainer(component, 'component');
 }
 
+/**
+ *
+ */
 export function getComponentContainerFromHead(instanceHead, libraries, options) {
   const { includeDeleted = true } = options ?? {};
   const libraryData = getComponentLibrary(libraries, instanceHead)?.data;
@@ -242,6 +311,9 @@ export function getComponentContainerFromHead(instanceHead, libraries, options) 
   return getComponentContainer(libraryData, component);
 }
 
+/**
+ *
+ */
 export function getComponentShape(fileData, component, shapeId, options) {
   const { withContext = false } = options ?? {};
   if (!component.deleted) {
@@ -263,6 +335,9 @@ export function getComponentShape(fileData, component, shapeId, options) {
   return shape;
 }
 
+/**
+ *
+ */
 function getChild(objects, rootId, targetId) {
   if (rootId === targetId) return objects[targetId];
   const root = objects[rootId];
@@ -274,12 +349,18 @@ function getChild(objects, rootId, targetId) {
   return undefined;
 }
 
+/**
+ *
+ */
 export function getRefShape(fileData, component, shape, options) {
   const { withContext = false } = options ?? {};
   if (!shape['shape-ref']) return undefined;
   return getComponentShape(fileData, component, shape['shape-ref'], { withContext });
 }
 
+/**
+ *
+ */
 export function getShapeInCopy(fileData, mainShape, rootCopy) {
   let objects;
   if (fileData?.['pages-index']) {
@@ -296,6 +377,9 @@ export function getShapeInCopy(fileData, mainShape, rootCopy) {
   return seek((s) => s['shape-ref'] === mainShape.id, children);
 }
 
+/**
+ *
+ */
 export function findRefShape(file, container, libraries, shape, options) {
   const { includeDeleted = false, withContext = false } = options ?? {};
   const parentHeads = getParentHeads(container.objects, shape);
@@ -313,6 +397,9 @@ export function findRefShape(file, container, libraries, shape, options) {
   return undefined;
 }
 
+/**
+ *
+ */
 export function findNearMatch(file, container, libraries, shape, options) {
   const { includeDeleted = false, withContext = false } = options ?? {};
   const parentShape = getShapeFromTree(container, shape['parent-id']);
@@ -343,6 +430,9 @@ export function findNearMatch(file, container, libraries, shape, options) {
   return nearMatch;
 }
 
+/**
+ *
+ */
 export function advanceShapeRef(file, container, libraries, shape, levels, options) {
   const { includeDeleted = false } = options ?? {};
   const refShape = findRefShape(file, container, libraries, shape, {
@@ -360,6 +450,9 @@ export function advanceShapeRef(file, container, libraries, shape, levels, optio
   });
 }
 
+/**
+ *
+ */
 export function findRefComponent(file, page, libraries, shape, options) {
   const { includeDeleted = false } = options ?? {};
   const parentCopyHeads = getParentCopyHeads(page.objects ?? {}, shape);
@@ -377,6 +470,9 @@ export function findRefComponent(file, page, libraries, shape, options) {
   return undefined;
 }
 
+/**
+ *
+ */
 export function findRemoteShape(container, libraries, shape, options) {
   const { withContext = false } = options ?? {};
   const objects = container.objects ?? {};
@@ -418,11 +514,17 @@ export function findRemoteShape(container, libraries, shape, options) {
   return findRemoteShape(componentContainer, libraries, remoteShape, { withContext });
 }
 
+/**
+ *
+ */
 export function directCopyQ(shape, component, page, file, libraries) {
   const refComponent = findRefComponent(file, page, libraries, shape, { includeDeleted: true });
   return component.id === refComponent?.id;
 }
 
+/**
+ *
+ */
 export function findSwapSlot(shape, container, file, libraries, viewedIds) {
   if (!viewedIds) viewedIds = new Set();
   if (viewedIds.has(shape.id)) return undefined;
@@ -447,6 +549,9 @@ export function findSwapSlot(shape, container, file, libraries, viewedIds) {
   return findSwapSlot(refShape, refContainer, refFile, libraries, new Set([...viewedIds, shape.id]));
 }
 
+/**
+ *
+ */
 export function matchSwapSlotQ(shapeMain, shapeInst, containerInst, containerMain, file, libraries) {
   const slotMain = findSwapSlot(shapeMain, containerMain, file, libraries);
   const slotInst = findSwapSlot(shapeInst, containerInst, file, libraries);
@@ -454,6 +559,9 @@ export function matchSwapSlotQ(shapeMain, shapeInst, containerInst, containerMai
   return slotMain === slotInst || shapeMain.id === slotInst;
 }
 
+/**
+ *
+ */
 export function findRefIdForSwapped(shape, container, libraries) {
   const swapSlotId = getSwapSlot(shape);
   const objects = container.objects ?? {};
@@ -467,6 +575,9 @@ export function findRefIdForSwapped(shape, container, libraries) {
   return findNextRelatedSwapShapeId(parentRef, swapSlotId, libraries);
 }
 
+/**
+ *
+ */
 function findNextRelatedSwapShapeId(parent, swapSlotId, libraries) {
   const container = getComponentContainerFromHead(parent, libraries);
   const objects = container.objects ?? {};
@@ -486,6 +597,9 @@ function findNextRelatedSwapShapeId(parent, swapSlotId, libraries) {
   return match?.id;
 }
 
+/**
+ *
+ */
 export function getComponentShapes(fileData, component) {
   if (!component.deleted) {
     const instancePage = getComponentPage(fileData, component);
@@ -496,6 +610,9 @@ export function getComponentShapes(fileData, component) {
   return Object.values(component.objects ?? {});
 }
 
+/**
+ *
+ */
 export function isMainOfKnownComponentQ(shape, libraries) {
   if (!mainInstanceQ(shape)) return false;
   const componentId = shape['component-id'];
@@ -504,6 +621,9 @@ export function isMainOfKnownComponentQ(shape, libraries) {
   return component != null;
 }
 
+/**
+ *
+ */
 export function loadComponentObjects(fileData, component, delta) {
   if (!component || Object.keys(component.objects ?? {}).length > 0) {
     return component;
@@ -529,6 +649,9 @@ export function loadComponentObjects(fileData, component, delta) {
   return { ...component, objects };
 }
 
+/**
+ *
+ */
 export function deleteComponentData(fileData, componentId, skipUndelete, delta) {
   delta = delta ?? point(0, 0);
   if (skipUndelete) {
@@ -540,6 +663,9 @@ export function deleteComponentData(fileData, componentId, skipUndelete, delta) 
   return result;
 }
 
+/**
+ *
+ */
 export function restoreComponent(fileData, componentId, pageId) {
   const updatePageQ = pageId != null;
   const component = getComponentById(fileData, componentId, true);
@@ -571,10 +697,16 @@ export function restoreComponent(fileData, componentId, pageId) {
   return result;
 }
 
+/**
+ *
+ */
 export function purgeComponent(fileData, componentId) {
   return deleteComponentFromList(fileData, componentId);
 }
 
+/**
+ *
+ */
 export function usesAssetQ(assetType, shape, libraryId, asset) {
   switch (assetType) {
     case 'component':
@@ -588,6 +720,9 @@ export function usesAssetQ(assetType, shape, libraryId, asset) {
   }
 }
 
+/**
+ *
+ */
 export function findAssetTypeUsages(fileData, libraryData, assetType) {
   let assets;
   switch (assetType) {
@@ -623,6 +758,9 @@ export function findAssetTypeUsages(fileData, libraryData, assetType) {
   return result;
 }
 
+/**
+ *
+ */
 export function usedInQ(fileData, libraryId, asset, assetType) {
   for (const container of containersSeqFromFile(fileData)) {
     for (const shape of shapesSeq(container)) {
@@ -632,6 +770,9 @@ export function usedInQ(fileData, libraryId, asset, assetType) {
   return false;
 }
 
+/**
+ *
+ */
 export function usedAssetsChangedSince(fileData, library, sinceDate) {
   const results = [];
   for (const container of containersSeqFromFile(fileData)) {
@@ -644,6 +785,9 @@ export function usedAssetsChangedSince(fileData, library, sinceDate) {
   return results;
 }
 
+/**
+ *
+ */
 export function getOrAddLibraryPage(fileData, gridGap) {
   const pages = pagesSeq(fileData);
   const libraryPage = seek((p) => p.name === 'Main components', pages);
@@ -667,6 +811,9 @@ export function getOrAddLibraryPage(fileData, gridGap) {
   return [updatedData, newPage.id, point(0, 0)];
 }
 
+/**
+ *
+ */
 export function absorbAssets(fileData, libraryData) {
   const usedComponents = findAssetTypeUsages(fileData, libraryData, 'component');
   if (notEmpty(usedComponents)) {
@@ -687,6 +834,9 @@ export function absorbAssets(fileData, libraryData) {
   return fileData;
 }
 
+/**
+ *
+ */
 function absorbComponents(fileData, usedComponents, libraryData) {
   const gridGap = 50;
   const [fileDataWithPage, pageId, startPos] = getOrAddLibraryPage(fileData, gridGap);
@@ -736,6 +886,9 @@ function absorbComponents(fileData, usedComponents, libraryData) {
   return currentData;
 }
 
+/**
+ *
+ */
 function absorbColorsHelper(fileData, usedColors) {
   let result = fileData;
   for (const [color, usages] of usedColors) {
@@ -762,6 +915,9 @@ function absorbColorsHelper(fileData, usedColors) {
   return result;
 }
 
+/**
+ *
+ */
 function absorbTypographiesHelper(fileData, usedTypographies) {
   let result = fileData;
   for (const [typography, usages] of usedTypographies) {
@@ -785,6 +941,9 @@ function absorbTypographiesHelper(fileData, usedTypographies) {
   return result;
 }
 
+/**
+ *
+ */
 function absorbMedia(fileData, libraryData) {
   const usedMediaIds = collectUsedMedia(fileData);
   const libMedia = libraryData.media ?? {};
@@ -800,7 +959,13 @@ function absorbMedia(fileData, libraryData) {
   return fileData;
 }
 
+/**
+ *
+ */
 export function detachExternalReferences(file, fileId) {
+  /**
+   *
+   */
   function detachText(content, targetFileId) {
     if (!content) return content;
     return transformNodes(content, (node) => {
@@ -820,6 +985,9 @@ export function detachExternalReferences(file, fileId) {
     });
   }
 
+  /**
+   *
+   */
   function detachShape(objects, shape) {
     let result = shape;
 
@@ -850,12 +1018,18 @@ export function detachExternalReferences(file, fileId) {
     return result;
   }
 
+  /**
+   *
+   */
   function getComponentRefFile(objects, shape) {
     if ('component-file' in shape) return shape['component-file'];
     if ('shape-ref' in shape) return getComponentRefFile(objects, objects[shape['parent-id']]);
     return undefined;
   }
 
+  /**
+   *
+   */
   function detachObjects(objects) {
     const result = {};
     for (const [id, shape] of Object.entries(objects)) {
@@ -864,6 +1038,9 @@ export function detachExternalReferences(file, fileId) {
     return result;
   }
 
+  /**
+   *
+   */
   function detachPages(pagesIndex) {
     const result = {};
     for (const [id, page] of Object.entries(pagesIndex)) {
@@ -877,6 +1054,9 @@ export function detachExternalReferences(file, fileId) {
   return { ...file, data: { ...data, 'pages-index': detachPages(data['pages-index'] ?? {}) } };
 }
 
+/**
+ *
+ */
 export function getRefChainUntilTargetRef(container, libraries, shape, targetRef) {
   const chain = [shape];
   let current = shape;
@@ -889,6 +1069,9 @@ export function getRefChainUntilTargetRef(container, libraries, shape, targetRef
   return chain;
 }
 
+/**
+ *
+ */
 export function getTouchedFromRefChainUntilTargetRef(container, libraries, shape, targetRefId) {
   const chain = getRefChainUntilTargetRef(container, libraries, shape, targetRefId);
   const touchedSet = new Set();
@@ -907,6 +1090,9 @@ export function getTouchedFromRefChainUntilTargetRef(container, libraries, shape
   return touchedSet;
 }
 
+/**
+ *
+ */
 export function dumpShape(shapeId, level, objects, file, libraries, flags) {
   const shape = objects[shapeId];
   if (!shape) return '';
@@ -925,6 +1111,9 @@ export function dumpShape(shapeId, level, objects, file, libraries, flags) {
   return lines.join('\n');
 }
 
+/**
+ *
+ */
 export function dumpComponent(component, file, libraries, flags) {
   const lines = [];
   const deleted = component.deleted ? 'DELETED ' : '';

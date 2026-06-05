@@ -118,6 +118,9 @@ export const svgGroupSafeTags = new Set([
   'pattern', 'style', 'switch', 'text', 'view'
 ]);
 
+/**
+ *
+ */
 export function camelize(s) {
   if (typeof s !== 'string') return null;
   const vendor = s.startsWith('-');
@@ -128,6 +131,9 @@ export function camelize(s) {
   return result;
 }
 
+/**
+ *
+ */
 export function propKey(k) {
   if (typeof k === 'string' || typeof k === 'number') {
     k = String(k);
@@ -150,6 +156,9 @@ export const svgProps = new Set([
   ...[...svgPresentationAttrs].map(propKey)
 ].filter((k) => k != null));
 
+/**
+ *
+ */
 export function parseStyle(style) {
   const result = {};
   const items = style.split(';');
@@ -167,6 +176,9 @@ export function parseStyle(style) {
   return result;
 }
 
+/**
+ *
+ */
 export function formatStyles(attrs) {
   if (!('style' in attrs)) return attrs;
   const style = attrs.style;
@@ -176,6 +188,9 @@ export function formatStyles(attrs) {
   return attrs;
 }
 
+/**
+ *
+ */
 export function attrsToProps(attrs, whitelist = true) {
   const result = {};
   for (const [k, v] of Object.entries(attrs)) {
@@ -197,6 +212,9 @@ export function attrsToProps(attrs, whitelist = true) {
   return result;
 }
 
+/**
+ *
+ */
 export function extractIds(val) {
   if (typeof val === 'string') {
     const results = [];
@@ -213,6 +231,9 @@ export function extractIds(val) {
   return [];
 }
 
+/**
+ *
+ */
 export function fixDotNumber(numStr) {
   if (numStr.startsWith('.')) {
     return '0' + numStr;
@@ -223,6 +244,9 @@ export function fixDotNumber(numStr) {
   return numStr;
 }
 
+/**
+ *
+ */
 export function parseNumbers(data) {
   const matches = data.match(/[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/g);
   if (!matches) return [];
@@ -236,6 +260,9 @@ export function parseNumbers(data) {
   return results;
 }
 
+/**
+ *
+ */
 function formatTranslateParams(params) {
   if (params.length === 1) {
     return [gpt.point(params[0], 0)];
@@ -243,6 +270,9 @@ function formatTranslateParams(params) {
   return [gpt.point(params[0], params[1])];
 }
 
+/**
+ *
+ */
 function formatScaleParams(params) {
   if (params.length === 1) {
     return [gpt.point(params[0])];
@@ -250,6 +280,9 @@ function formatScaleParams(params) {
   return [gpt.point(params[0], params[1])];
 }
 
+/**
+ *
+ */
 function formatRotateParams(params) {
   if (params.length === 1) {
     return [params[0], gpt.point(0, 0)];
@@ -257,14 +290,23 @@ function formatRotateParams(params) {
   return [params[0], gpt.point(params[1], params[2])];
 }
 
+/**
+ *
+ */
 function formatSkewXParams(params) {
   return [params[0], 0];
 }
 
+/**
+ *
+ */
 function formatSkewYParams(params) {
   return [0, params[0]];
 }
 
+/**
+ *
+ */
 function toMatrix(type, params) {
   switch (type) {
     case 'matrix':
@@ -284,6 +326,9 @@ function toMatrix(type, params) {
   }
 }
 
+/**
+ *
+ */
 export function parseTransform(transform) {
   if (typeof transform !== 'string') return gmt.matrix();
   const regex = new RegExp(matricesRegex.source, matricesRegex.flags);
@@ -298,14 +343,23 @@ export function parseTransform(transform) {
   return matrices.reduce((acc, mtx) => gmt.multiply(acc, mtx), gmt.matrix());
 }
 
+/**
+ *
+ */
 export function formatMove([x, y]) {
   return `M${x} ${y}`;
 }
 
+/**
+ *
+ */
 export function formatLine([x, y]) {
   return `L${x} ${y}`;
 }
 
+/**
+ *
+ */
 export function pointsToPath(pointsStr) {
   const nums = parseNumbers(pointsStr);
   const points = [];
@@ -318,6 +372,9 @@ export function pointsToPath(pointsStr) {
   return formatMove(head) + other.map(formatLine).join('');
 }
 
+/**
+ *
+ */
 export function polylineToPath(node) {
   const attrs = { ...node.attrs };
   const pointsStr = attrs.points;
@@ -326,6 +383,9 @@ export function polylineToPath(node) {
   return { ...node, attrs, tag: 'path' };
 }
 
+/**
+ *
+ */
 export function polygonToPath(node) {
   const attrs = { ...node.attrs };
   const pointsStr = attrs.points;
@@ -334,6 +394,9 @@ export function polygonToPath(node) {
   return { ...node, attrs, tag: 'path' };
 }
 
+/**
+ *
+ */
 export function lineToPath(node) {
   const attrs = { ...node.attrs };
   const x1 = attrs.x1 ?? 0;
@@ -348,6 +411,9 @@ export function lineToPath(node) {
   return { ...node, attrs, tag: 'path' };
 }
 
+/**
+ *
+ */
 export function addTransform(attrs, transform) {
   if (!transform) return attrs;
   const oldTransform = attrs.transform;
@@ -357,6 +423,9 @@ export function addTransform(attrs, transform) {
   return { ...attrs, transform: newTransform };
 }
 
+/**
+ *
+ */
 export function inheritAttributes(groupAttrs, node) {
   if (node == null || typeof node !== 'object') return node;
   let attrs = formatStyles(node.attrs ?? {});
@@ -383,13 +452,16 @@ export function inheritAttributes(groupAttrs, node) {
     groupInheritable.style = inheritStyle;
   }
 
-  let merged = deepMerge(groupInheritable, attrs);
+  const merged = deepMerge(groupInheritable, attrs);
   for (const k of Object.keys(merged)) {
     if (merged[k] == null) delete merged[k];
   }
   return { ...node, attrs: merged };
 }
 
+/**
+ *
+ */
 export function mapNodes(mapfn, node) {
   if (node == null || typeof node !== 'object') return node;
   let result = mapfn(node);
@@ -399,6 +471,9 @@ export function mapNodes(mapfn, node) {
   return result;
 }
 
+/**
+ *
+ */
 export function reduceNodes(redfn, value, node) {
   if (node == null || typeof node !== 'object') return value;
   let result = redfn(value, node);
@@ -410,6 +485,9 @@ export function reduceNodes(redfn, value, node) {
   return result;
 }
 
+/**
+ *
+ */
 export function calculateRatio(width, height) {
   return mth.hypot(width, height) / mth.sqrt(2);
 }
@@ -437,7 +515,13 @@ export const svgTagDefaults = {
   feTurbulence: { units: 'filterUnits', default: 'objectBoundingBox', objectBoundingBox: {}, userSpaceOnUse: { x: '-10%', y: '-10%', width: '120%', height: '120%' } },
 };
 
+/**
+ *
+ */
 export function fixDefaultValues(svgData) {
+  /**
+   *
+   */
   function addDefaults(node) {
     const tag = node.tag;
     const tagDefault = svgTagDefaults[tag];
@@ -454,6 +538,9 @@ export function fixDefaultValues(svgData) {
   }, svgData);
 }
 
+/**
+ *
+ */
 export function fixPercents(svgData) {
   const vbox = {
     x: svgData['offset-x'],
@@ -462,9 +549,15 @@ export function fixPercents(svgData) {
     height: svgData.height,
     ratio: calculateRatio(svgData.width, svgData.height)
   };
+  /**
+   *
+   */
   function fixLength(propLength, val) {
     return (vbox[propLength] * val) / 100;
   }
+  /**
+   *
+   */
   function fixCoord(propCoord, propLength, val) {
     return vbox[propCoord] + fixLength(propLength, val);
   }
@@ -473,6 +566,9 @@ export function fixPercents(svgData) {
   const isWidth = new Set(['width']);
   const isHeight = new Set(['height']);
   const isOther = new Set(['r', 'stroke-width']);
+  /**
+   *
+   */
   function fixPercentAttrViewbox(attrKey, attrVal) {
     if (typeof attrVal !== 'string') return attrVal;
     if (!attrVal.endsWith('%')) return attrVal;
@@ -484,6 +580,9 @@ export function fixPercents(svgData) {
     if (isOther.has(attrKey)) return String(fixLength('ratio', attrNum));
     return attrVal;
   }
+  /**
+   *
+   */
   function fixPercentAttrsViewbox(attrs) {
     const result = {};
     for (const [k, v] of Object.entries(attrs)) {
@@ -491,6 +590,9 @@ export function fixPercents(svgData) {
     }
     return result;
   }
+  /**
+   *
+   */
   function fixPercentValues(node) {
     if (node == null || typeof node !== 'object') return node;
     const units = node.attrs?.filterUnits ?? node.attrs?.gradientUnits ?? node.attrs?.patternUnits ?? node.attrs?.clipUnits;
@@ -514,6 +616,9 @@ export function fixPercents(svgData) {
   return mapNodes(fixPercentValues, svgData);
 }
 
+/**
+ *
+ */
 export function extractDefs(node) {
   if (node == null || typeof node !== 'object') return [{}, node];
   const removeNodeQ = (child) => child.tag != null && (tagsToRemove.has(child.tag) || !svgTags.has(child.tag));
@@ -525,6 +630,9 @@ export function extractDefs(node) {
   return [nodeDefs, newNode];
 }
 
+/**
+ *
+ */
 export function findAttrReferences(attrs) {
   const results = [];
   for (const [, val] of Object.entries(attrs)) {
@@ -537,6 +645,9 @@ export function findAttrReferences(attrs) {
   return results;
 }
 
+/**
+ *
+ */
 export function findNodeReferences(node) {
   const current = new Set(findAttrReferences(node.attrs || {}));
   const children = (node.content || []).flatMap(findNodeReferences);
@@ -544,6 +655,9 @@ export function findNodeReferences(node) {
   return [...current];
 }
 
+/**
+ *
+ */
 export function findDefReferences(defs, references) {
   const result = new Set(references);
   const checked = new Set();
@@ -565,6 +679,9 @@ export function findDefReferences(defs, references) {
   return [...result];
 }
 
+/**
+ *
+ */
 export function filterValidDefReferences(refIds, defs) {
   const isStyleFragment = (refId) => {
     if (hexColorStringQ('#' + refId)) return true;
@@ -576,10 +693,16 @@ export function filterValidDefReferences(refIds, defs) {
   return refIds.filter((id) => !isStyleFragment(id) && defs[id] != null);
 }
 
+/**
+ *
+ */
 function hexColorStringQ(str) {
   return typeof str === 'string' && /^#(?:[0-9a-fA-F]{3}){1,2}$/.test(str);
 }
 
+/**
+ *
+ */
 export function processGradientStops(stops) {
   return stops.map((stop) => {
     const stopAttrs = stop.attrs || {};
@@ -590,7 +713,7 @@ export function processGradientStops(stops) {
     }
     const styleStopColor = parsedStyle?.['stop-color'];
     const styleStopOpacity = parsedStyle?.['stop-opacity'];
-    let finalAttrs = { ...stopAttrs };
+    const finalAttrs = { ...stopAttrs };
     if (styleStopColor && !('stop-color' in stopAttrs)) {
       finalAttrs['stop-color'] = styleStopColor;
     }
@@ -612,7 +735,13 @@ export function processGradientStops(stops) {
   });
 }
 
+/**
+ *
+ */
 export function resolveGradientHref(defs) {
+  /**
+   *
+   */
   function resolveGradient(gradientId, gradientNode, defs, visited) {
     if (visited.has(gradientId)) {
       return gradientNode;
@@ -628,9 +757,9 @@ export function resolveGradientHref(defs) {
     const resolvedBase = resolveGradient(cleanHref, baseGradient, defs, new Set([...visited, gradientId]));
     const baseAttrs = resolvedBase.attrs || {};
     const refAttrs = gradientNode.attrs || {};
-    let baseAttrsClean = { ...baseAttrs };
+    const baseAttrsClean = { ...baseAttrs };
     delete baseAttrsClean.id;
-    let refAttrsClean = { ...refAttrs };
+    const refAttrsClean = { ...refAttrs };
     delete refAttrsClean.href;
     delete refAttrsClean['xlink:href'];
     delete refAttrsClean.id;
@@ -642,7 +771,7 @@ export function resolveGradientHref(defs) {
     } else {
       combinedTransform = refTransform || baseTransform;
     }
-    let mergedAttrs = deepMerge(baseAttrsClean, refAttrsClean);
+    const mergedAttrs = deepMerge(baseAttrsClean, refAttrsClean);
     if (combinedTransform) {
       mergedAttrs.gradientTransform = combinedTransform;
     }
@@ -664,6 +793,9 @@ export function resolveGradientHref(defs) {
   return result;
 }
 
+/**
+ *
+ */
 function deepMerge(a, b) {
   const result = { ...a };
   for (const key of Object.keys(b)) {
@@ -677,6 +809,9 @@ function deepMerge(a, b) {
   return result;
 }
 
+/**
+ *
+ */
 export function collectImages(svgData) {
   const images = [];
   reduceNodes((acc, node) => {

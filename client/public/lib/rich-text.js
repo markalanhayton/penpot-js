@@ -1,12 +1,13 @@
 'use strict';
-import { SYSTEM_FONTS } from '@penpot/shared/constants';
+import { SYSTEM_FONTS, SYSTEM_FONT_SIZES } from '@penpot/shared/constants';
 import { contentTreeToHTML, htmlToContentTree, extractSelectionStyles } from './content-tree.js';
 import * as textTypes from '@penpot/shared/types/text.js';
+import { rgbToHex, rgbToStr } from '@penpot/shared/colors.js';
 
 let activeEditor = null;
 let activeToolbar = null;
 
-const FONT_SIZES = [8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 24, 28, 32, 36, 48, 64, 72, 96];
+const FONT_SIZES = [...SYSTEM_FONT_SIZES.slice(0, 5), 13, ...SYSTEM_FONT_SIZES.slice(5), 96];
 
 export function createRichTextEditor(container, shape, onCommit) {
   const editor = document.createElement('div');
@@ -36,7 +37,7 @@ export function createRichTextEditor(container, shape, onCommit) {
     text-align: ${shape.textAlign || 'left'};
     background: transparent;
     border: 2px solid var(--penpot-primary, #31efb8);
-    z-index: 100;
+    z-index: var(--penpot-z-dropdown, 400);
     overflow-wrap: break-word;
   `;
 
@@ -298,7 +299,7 @@ export function createFloatingToolbar(container, editorInstance, position) {
     display: flex;
     align-items: center;
     gap: 2px;
-    z-index: 110;
+    z-index: var(--penpot-z-dropdown, 400);
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     user-select: none;
   `;
@@ -504,10 +505,7 @@ function colorToHex(color) {
   if (!color) return '#000000';
   if (typeof color === 'string') return color;
   if (color.r !== undefined) {
-    const r = Math.round(color.r * 255);
-    const g = Math.round(color.g * 255);
-    const b = Math.round(color.b * 255);
-    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    return rgbToHex([Math.round(color.r * 255), Math.round(color.g * 255), Math.round(color.b * 255)]);
   }
   return '#000000';
 }
@@ -516,10 +514,7 @@ function getTextColor(shape) {
   if (shape.fills && shape.fills.length > 0) {
     const fill = shape.fills[0];
     if (fill.color) {
-      const r = Math.round(fill.color.r * 255);
-      const g = Math.round(fill.color.g * 255);
-      const b = Math.round(fill.color.b * 255);
-      return `rgb(${r},${g},${b})`;
+      return rgbToStr([Math.round(fill.color.r * 255), Math.round(fill.color.g * 255), Math.round(fill.color.b * 255)]);
     }
   }
   return '#e6e6e6';

@@ -4,7 +4,13 @@
 //
 // Copyright (c) KALEIDOS INC
 
+/**
+ *
+ */
 export class WeakEqMap {
+  /**
+   *
+   */
   constructor({ equals, hash }) {
     this._equals = equals;
     this._hash = hash;
@@ -27,6 +33,9 @@ export class WeakEqMap {
     });
   }
 
+  /**
+   *
+   */
   _getBucket(hash) {
     let b = this._buckets.get(hash);
     if (!b) {
@@ -36,6 +45,9 @@ export class WeakEqMap {
     return b;
   }
 
+  /**
+   *
+   */
   _findEntry(bucket, key) {
     let i = 0;
     let found = null;
@@ -55,6 +67,9 @@ export class WeakEqMap {
     return found;
   }
 
+  /**
+   *
+   */
   set(key, value) {
     if (key === null || key === undefined || (typeof key !== "object" && typeof key !== "function")) {
       throw new TypeError("WeakEqMap keys must be objects");
@@ -73,6 +88,9 @@ export class WeakEqMap {
     return this;
   }
 
+  /**
+   *
+   */
   get(key) {
     const hash = this._hash(key);
     const bucket = this._buckets.get(hash);
@@ -81,6 +99,9 @@ export class WeakEqMap {
     return e ? e.value : undefined;
   }
 
+  /**
+   *
+   */
   has(key) {
     const hash = this._hash(key);
     const bucket = this._buckets.get(hash);
@@ -88,6 +109,9 @@ export class WeakEqMap {
     return !!this._findEntry(bucket, key);
   }
 
+  /**
+   *
+   */
   delete(key) {
     const hash = this._hash(key);
     const bucket = this._buckets.get(hash);

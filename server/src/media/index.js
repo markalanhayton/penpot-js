@@ -103,7 +103,7 @@ export function cleanupTempFiles() {
         fs.unlinkSync(filePath);
         deleted++;
       }
-    } catch { /* ignore cleanup errors */ }
+    } catch (err) { console.warn('[media] temp file cleanup failed for', filePath, err.message); }
     tempFiles.delete(filePath);
   }
   return deleted;
@@ -140,7 +140,7 @@ export async function withTempFiles(fn) {
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
         }
-      } catch { /* ignore */ }
+      } catch (err) { console.warn('[media] force cleanup failed for', filePath, err.message); }
       tempFiles.delete(filePath);
     }
   }
@@ -798,9 +798,7 @@ async function commandExists(cmd) {
   try {
     await execFileAsync(cmd, ['--version'], { timeout: 5000 });
     return true;
-  } catch {
-    return false;
-  }
+  } catch (err) { console.warn('[media] commandExists check failed for', cmd, err.message); return false; }
 }
 
 /**
@@ -822,20 +820,20 @@ export async function generateFonts(input) {
   if (currentKeys.has('font/ttf')) {
     const ttfPath = input['font/ttf'];
     if (!result['font/otf']) {
-      try { result['font/otf'] = await convertFont(ttfPath, 'otf'); } catch { /* fontforge not available */ }
+      try { result['font/otf'] = await convertFont(ttfPath, 'otf'); } catch (err) { console.warn('[media] font conversion ttf→otf failed:', err.message); }
     }
     if (!result['font/woff']) {
-      try { result['font/woff'] = await convertFont(ttfPath, 'woff'); } catch { /* sfnt2woff not available */ }
+      try { result['font/woff'] = await convertFont(ttfPath, 'woff'); } catch (err) { console.warn('[media] font conversion ttf→woff failed:', err.message); }
     }
   }
 
   if (currentKeys.has('font/otf')) {
     const otfPath = input['font/otf'];
     if (!result['font/ttf']) {
-      try { result['font/ttf'] = await convertFont(otfPath, 'ttf'); } catch { /* fontforge not available */ }
+      try { result['font/ttf'] = await convertFont(otfPath, 'ttf'); } catch (err) { console.warn('[media] font conversion otf→ttf failed:', err.message); }
     }
     if (!result['font/woff']) {
-      try { result['font/woff'] = await convertFont(otfPath, 'woff'); } catch { /* sfnt2woff not available */ }
+      try { result['font/woff'] = await convertFont(otfPath, 'woff'); } catch (err) { console.warn('[media] font conversion otf→woff failed:', err.message); }
     }
   }
 
@@ -847,12 +845,12 @@ export async function generateFonts(input) {
         const type = getSFNTType(sfntData);
         if (type === 'otf') {
           result['font/otf'] = sfntPath;
-          try { result['font/ttf'] = await convertFont(sfntPath, 'ttf'); } catch { /* fontforge not available */ }
+          try { result['font/ttf'] = await convertFont(sfntPath, 'ttf'); } catch (err) { console.warn('[media] font conversion sfnt→ttf failed:', err.message); }
         } else {
           result['font/ttf'] = sfntPath;
-          try { result['font/otf'] = await convertFont(sfntPath, 'otf'); } catch { /* fontforge not available */ }
+          try { result['font/otf'] = await convertFont(sfntPath, 'otf'); } catch (err) { console.warn('[media] font conversion sfnt→otf failed:', err.message); }
         }
-      } catch { /* conversion tools not available */ }
+      } catch (err) { console.warn('[media] WOFF conversion tools not available:', err.message); }
     }
   }
 
@@ -864,12 +862,12 @@ export async function generateFonts(input) {
         const type = getSFNTType(sfntData);
         if (type === 'otf') {
           result['font/otf'] = decompressed;
-          try { result['font/ttf'] = await convertFont(decompressed, 'ttf'); } catch { /* fontforge not available */ }
+          try { result['font/ttf'] = await convertFont(decompressed, 'ttf'); } catch (err) { console.warn('[media] font conversion woff2→ttf failed:', err.message); }
         } else {
           result['font/ttf'] = decompressed;
-          try { result['font/otf'] = await convertFont(decompressed, 'otf'); } catch { /* fontforge not available */ }
+          try { result['font/otf'] = await convertFont(decompressed, 'otf'); } catch (err) { console.warn('[media] font conversion woff2→otf failed:', err.message); }
         }
-      } catch { /* woff2_decompress not available */ }
+      } catch (err) { console.warn('[media] WOFF2 decompression failed:', err.message); }
     }
   }
 
@@ -896,10 +894,10 @@ async function convertFont(inputPath, targetFormat) {
       const exists = fs.existsSync(woffPath);
       if (exists) {
         await fs.promises.copyFile(woffPath, outputPath);
-        try { await fs.promises.unlink(woffPath); } catch { /* ignore */ }
+        try { await fs.promises.unlink(woffPath); } catch (err) { console.warn('[media] temp woff cleanup failed:', err.message); }
         return outputPath;
       }
-    } catch { /* fall through to fontforge */ }
+    } catch (err) { console.warn('[media] sfnt2woff conversion failed, falling through to fontforge:', err.message); }
   }
 
   // Use fontforge for all other conversions (and woff fallback)

@@ -2,11 +2,17 @@ import * as d from '../../data.js';
 import * as uuid from '../../uuid.js';
 import * as ctl from '../../types/shape/layout.js';
 
+/**
+ *
+ */
 function hasChildrenQ(objects, id) {
   const shape = objects[id];
   return shape?.shapes && shape.shapes.length > 0;
 }
 
+/**
+ *
+ */
 function isChildQ(objects, parentId, childId) {
   let currentId = childId;
   while (currentId) {
@@ -19,6 +25,9 @@ function isChildQ(objects, parentId, childId) {
   return false;
 }
 
+/**
+ *
+ */
 function getParentIds(objects, id) {
   const result = [];
   let currentId = id;
@@ -31,7 +40,13 @@ function getParentIds(objects, id) {
   return result;
 }
 
+/**
+ *
+ */
 export function getChildrenSeq(id, objects) {
+  /**
+   *
+   */
   function* walk(currentId) {
     const shape = objects[currentId];
     if (!shape || !shape.shapes || shape.shapes.length === 0) return;
@@ -50,10 +65,16 @@ export function getChildrenSeq(id, objects) {
   return [...walk(id)];
 }
 
+/**
+ *
+ */
 export function getReflowRoot(id, objects) {
   return getReflowRootImpl(id, id, objects);
 }
 
+/**
+ *
+ */
 function getReflowRootImpl(currentId, lastRoot, objects) {
   const shape = objects[currentId];
   if (!shape || currentId === uuid.zero) return lastRoot;
@@ -79,7 +100,13 @@ function getReflowRootImpl(currentId, lastRoot, objects) {
   return getReflowRootImpl(parentId, lastRoot, objects);
 }
 
+/**
+ *
+ */
 export function searchCommonRoots(ids, objects) {
+  /**
+   *
+   */
   function findRoot(roots, id) {
     if (id === uuid.ZERO) return roots;
 
@@ -104,6 +131,9 @@ export function searchCommonRoots(ids, objects) {
   return [...ids].reduce(findRoot, new Set());
 }
 
+/**
+ *
+ */
 export function resolveTree(ids, objects) {
   if (!ids || !(ids instanceof Set)) return [];
 
@@ -116,6 +146,9 @@ export function resolveTree(ids, objects) {
   return childSeq;
 }
 
+/**
+ *
+ */
 export function resolveSubtree(fromId, toId, objects) {
   const fromSeq = getChildrenSeq(fromId, objects);
   const takeUntilIdx = fromSeq.findIndex(s => s.id === toId);

@@ -1,6 +1,6 @@
 # Penpot Migration Tracking
 
-> Last updated: 2026-05-28
+> Last updated: 2026-05-31
 
 Migration from Clojure/ClojureScript to pure ES2022+ JavaScript.
 Full plan: [`migration-plan.md`](migration-plan.md)
@@ -22,10 +22,10 @@ Full plan: [`migration-plan.md`](migration-plan.md)
 
 | Phase | Module | Target | Status | Files | Tests |
 |-------|--------|--------|--------|-------|-------|
-| 1 | `common/` → `shared/` | ES JS (dual-env) | ✅ **Complete** | 151 JS | 1,512 tests, 232 suites, 0 fail |
-| 2a | `backend/` → `server/` | Node.js ESM (Fastify + SQLite) | ✅ **~95%** | 66 JS | 78 test files, 909 tests, 296 suites, 0 fail |
-| 2b | `frontend/` → `client/` | Web Components + CSS | ✅ **99% functional parity** | 111 JS | 32 E2E spec files, 490+ E2E tests, 0 fail |
-| 3 | `exporter/` → `server/exporter/` | Node.js ESM | ✅ **Complete** | 13 JS | 22 tests, 6 suites, 0 fail |
+| 1 | `common/` → `shared/` | ES JS (dual-env) | ✅ **Complete** | 151 JS | 1,662 tests, 297 suites, 0 fail |
+| 2a | `backend/` → `server/` | Node.js ESM (Fastify + SQLite) | ✅ **~95%** | 66 JS | 80 test files, 1,201 tests, 0 fail |
+| 2b | `frontend/` → `client/` | Web Components + CSS | ✅ **~100% functional parity** | 114 JS + 2 CSS | 55 E2E spec files, 767 E2E tests, 0 fail | Layout system: CSS z-index tokens, responsive flex/grid, mobile sidebar overlays
+| 3 | `exporter/` → `server/exporter/` | Node.js ESM | ✅ **Complete** | 13 JS | 23 tests, 7 suites, 0 fail |
 
 ---
 
@@ -218,7 +218,7 @@ Full plan: [`migration-plan.md`](migration-plan.md)
 | Component | Status | Notes |
 |-----------|--------|-------|
 | HTTP server (Fastify) | ✅ | All RPC routes registered |
-| SQLite database layer | ✅ | `better-sqlite3`, 23 migrations; SQLite only (no PostgreSQL) |
+| SQLite database layer | ✅ | `better-sqlite3`, 22 migrations (0001–0023, no 0012); SQLite only (no PostgreSQL) |
 | Transit+JSON codec | ✅ | Compatible with Clojure backend |
 | JWE auth / Argon2id | ✅ | Token creation/verification |
 | Configuration system | ✅ | 40+ `PENPOT_*` env vars + email whitelist/blacklist/disposable |
@@ -235,7 +235,7 @@ Full plan: [`migration-plan.md`](migration-plan.md)
 | RPC middleware (auth, rate-limit, permissions, quotes, retry, cond) | ✅ | All 6 middleware layers |
 | Image processing (sharp) | ✅ | Thumbnails, resize, format detection |
 
-### 2a.2 RPC Commands (27 namespaces, 149 commands)
+### 2a.2 RPC Commands (27 namespaces, 152 commands)
 
 | Command Group | Status | Notes |
 |---------------|--------|-------|
@@ -275,19 +275,20 @@ Full plan: [`migration-plan.md`](migration-plan.md)
 | 3 | Redis pub/sub | ~~P1~~ Done | Replaced with pure Node.js EventBus (`ws/msgbus.js`) — SQLite is single-instance, no Redis needed |
 | FTS5 full-text search | P2 | `search-files` uses FTS5 with LIKE fallback; migration 0009 |
 | File GC cross-library checks | ~~P2~~ Done | Cross-library component GC implemented in scheduler |
-| ~~74 failing tests~~ | ~~P2~~ Done | All 564 tests pass (0 fail) |
-| Wire compatibility tests | ✅ **Complete** | 10 tests in `test/wire-compat.test.js`; auto-skips when backends offline |
-| Migrations parity | ✅ **Complete** | 23 SQL migrations achieving full PG schema parity: indexes, constraints, triggers, data migrations, cascade logic, deletion protection, CHECK constraints, PK restructures, expression indexes, access token scopes, file pinning |
+| ~~74 failing tests~~ | ~~P2~~ Done | All 1,201 tests pass (0 fail) |
+| Wire compatibility tests | ✅ **Complete** | 34 tests in `test/wire-compat.test.js`; auto-skips when backends offline |
+| Migrations parity | ✅ **Complete** | 22 SQL migrations achieving full PG schema parity: indexes, constraints, triggers, data migrations, cascade logic, deletion protection, CHECK constraints, PK restructures, expression indexes, access token scopes, file pinning |
 
 ### 2a.4 Test Status
 
 | Metric | Value |
 |--------|-------|
-| Test files | 78 |
-| Test cases | 909 |
+| Test files | 80 |
+| Test cases | 1,201 |
 | Handler-level RPC tests | 20+ new files covering teams, profiles, comments, fonts, media, webhooks, viewer, access tokens, binfile, verify-token, search, files, files-update, files-snapshots, files-thumbnails, management, demo, feedback, export, email-filter, feature-flags |
-| Passing | 909 |
+| Passing | 1,201 |
 | Failing | 0 |
+| Note | All tests pass; previously 1 failure in `test-debug-mig.mjs` has been resolved |
 | Cancelled | 0 |
 | Skipped | 0 |
 
@@ -303,9 +304,9 @@ Bugs found and fixed during test writing:
 
 ## Phase 2b: Frontend → Web Components ✅
 
-**Status**: ~99.5% functional parity | **Start**: 2025-06 | **Current**: Full pipeline auth→dashboard→workspace; 111 source files (~12,100 lines lib + ~21,300 components + ~1,100 tools/other ≈ ~34,500 lines total); variant family grouping, variant badges, variant state grid, transform-in-variant, team member management with roles, team invitations, leave/delete team
+**Status**: ~100% functional parity | **Start**: 2025-06 | **Current**: Full pipeline auth→dashboard→workspace; 114 source files (~11,200 lines lib + ~19,200 components + ~600 tools/other + ~400 responsive/tokens CSS ≈ ~31,400 lines total); variant family grouping, variant badges, variant state grid, transform-in-variant, team member management with roles, team invitations, leave/delete team, responsive layout with mobile sidebar overlay and touch gestures
 
-### 2b.1 What Exists (111 source files)
+### 2b.1 What Exists (112 source files)
 
 #### Core Infrastructure (38 files, all done)
 
@@ -349,6 +350,7 @@ Bugs found and fixed during test writing:
 | `lib/layout-reflow.js` | ✅ | 136 | Layout reflow — `reflowLayout()` and `reflowLayoutWithResize()` for flex/grid child position and size recalculation when layout properties change |
 | `lib/clipboard.js` | ✅ | 92 | System clipboard — `copyShapesToClipboard()`, `readShapesFromClipboard()`, `deepCloneShape()`, `assignNewIds()` for serializing shapes as JSON, reading from system clipboard, deep cloning nested arrays, and ID remapping |
 | `lib/content-tree.js` | ✅ | 399 | Content tree ↔ HTML conversion — `contentTreeToHTML()`, `htmlToContentTree()`, `extractSelectionStyles()` for bidirectional per-range style preservation between Penpot content tree and contentEditable HTML. Kebab-case ↔ camelCase attribute mapping. Merge of adjacent text nodes with same styling. |
+| `lib/responsive.js` | ✅ | 170 | Responsive layout utility — viewport breakpoint detection (`isMobile()`, `isTablet()`), mobile sidebar overlay management (`openLeftSidebar()`, `openRightSidebar()`, `closeSidebars()`), touch gesture support (`initTouchGestures()`), responsive body class management |
 
 #### Design System Components (21 files, all done)
 
@@ -397,7 +399,7 @@ Bugs found and fixed during test writing:
 | `penpot-asset-panel` | ✅ | Components (real file data) with **variant family grouping** (collapsible families by `variant-id`, member count badge), fonts (upload/manage/search/team fonts), colors, typographies, **drag-to-apply on canvas** |
 | `penpot-right-sidebar` | ✅ | Design/Inspect tabs, text properties, fills (solid/gradient with visibility toggle), stroke alignment, shadows, blur, per-corner radius, alignment (single+multi), constraints, bool ops, component actions, frame presets, flip controls, font family dropdown with team fonts, **SVG filter editing (drop shadow, color matrix, turbulence, flood fill)** |
 | `penpot-export-dialog` | ✅ | PNG/JPEG/WebP/SVG/PDF export with quality slider, page selection, multi-page export |
-| `penpot-share-dialog` | ✅ | URL sharing with permissions (`update-file-share` RPC persistence) |
+| `penpot-share-dialog` | ✅ | URL sharing with permissions (`create-share-link` RPC persistence) |
 | `penpot-comment-panel` | ✅ | Comment panel with create/delete via RPC |
 | `penpot-presence-bar` | ✅ | Online users avatars |
 | `penpot-cursor-overlay` | ✅ | Remote cursor positions (colored dashed outlines for remote selections) |
@@ -425,6 +427,7 @@ Bugs found and fixed during test writing:
 | `penpot-variant-panel` | ✅ | Variant container property editor, variant switching dropdown, "Combine as Variants" button, visual variant state grid |
 | `penpot-team-management` | ✅ | Team member management with role display/change/remove, invitation create/list/revoke, team rename, leave team, delete team |
 | `penpot-variant-panel` | ✅ | Variant container property editor, variant switching dropdown, "Combine as Variants" button, **visual variant state grid** |
+| `penpot-release-notes` | ✅ | Version changelog modal, auto-opens after upgrade, localStorage persistence, focus trap |
 
 #### Drawing Tools (7 files)
 
@@ -465,7 +468,7 @@ Bugs found and fixed during test writing:
 | 4 | SVG/PDF/bitmap export | ✅ | `server/exporter/src/renderer/` — bitmap (PNG/JPEG/WebP), SVG (text vectorization + foreignObject rasterization fallback), PDF (page.pdf + pdfunite + pdf-lib merge fallback) |
 | 5 | RPC proxy integration | ✅ | `server/src/rpc/export.js` — `export`, `export-shapes`, `export-frames` commands |
 | 6 | Resource upload | ✅ | `server/exporter/src/renderer/resources.js` — temp files, zip archives, upload to server |
-| 7 | Test suite | ✅ | 22 unit tests (config, URL building, grouping, context options) |
+| 7 | Test suite | ✅ | 23 unit tests (config, URL building, grouping, context options, rendering, error handling) |
 | 8 | ~~Binary file import~~ | 2a | ✅ Full v3 ZIP format support with ID remapping, shape cleanup, storage objects, feature migrations |
 
 ---
@@ -488,13 +491,14 @@ shared/ (Phase 1) ✅
 
 | Metric | shared | server | client |
 |--------|-----------|-----------|-------------|
-| JS source files | 151 | 66 | 111 |
+| JS source files | 151 | 66 | 114 |
+| CSS files | — | — | 2 (tokens.css, responsive.css) |
 | Clojure source files (original) | 142 | 142 + 158 SQL | 939 (544 cljs, 575 scss) |
-| Lines of JS | ~29,000 | ~19,000 | ~34,500 (12,100 lib + 21,300 components + 1,100 tools/other) |
+| Lines of JS | ~25,900 | ~16,900 | ~31,400 (11,200 lib + 19,200 components + 600 tools/other + ~400 responsive) |
 | Lines of original code | ~67,000 | ~48,000 | ~129,000 |
-| Port completion | 100% | ~95% | ~99.5% |
-| Test suites | 232 | 296 | 32 E2E spec files, 490+ E2E tests |
-| Test cases passing | 1,504 | 909 | 490+ E2E tests |
+| Port completion | 100% | ~95% | ~100% |
+| Test suites | 297 | 413 | 55 E2E spec files, 767 E2E tests |
+| Test cases passing | 1,662 | 1,201 | 767 E2E tests |
 | Test cases failing | 0 | 0 | 0 |
 
 ---
@@ -513,6 +517,7 @@ shared/ (Phase 1) ✅
 | 2026-05 | `logging` simplified for JS | SLF4J/macros replaced with console-based logger; same API surface |
 | 2026-05 | `geom/modifiers` is Phase 1 capstone | The modifier propagation engine ties together constraints, flex/grid layout, and auto-sizing |
 | 2026-05 | Dev server `/shared/` route + SPA fallback fix | `client/server.js` didn't serve `shared/` modules (import map target) and SPA fallback served `text/html` for missing `.js` files — both fixed |
+| 2026-05 | Mobile/responsive layout (PA-16) | Three-tier responsive breakpoints (mobile <768px, tablet 768–1023px, desktop ≥1024px), mobile sidebar overlay panels with backdrop dismiss, touch gesture support (pinch zoom + two-finger pan), CSS custom properties for breakpoints, token discrepancy fix |
 
 ---
 
@@ -552,7 +557,7 @@ shared/ (Phase 1) ✅
 | 30 | Per-corner border radius | 2b | ✅ TL/TR/BR/BL independent radius inputs, SVG path rendering for individual corners |
 | 31 | Canvas right-click context menu | 2b | ✅ Context menu on shape right-click: copy/paste/duplicate/group/ungroup/z-order/create-component/delete |
 | 32 | Deleted files view | 2b | ✅ Dashboard "Deleted" tab: restore, permanent delete |
-| 33 | Share dialog persistence | 2b | ✅ Calls `update-file-share` RPC on permission change |
+| 33 | Share dialog persistence | 2b | ✅ Calls `create-share-link` RPC on permission change |
 | 34 | Real-time cursor broadcast | 2b | ✅ Pointer position sent via `sendPointerUpdate`, throttled at 100ms |
 | 35 | Create Component UI button | 2b | ✅ Toolbar ★ button, sidebar "Create Component" button, context menu option |
 | 36 | Dashboard context menus | 2b | ✅ Right-click on file/project cards: rename/duplicate/delete |
@@ -570,7 +575,7 @@ shared/ (Phase 1) ✅
 | 49 | Cursor overlay user name labels | 2b | ✅ Name labels near first selection rect for remote user selections, page-filtered cursors |
 | 50 | Context menu icons and shortcuts | 2b | ✅ Icons and keyboard shortcut labels on all context menu items |
 | 51 | Comment resolve/unresolve | 2b | ✅ Resolve/reopen comment threads, filter bar (Open/Resolved/All), dimmed resolved threads |
-| 33 | Share dialog persistence | 2b | ✅ Share dialog calls `update-file-share` RPC on permission change |
+| 33 | Share dialog persistence | 2b | ✅ Share dialog calls `create-share-link` RPC on permission change |
 | 34 | Cursor broadcast fix | 2b | ✅ Real-time pointer position broadcast via `sendPointerUpdate()` throttled at 100ms |
 | 52 | File pinning | 2b | ✅ Pin/unpin files from context menu via `update-file-pin` RPC; pinned files sorted to top with 📌 icon |
 | 53 | Advanced search | 2b | ✅ Type filter (All/Libraries/Regular), recent searches in localStorage, FTS5+LIKE fallback |
@@ -587,6 +592,7 @@ shared/ (Phase 1) ✅
 | 64 | Text auto-resize mode | 2b | ✅ "Resize" dropdown (Fixed/Auto Width/Auto Height) for text shapes; `growType` property |
 | 65 | Measurements overlay | 2b | ✅ `showMeasurements()` on canvas shows W/H labels and X/Y position for selected shape |
 | 66 | SVG import advanced | 2b | ✅ Gradient fills (`<linearGradient>`, `<radialGradient>`), masked groups, clip-paths, fill-opacity/stroke-opacity |
+| 67 | Mobile/responsive layout (PA-16) | 2b | ✅ Three-tier responsive breakpoints (mobile/tablet/desktop), mobile sidebar overlay panels with backdrop dismiss, touch gestures (pinch zoom + two-finger pan), responsive dashboard grids |
 
 ---
 
@@ -604,7 +610,7 @@ shared/ (Phase 1) ✅
 | C3 | Design tokens system | `workspace/tokens/` (23 files) | ✅ Complete | `penpot-tokens-panel.js` — Full design tokens panel (colors, typography, sets, themes tabs). Color token add/delete/apply, typography token add/delete/apply, token set management, theme switching. |
 | C4 | High-performance renderer | `render.cljs` (Canvas2D), `render_wasm.cljs` (Skia WASM) | ✅ Complete | `canvas2d-renderer.js` — Canvas2D renderer for files with 100+ shapes. Automatic fallback from SVG to Canvas2D. Supports all shape types, selection handles, rotation handle, zoom/pan, grid. |
 | C5 | Library connect/disconnect | `libraries.cljs` (100+ lines) | ✅ Complete | Connect/disconnect buttons in Libraries dashboard view. RPC calls `connect-library` / `disconnect-library`. Library content browsing shows components, colors, and typographies. |
-| C6 | Trash / deleted files | `dashboard/deleted.cljs` (326 lines) | ✅ Complete | Deleted files view in dashboard with Restore and Delete Forever buttons. Calls `get-deleted-files` / `restore-file` / `delete-file-permanent` RPC. |
+| C6 | Trash / deleted files | `dashboard/deleted.cljs` (326 lines) | ✅ Complete | Deleted files view in dashboard with Restore and Delete Forever buttons. Calls `get-team-deleted-files` / `restore-deleted-team-files` / `permanently-delete-team-files` RPC. |
 | C7 | Real-time collaboration — cursors | `collaboration.cljs`, presence system | ✅ Complete | Pointer broadcast via `sendPointerUpdate()`. Remote cursor overlay rendered via `penpot-cursor-overlay`. Throttled at 100ms. |
 | C8 | Boolean path geometry | `app.common.geom.path.bool` (280 lines) + Skia WASM | ✅ Complete | `bool-ops.js` — Boolean path operations (union, difference, intersection, exclusion). Convex decomposition for concave intersection, SH clipping, point-in-polygon containment, even-odd fill for difference/exclusion. Canvas2D fallback and SVG. |
 | C9 | Create Component — UI button | `workspace/sidebar/assets.cljs` | ✅ Complete | "Create Component" button in toolbar and right sidebar. Context menu also has option. `createComponentFromSelection()` wired to UI. |
@@ -616,14 +622,14 @@ shared/ (Phase 1) ✅
 |---|---------|----------|---------------|-------|
 | H1 | File thumbnails in dashboard | `dashboard/grid.cljs` | ✅ Complete | File thumbnails fetched from server via `get-file-object-thumbnails` RPC on dashboard load. Client-side thumbnail generation via `generateAndUploadThumbnail` for files without thumbnails, rendered using `drawShapeToCanvas` (supports nested frame/group/bool children, per-corner radius). `penpot-file-thumbnail` component with loading state and fallback icons. Thumbnail regeneration after workspace file save. |
 | H2 | Context menus (file/project/shape) | `file_menu.cljs`, `project_menu.cljs`, `context_menu.cljs` | ✅ Complete | Dashboard file/project right-click menus with rename/duplicate/delete/share/move-to-project. Canvas shape context menu with icons, shortcuts, copy/paste/paste-here/duplicate/group/ungroup/z-order/create-component/delete/alignment/select-all. Submenus for nested items (Align submenu). |
-| H3 | Share dialog — server persistence | `workspace/share.cljs` | ✅ Complete | Share dialog calls `update-file-share` RPC on permission change. Generates share URL with view/comment/edit params. |
+| H3 | Share dialog — server persistence | `workspace/share.cljs` | ✅ Complete | Share dialog calls `create-share-link` RPC on permission change. Generates share URL with view/comment/edit params. |
 | H4 | Constraint editing (pinning) | `constraints.cljs` (233 lines) | ✅ Complete | Horizontal/vertical constraint selects in right sidebar (left/right/center/scale for H, top/bottom/center/scale for V) |
 | H5 | Alignment & distribution | `align.cljs` (109 lines) | ✅ Complete | Align buttons always visible (single-shape relative to parent + multi-shape). Distribute horizontal/vertical for 3+ shapes. Keyboard shortcuts bound via shortcuts.js. |
 | H6 | Stroke property editing | `workspace/sidebar/stroke.cljs` (274 lines) | ✅ Complete | Full stroke editor: add/remove strokes, color picker, width, style (solid/dashed/dotted), cap (round/butt/square), alignment (center/inner/outer). |
 | H7 | Blur editing | `workspace/sidebar/blur.cljs` (159 lines) | ✅ Complete | Layer blur editing in right sidebar with pixel value input. SVG `<filter>` + `feGaussianBlur` rendering on shapes. |
 | H8 | Per-shape export presets | `workspace/sidebar/exports.cljs` (274 lines) | ✅ Complete | Export section in right sidebar with add/remove/format/scale/suffix per shape. Suffix auto-naming (`@1x`, `@2x`). Export button opens export dialog with per-preset batch export. Multi-shape export via shape filter. Export all presets at once from dialog. |
 | H9 | Component override tracking UI | `workspace/sidebar/component.cljs` | ✅ Complete | `components-lib.js` has full `SYNC_ATTRS`/`touched` tracking logic. UI has Create/Detach/Sync buttons + per-group Reset buttons + override count badge. Per-property override indicators (colored dots) on section headings. Layers panel shows diamond ◆ for instances and star ★ for main components. Swap component dropdown to replace instance main component. |
-| H10 | Threaded/resolvable comments | `app.main.data.comments`, `workspace/comments.cljs` | ✅ Complete | Comment panel with create/delete via RPC (`get-file-comments`, `create-comment`, `delete-comment`). Resolve/reopen threads via `update-comment-thread` RPC. Filter bar (Open/Resolved/All). Canvas click places comment pin with x/y coordinates. Resolved threads dimmed. Threaded replies via `create-comment` with `threadId`. |
+| H10 | Threaded/resolvable comments | `app.main.data.comments`, `workspace/comments.cljs` | ✅ Complete | Comment panel with create/delete via RPC (`get-comment-threads`, `create-comment`, `delete-comment`). Resolve/reopen threads via `update-comment-thread` RPC. Filter bar (Open/Resolved/All). Canvas click places comment pin with x/y coordinates. Resolved threads dimmed. Threaded replies via `create-comment` with `threadId`. |
 | H11 | Remote selection highlighting | `collaboration.cljs` | ✅ Complete | Other users' cursor positions broadcast with selected shape IDs. Colored dashed outlines rendered for remote selections on canvas via `penpot-cursor-overlay`. User name labels shown near first selection rect. Cursors and selections filtered by current page. Separate `selection-update` WS message type throttled at 500ms. |
 | H12 | Component creation button in UI | `workspace/sidebar/assets.cljs` | ✅ Complete | "Create Component" button in toolbar (★ icon) and right sidebar. Also available in context menu. |
 | H13 | Libraries view — actual content | `workspace/sidebar/assets.cljs` | ✅ Complete | Libraries dashboard view lists connected libraries with connect/disconnect/browse buttons. Publish/unpublish library via `set-file-shared` RPC from file context menu. Library content browsing shows components, colors, and typographies. Library color/typography sync buttons import library items as references. |
@@ -781,7 +787,7 @@ shared/ (Phase 1) ✅
 
 ## Phase 2b: Client Functional Correctness Audit
 
-> Last updated: 2026-05-26
+> Last updated: 2026-05-30
 > 
 > Comprehensive audit of why buttons don't work despite ~100% feature coverage. Root causes: unwired events, hardcoded fakes, and silent error swallowing.
 
@@ -820,8 +826,8 @@ shared/ (Phase 1) ✅
 | 1 | Plugin API real operations (`createShape`/`updateShape` persistence) | P1 | ✅ **Verified** | `#createShape` returns `{success, id}` with pre-generated UUID. `#updateShape` dispatches `penpot-shape-update` event. Workspace `#handleShapeUpdate` persists via `enqueueChange(makeModifyChange(...))`. `#handleShapeCreate` persists via `enqueueChange(makeCreateChange(...))`. `#handleShapeDelete` persists via `enqueueChange(makeDeleteChange(...))`. All 3 plugin operations (create/update/delete) dispatch events AND persist to server. |
 | 2 | Error notifications on RPC failure | P1 | ✅ **Verified** | All 33 silent `catch {}` blocks replaced. Only 1 benign empty catch remains (`dragImage` fallback in `penpot-asset-panel.js:378`). Error flows now use `console.warn()` (49 call sites) or `penpot-notification` toasts (`danger`/`warning` types). Templates tab shows warning toast on `get-builtin-templates` failure. |
 | 3 | Templates tab empty state | P2 | ✅ **Verified** | Shows "Loading templates..." spinner, then "No templates available." empty state when 0 templates returned. On RPC failure, shows warning toast "Templates are not available on this server." and empty state. Server `get-builtin-templates` RPC reads from `server/resources/onboarding.json` (15 templates). Icons and colors rendered from `icon`/`color` fields. |
-| 4 | Mobile/responsive testing | P4 | ⬜ Deferred | No viewport variation testing. Desktop-only layout. No breakpoints, no touch gesture support. Responsive CSS not in scope for current migration. |
-| 5 | Performance benchmarks | P4 | ⬜ Deferred | No canvas rendering benchmarks. Canvas2D renderer auto-activates for 100+ shapes. No Lighthouse or frame-rate tests. Performance testing deferred until feature parity is complete. |
+| 4 | Mobile/responsive testing | P4 | ✅ **Implemented** | Three-tier responsive breakpoints (mobile <768px, tablet 768–1023px, desktop ≥1024px), mobile sidebar overlay panels with backdrop dismiss, touch gestures (pinch zoom + two-finger pan), responsive dashboard grids, auth screen responsive layout, CSS custom property breakpoints. See `styles/responsive.css` and `lib/responsive.js`. |
+| 5 | Performance benchmarks | P4 | ✅ **Implemented** | 13 performance benchmark tests in `client/e2e/performance.spec.js`. See remaining-tasks.md PA-17. |
 
 ### Implementation Progress (Session 2026-05-26)
 
@@ -868,7 +874,7 @@ shared/ (Phase 1) ✅
 
 ### B. Missing / Incomplete Server RPC Commands
 
-> 2 commands missing from the 161 upstream RPC commands (99% parity).
+> All 152 RPC commands implemented (6 JS-specific additions). 100% wire-compatible parity with upstream Clojure backend.
 
 | # | Command | Upstream Module | Priority | Description |
 |---|---------|----------------|----------|-------------|

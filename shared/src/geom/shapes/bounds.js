@@ -3,26 +3,44 @@ import * as grc from '../../geom/rect.js';
 import * as mth from '../../math.js';
 import * as pathMod from '../../types/path.js';
 
+/**
+ *
+ */
 function pathShapeQ(shape) {
   return shape.type === 'path';
 }
 
+/**
+ *
+ */
 function svgRawShapeQ(shape) {
   return shape.type === 'svg-raw';
 }
 
+/**
+ *
+ */
 function boolShapeQ(shape) {
   return shape.type === 'bool';
 }
 
+/**
+ *
+ */
 function frameShapeQ(shape) {
   return shape.type === 'frame';
 }
 
+/**
+ *
+ */
 function maskShapeQ(shape) {
   return shape.maskedGroup || shape['masked-group'];
 }
 
+/**
+ *
+ */
 export function shapeStrokeMargin(shape, strokeWidth) {
   if (pathShapeQ(shape)) {
     return strokeWidth + mth.sqrt(2 * strokeWidth * strokeWidth);
@@ -30,6 +48,9 @@ export function shapeStrokeMargin(shape, strokeWidth) {
   return mth.sqrt(2 * strokeWidth * strokeWidth);
 }
 
+/**
+ *
+ */
 function applyFilters(attr, type, filters) {
   return filters
     .filter(f => !f.hidden)
@@ -37,6 +58,9 @@ function applyFilters(attr, type, filters) {
     .map(item => ({ id: `filter_${item.id}`, type, params: item }));
 }
 
+/**
+ *
+ */
 export function shapeToFilters(shape) {
   const result = [{ id: 'BackgroundImageFix', type: 'image-fix' }];
   const shadows = shape.shadow || [];
@@ -47,6 +71,9 @@ export function shapeToFilters(shape) {
   return result;
 }
 
+/**
+ *
+ */
 function calculateFilterBounds(selrect, filterEntry) {
   const x = selrect.x;
   const y = selrect.y;
@@ -67,6 +94,9 @@ function calculateFilterBounds(selrect, filterEntry) {
   return grc.makeRect(filterX, filterY, filterW, filterH);
 }
 
+/**
+ *
+ */
 export function getRectFilterBounds(selrect, filters, blurValue, ignoreShadowMarginQ) {
   if (ignoreShadowMarginQ === undefined) ignoreShadowMarginQ = false;
   const boundsXf = filters
@@ -91,6 +121,9 @@ export function getRectFilterBounds(selrect, filters, blurValue, ignoreShadowMar
   return result;
 }
 
+/**
+ *
+ */
 export function getShapeFilterBounds(shape, ignoreShadowMarginQ) {
   if (ignoreShadowMarginQ === undefined) ignoreShadowMarginQ = false;
 
@@ -113,6 +146,9 @@ export function getShapeFilterBounds(shape, ignoreShadowMarginQ) {
   return getRectFilterBounds(srect, filters, blurValue, ignoreShadowMarginQ);
 }
 
+/**
+ *
+ */
 export function calculatePadding(shape, ignoreMarginQ, ignoreShadowMarginQ) {
   if (ignoreMarginQ === undefined) ignoreMarginQ = false;
   if (ignoreShadowMarginQ === undefined) ignoreShadowMarginQ = false;
@@ -158,6 +194,9 @@ export function calculatePadding(shape, ignoreMarginQ, ignoreShadowMarginQ) {
   };
 }
 
+/**
+ *
+ */
 function addPadding(bounds, padding) {
   const h = padding.horizontal;
   const v = padding.vertical;
@@ -174,6 +213,9 @@ function addPadding(bounds, padding) {
   };
 }
 
+/**
+ *
+ */
 export function calculateBaseBounds(shape, ignoreMarginQ, ignoreShadowMarginQ) {
   if (ignoreMarginQ === undefined) ignoreMarginQ = true;
   if (ignoreShadowMarginQ === undefined) ignoreShadowMarginQ = false;
@@ -183,6 +225,9 @@ export function calculateBaseBounds(shape, ignoreMarginQ, ignoreShadowMarginQ) {
   );
 }
 
+/**
+ *
+ */
 export function getObjectBounds(objects, shape, opts) {
   const { ignoreMarginQ = true, ignoreShadowMarginQ = false } = opts || {};
   const baseBounds = calculateBaseBounds(shape, ignoreMarginQ, ignoreShadowMarginQ);
@@ -213,6 +258,9 @@ export function getObjectBounds(objects, shape, opts) {
   return getRectFilterBounds(childrenBounds, filters, blurValue, ignoreShadowMarginQ);
 }
 
+/**
+ *
+ */
 export function getFrameBounds(shape, opts) {
   return getObjectBounds({}, shape, opts);
 }

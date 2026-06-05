@@ -7,6 +7,8 @@ import './penpot-variant-panel.js';
 import './penpot-tokens-panel.js';
 import './penpot-interaction-panel.js';
 import { SYSTEM_FONTS } from '@penpot/shared/constants';
+import { hexToRgb as _hexToRgb, parseRgb as _parseRgb, rgbToHsl as _rgbToHsl, parse as _parseColor } from '@penpot/shared/colors.js';
+
 
 const template = document.createElement('template');
 template.innerHTML = `<style>
@@ -81,8 +83,13 @@ export class PenpotRightSidebar extends PenpotElement {
   #teamFonts = [];
   #fileData = null;
   #missingFonts = [];
+  #pages = [];
+  #currentPageIndex = 0;
+  #renderQueued = false;
 
   set fileData(val) { this.#fileData = val; }
+  set pages(val) { this.#pages = val; }
+  set currentPageIndex(val) { this.#currentPageIndex = val; }
   #toolManager = null;
 
   set toolManager(val) { this.#toolManager = val; }
@@ -108,7 +115,7 @@ export class PenpotRightSidebar extends PenpotElement {
     });
   }
 
-  set teamFonts(val) {
+  set toolFonts(val) {
     this.#teamFonts = val || [];
     if (this.#activeTab === 'design' && this.#selectedShape) this.render();
   }
@@ -122,14 +129,23 @@ export class PenpotRightSidebar extends PenpotElement {
 
   set selectedShape(shape) {
     this.#selectedShape = shape;
-    this.render();
+    this.#scheduleRender();
   }
 
   get selectedShape() { return this.#selectedShape; }
 
   set selectedIds(ids) {
     this.#selectedIds = ids ? [...ids] : [];
-    this.render();
+    this.#scheduleRender();
+  }
+
+  #scheduleRender() {
+    if (this.#renderQueued) return;
+    this.#renderQueued = true;
+    requestAnimationFrame(() => {
+      this.#renderQueued = false;
+      this.render();
+    });
   }
 
   render() {
@@ -220,7 +236,7 @@ export class PenpotRightSidebar extends PenpotElement {
 
     html += `<div class="penpot-rside__properties-section">`;
     html += `<h4>Rotation${this.#overrideDot('geometry-group')}</h4>`;
-    html += `<div class="penpot-rside__prop-row"><span class="penpot-rside__prop-label">\u00B0</span><input class="penpot-rside__prop-input" value="${Math.round((s.rotation || 0) * 180 / Math.PI)}" type="number" data-prop="rotation"></div>`;
+    html += `<div class="penpot-rside__prop-row"><span class="penpot-rside__prop-label">\u00B0</span><input class="penpot-rside__prop-input" value="${Math.round(s.rotation || 0)}" type="number" data-prop="rotation"></div>`;
     html += `</div>`;
 
     html += `<div class="penpot-rside__properties-section">`;
@@ -1050,7 +1066,7 @@ export class PenpotRightSidebar extends PenpotElement {
     const w = Math.round(s.width || 0);
     const h = Math.round(s.height || 0);
     const opacity = s.opacity ?? 1;
-    const rotation = Math.round((s.rotation || 0) * 180 / Math.PI);
+    const rotation = Math.round(s.rotation || 0);
     const fmt = this.#inspectColorFormat;
 
     let html = '';
@@ -1432,34 +1448,21 @@ export class PenpotRightSidebar extends PenpotElement {
   #parseColorToRGB(color) {
     if (!color || typeof color !== 'string') return null;
     if (color.startsWith('#')) {
-      const hex = color.slice(1);
-      if (hex.length === 3) {
-        return { r: parseInt(hex[0] + hex[0], 16), g: parseInt(hex[1] + hex[1], 16), b: parseInt(hex[2] + hex[2], 16) };
+      const normalized = _parseColor(color);
+      if (normalized) {
+        const [r, g, b] = _hexToRgb(normalized);
+        return { r, g, b };
       }
-      if (hex.length === 6) {
-        return { r: parseInt(hex.slice(0, 2), 16), g: parseInt(hex.slice(2, 4), 16), b: parseInt(hex.slice(4, 6), 16) };
-      }
+      return null;
     }
-    const rgbMatch = color.match(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/);
-    if (rgbMatch) return { r: parseInt(rgbMatch[1]), g: parseInt(rgbMatch[2]), b: parseInt(rgbMatch[3]) };
+    const rgb = _parseRgb(color);
+    if (rgb) return { r: rgb[0], g: rgb[1], b: rgb[2] };
     return null;
   }
 
   #rgbToHSL(r, g, b) {
-    r /= 255; g /= 255; b /= 255;
-    const max = Math.max(r, g, b), min = Math.min(r, g, b);
-    const l = (max + min) / 2;
-    let h = 0, s = 0;
-    if (max !== min) {
-      const d = max - min;
-      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-      switch (max) {
-        case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
-        case g: h = ((b - r) / d + 2) / 6; break;
-        case b: h = ((r - g) / d + 4) / 6; break;
-      }
-    }
-    return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+    const [h, s, l] = _rgbToHsl([r, g, b]);
+    return { h: Math.round(h), s: Math.round(s * 100), l: Math.round(l * 100) };
   }
 
   #bindInspectEvents(content, s) {
@@ -1614,7 +1617,7 @@ export class PenpotRightSidebar extends PenpotElement {
     lines.push(`top: ${Math.round(s.y || 0)}px;`);
     lines.push(`width: ${Math.round(s.width || 0)}px;`);
     lines.push(`height: ${Math.round(s.height || 0)}px;`);
-    if (s.rotation) lines.push(`transform: rotate(${Math.round((s.rotation || 0) * 180 / Math.PI)}deg);`);
+    if (s.rotation) lines.push(`transform: rotate(${Math.round(s.rotation)}deg);`);
     if (s.opacity != null && s.opacity < 1) lines.push(`opacity: ${s.opacity};`);
     if (s.blendMode && s.blendMode !== 'normal') lines.push(`mix-blend-mode: ${s.blendMode};`);
 
@@ -1718,7 +1721,7 @@ export class PenpotRightSidebar extends PenpotElement {
     if (s.y) attrs.push(`y="${Math.round(s.y)}"`);
     if (s.width) attrs.push(`width="${Math.round(s.width)}"`);
     if (s.height) attrs.push(`height="${Math.round(s.height)}"`);
-    if (s.rotation) attrs.push(`transform="rotate(${Math.round((s.rotation || 0) * 180 / Math.PI)} ${Math.round((s.x || 0) + (s.width || 0) / 2)} ${Math.round((s.y || 0) + (s.height || 0) / 2)})"`);
+    if (s.rotation) attrs.push(`transform="rotate(${Math.round(s.rotation)} ${Math.round((s.x || 0) + (s.width || 0) / 2)} ${Math.round((s.y || 0) + (s.height || 0) / 2)})"`);
     if (s.opacity != null && s.opacity < 1) attrs.push(`opacity="${s.opacity}"`);
 
     const fills = s.fills || [];

@@ -6,6 +6,9 @@
 
 /* global URL, URLSearchParams */
 
+/**
+ *
+ */
 export function uri(o) {
   if (o instanceof URL) return o;
   if (o === null || o === undefined) return o;
@@ -34,6 +37,9 @@ export function uri(o) {
   return new URL(String(o));
 }
 
+/**
+ *
+ */
 export function parse(s) {
   try {
     return new URL(s);
@@ -46,18 +52,30 @@ export function parse(s) {
   }
 }
 
+/**
+ *
+ */
 export function queryEncode(s) {
   return encodeURIComponent(s);
 }
 
+/**
+ *
+ */
 export function percentEncode(s) {
   return encodeURIComponent(s);
 }
 
+/**
+ *
+ */
 export function isURI(o) {
   return o instanceof URL;
 }
 
+/**
+ *
+ */
 export function queryStringToMap(s) {
   const params = new URLSearchParams(s);
   const result = {};
@@ -67,11 +85,17 @@ export function queryStringToMap(s) {
   return result;
 }
 
+/**
+ *
+ */
 export function defaultEncodeValue(v) {
   if (typeof v === "string" && v.startsWith(":")) return v.slice(1);
   return v;
 }
 
+/**
+ *
+ */
 export function getDomain(urlObj) {
   if (!(urlObj instanceof URL)) urlObj = uri(urlObj);
   if (urlObj.port) {
@@ -80,6 +104,9 @@ export function getDomain(urlObj) {
   return urlObj.hostname;
 }
 
+/**
+ *
+ */
 export function mapToQueryString(params, { valueFn = defaultEncodeValue, keyFn = (k) => k } = {}) {
   const entries = Object.entries(params)
     .filter(([, v]) => v !== null && v !== undefined)
@@ -87,6 +114,9 @@ export function mapToQueryString(params, { valueFn = defaultEncodeValue, keyFn =
   return new URLSearchParams(entries).toString();
 }
 
+/**
+ *
+ */
 export function ensurePathSlash(u) {
   const urlObj = u instanceof URL ? u : uri(u);
   if (!urlObj.pathname.endsWith("/")) {

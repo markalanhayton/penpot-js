@@ -2,15 +2,24 @@ import * as d from '../data.js';
 import * as gco from '../geom/shapes/common.js';
 import * as uuid from '../uuid.js';
 
+/**
+ *
+ */
 export function rootQ(shape) {
   return shape?.type === 'frame' && shape?.id === uuid.zero;
 }
 
+/**
+ *
+ */
 export function isDirectChildOfRootQ(objectsOrShape, id) {
   const shape = id !== undefined ? objectsOrShape[id] : objectsOrShape;
   return shape != null && (shape.frameId ?? shape['frame-id']) === uuid.zero;
 }
 
+/**
+ *
+ */
 export function rootFrameQ(objectsOrShape, id) {
   if (id !== undefined) {
     if (id === uuid.zero) return false;
@@ -20,70 +29,115 @@ export function rootFrameQ(objectsOrShape, id) {
   return shape != null && shape.id !== uuid.zero && shape.type === 'frame' && (shape.frameId ?? shape['frame-id']) === uuid.zero;
 }
 
+/**
+ *
+ */
 export function frameShapeQ(objectsOrShape, id) {
   const shape = id !== undefined ? objectsOrShape[id] : objectsOrShape;
   return shape != null && shape.type === 'frame';
 }
 
+/**
+ *
+ */
 export function groupShapeQ(objectsOrShape, id) {
   const shape = id !== undefined ? objectsOrShape[id] : objectsOrShape;
   return shape != null && shape.type === 'group';
 }
 
+/**
+ *
+ */
 export function maskShapeQ(shape) {
   return groupShapeQ(shape) && !!(shape.maskedGroup ?? shape['masked-group']);
 }
 
+/**
+ *
+ */
 export function boolShapeQ(shape) {
   return shape != null && shape.type === 'bool';
 }
 
+/**
+ *
+ */
 export function textShapeQ(objectsOrShape, id) {
   const shape = id !== undefined ? objectsOrShape[id] : objectsOrShape;
   return shape != null && shape.type === 'text';
 }
 
+/**
+ *
+ */
 export function rectShapeQ(shape) {
   return shape != null && shape.type === 'rect';
 }
 
+/**
+ *
+ */
 export function circleShapeQ(shape) {
   return shape?.type === 'circle';
 }
 
+/**
+ *
+ */
 export function imageShapeQ(shape) {
   return shape != null && shape.type === 'image';
 }
 
+/**
+ *
+ */
 export function svgRawShapeQ(objectsOrShape, id) {
   const shape = id !== undefined ? objectsOrShape[id] : objectsOrShape;
   return shape != null && shape.type === 'svg-raw';
 }
 
+/**
+ *
+ */
 export function pathShapeQ(objectsOrShape, id) {
   const shape = id !== undefined ? objectsOrShape[id] : objectsOrShape;
   return shape != null && shape.type === 'path';
 }
 
+/**
+ *
+ */
 export function unframedShapeQ(shape) {
   return shape != null && !frameShapeQ(shape) && (shape.frameId ?? shape['frame-id']) === uuid.zero;
 }
 
+/**
+ *
+ */
 export function hasChildrenQ(objectsOrShape, id) {
   const shape = id !== undefined ? objectsOrShape[id] : objectsOrShape;
   return d.notEmpty(shape?.shapes);
 }
 
+/**
+ *
+ */
 export function hasLayoutQ(objects, id) {
   const shape = objects[id];
   return !!(shape && shape.layout);
 }
 
+/**
+ *
+ */
 export function groupLikeShapeQ(objectsOrShape, id) {
   const shape = id !== undefined ? objectsOrShape[id] : objectsOrShape;
   return groupShapeQ(shape) || boolShapeQ(shape) || (svgRawShapeQ(shape) && hasChildrenQ(shape));
 }
 
+/**
+ *
+ */
 export function getSelectedType(objects, selected) {
   if (selected.length === 1) {
     return objects[selected[0]]?.type;
@@ -91,15 +145,24 @@ export function getSelectedType(objects, selected) {
   return 'multiple';
 }
 
+/**
+ *
+ */
 export function getShapeType(objects, id) {
   const shape = objects[id];
   if (rootQ(shape)) return 'root';
   return shape?.type;
 }
 
+/**
+ *
+ */
 export function getChildrenIds(objects, id, opts) {
   const { ignoreChildrenFn } = opts || {};
 
+  /**
+   *
+   */
   function getChildrenIdsRec(currentId, processed) {
     if (processed.has(currentId)) return [];
     const shape = objects[currentId];
@@ -117,18 +180,30 @@ export function getChildrenIds(objects, id, opts) {
   return getChildrenIdsRec(id, new Set());
 }
 
+/**
+ *
+ */
 export function getChildrenIdsWithSelf(objects, id) {
   return [id, ...getChildrenIds(objects, id)];
 }
 
+/**
+ *
+ */
 export function getChildren(objects, id) {
   return getChildrenIds(objects, id).map(cid => objects[cid]).filter(Boolean);
 }
 
+/**
+ *
+ */
 export function getChildrenWithSelf(objects, id) {
   return getChildrenIdsWithSelf(objects, id).map(cid => objects[cid]).filter(Boolean);
 }
 
+/**
+ *
+ */
 export function getChild(objects, id, childId) {
   const shape = objects[id];
   if (id === childId) return shape;
@@ -139,18 +214,27 @@ export function getChild(objects, id, childId) {
   return undefined;
 }
 
+/**
+ *
+ */
 export function getParent(objects, id) {
   const shape = objects[id];
   if (!shape) return undefined;
   return objects[shape.parentId ?? shape['parent-id']];
 }
 
+/**
+ *
+ */
 export function getParentId(objects, id) {
   const shape = objects[id];
   if (!shape) return undefined;
   return shape.parentId ?? shape['parent-id'];
 }
 
+/**
+ *
+ */
 export function getParentIds(objects, shapeId) {
   const result = [];
   let current = shapeId;
@@ -163,6 +247,9 @@ export function getParentIds(objects, shapeId) {
   return result;
 }
 
+/**
+ *
+ */
 export function getParentIdsSeq(objects, shapeId) {
   const parentId = getParentId(objects, shapeId);
   if (parentId == null || parentId === shapeId) return [];
@@ -170,10 +257,16 @@ export function getParentIdsSeq(objects, shapeId) {
   return [parentId, ...rest];
 }
 
+/**
+ *
+ */
 export function getParentIdsSeqWithSelf(objects, shapeId) {
   return [shapeId, ...getParentIdsSeq(objects, shapeId)];
 }
 
+/**
+ *
+ */
 export function getParents(objects, shapeId) {
   const result = [];
   let current = shapeId;
@@ -186,6 +279,9 @@ export function getParents(objects, shapeId) {
   return result;
 }
 
+/**
+ *
+ */
 export function getParentSeq(objects, shapeOrId, shapeId) {
   if (shapeId === undefined) {
     const id = shapeOrId;
@@ -199,11 +295,17 @@ export function getParentSeq(objects, shapeOrId, shapeId) {
   return [parent, ...getParentSeq(objects, parent, parentId)];
 }
 
+/**
+ *
+ */
 export function getParentsWithSelf(objects, id) {
   const lookup = d.getf(objects);
   return [lookup(id), ...getParentIds(objects, id).map(lookup)];
 }
 
+/**
+ *
+ */
 export function hiddenParentQ(objects, shapeId) {
   let parentId = getParentId(objects, shapeId);
   let currentId = shapeId;
@@ -215,6 +317,9 @@ export function hiddenParentQ(objects, shapeId) {
   return false;
 }
 
+/**
+ *
+ */
 export function getParentIdsWithIndex(objects, shapeId) {
   const parentList = [];
   const parentIndices = {};
@@ -230,11 +335,17 @@ export function getParentIdsWithIndex(objects, shapeId) {
   return [parentList, parentIndices];
 }
 
+/**
+ *
+ */
 export function getSiblingsIds(objects, id) {
   const parent = getParent(objects, id);
   return (parent?.shapes || []).filter(sid => sid !== id);
 }
 
+/**
+ *
+ */
 export function getFrame(objects, shapeOrId) {
   if (shapeOrId === undefined) return objects[uuid.zero];
   if (typeof shapeOrId === 'object' && shapeOrId !== null) {
@@ -246,6 +357,9 @@ export function getFrame(objects, shapeOrId) {
   return getFrame(objects, shape);
 }
 
+/**
+ *
+ */
 export function getRootFrame(objects, shapeId) {
   let frameId;
   if (frameShapeQ(objects, shapeId)) {
@@ -259,6 +373,9 @@ export function getRootFrame(objects, shapeId) {
   return getRootFrame(objects, frame.frameId ?? frame['frame-id']);
 }
 
+/**
+ *
+ */
 export function getParentFrame(objects, shapeOrId) {
   if (typeof shapeOrId === 'object' && shapeOrId !== null) {
     return objects[shapeOrId.frameId ?? shapeOrId['frame-id']];
@@ -268,11 +385,17 @@ export function getParentFrame(objects, shapeOrId) {
   return getFrame(objects, shape);
 }
 
+/**
+ *
+ */
 export function validFrameTargetQ(objects, parentId, shapeId) {
   const shape = objects[shapeId];
   return !frameShapeQ(shape) || parentId === uuid.zero;
 }
 
+/**
+ *
+ */
 export function getPositionOnParent(objects, id) {
   const obj = objects[id];
   const pid = obj?.parentId ?? obj?.['parent-id'];
@@ -280,6 +403,9 @@ export function getPositionOnParent(objects, id) {
   return (prt?.shapes || []).indexOf(id);
 }
 
+/**
+ *
+ */
 export function getPrevSibling(objects, id) {
   const obj = objects[id];
   const pid = obj?.parentId ?? obj?.['parent-id'];
@@ -290,6 +416,9 @@ export function getPrevSibling(objects, id) {
   return undefined;
 }
 
+/**
+ *
+ */
 export function getImmediateChildren(objects, shapeId, opts) {
   if (shapeId === undefined) shapeId = uuid.zero;
   const { removeHidden = false, removeBlocked = false } = opts || {};
@@ -304,6 +433,9 @@ export function getImmediateChildren(objects, shapeId, opts) {
     .filter(child => !gco.invalidGeometryQ(child));
 }
 
+/**
+ *
+ */
 export function isParentQ(objects, shapeId, parentCandidate) {
   let currentId = shapeId;
   while (true) {
@@ -315,23 +447,38 @@ export function isParentQ(objects, shapeId, parentCandidate) {
   }
 }
 
+/**
+ *
+ */
 export function makeContainer(pageOrComponent, type) {
   return { ...pageOrComponent, type };
 }
 
+/**
+ *
+ */
 export function pageQ(container) {
   return container?.type === 'page';
 }
 
+/**
+ *
+ */
 export function componentQ(container) {
   return container?.type === 'component';
 }
 
+/**
+ *
+ */
 export function componentTouchedQ(objects, rootId) {
   const children = getChildrenWithSelf(objects, rootId);
   return children.some(c => c.touched && Object.keys(c.touched).length > 0) || false;
 }
 
+/**
+ *
+ */
 export function componentsNestingLoopQ(objectsOrChildren, shapeIdOrParents, parentId) {
   let children, parents;
   if (parentId !== undefined) {
@@ -349,11 +496,17 @@ export function componentsNestingLoopQ(objectsOrChildren, shapeIdOrParents, pare
   return false;
 }
 
+/**
+ *
+ */
 export function getUsedNames(elements) {
   const items = Array.isArray(elements) ? elements : Object.values(elements);
   return new Set(items.map(e => e.name).filter(Boolean));
 }
 
+/**
+ *
+ */
 export function generateUniqueName(baseName, existingNames, opts) {
   const { suffixFn, immediateSuffix, suffix } = opts || {};
   const effectiveSuffixFn = suffixFn ||
@@ -374,6 +527,9 @@ export function generateUniqueName(baseName, existingNames, opts) {
   }
 }
 
+/**
+ *
+ */
 export function walkPages(f, data) {
   const pagesIndex = data.pagesIndex ?? data['pages-index'] ?? {};
   const updated = {};
@@ -383,6 +539,9 @@ export function walkPages(f, data) {
   return { ...data, pagesIndex: updated, ['pages-index']: updated };
 }
 
+/**
+ *
+ */
 export function updateObjectList(page, objectsList) {
   const objects = { ...(page.objects || {}) };
   for (const obj of objectsList) {
@@ -391,6 +550,9 @@ export function updateObjectList(page, objectsList) {
   return { ...page, objects };
 }
 
+/**
+ *
+ */
 export function appendAtTheEnd(prevIds, ids) {
   const result = [...prevIds];
   for (const id of ids) {
@@ -399,6 +561,9 @@ export function appendAtTheEnd(prevIds, ids) {
   return result;
 }
 
+/**
+ *
+ */
 export function cleanLoops(objects, ids) {
   if (ids.length <= 1) return [...ids];
   const idsSet = new Set(ids);
@@ -406,12 +571,15 @@ export function cleanLoops(objects, ids) {
   return ids.filter(id => !parentSelectedQ(id));
 }
 
+/**
+ *
+ */
 function indexedShapes(objects, selected) {
   const selectedSet = new Set(selected);
   const result = [];
   let index = 1;
   let addQ = false;
-  let pending = new Set(selected);
+  const pending = new Set(selected);
   let stack = [...(objects[uuid.zero]?.shapes || [])].reverse();
 
   while (pending.size > 0 && stack.length > 0) {
@@ -437,6 +605,9 @@ function indexedShapes(objects, selected) {
   return result;
 }
 
+/**
+ *
+ */
 export function expandRegionSelection(objects, selection) {
   const selectionSet = new Set(selection);
   const indexed = indexedShapes(objects, selectionSet);
@@ -447,18 +618,27 @@ export function expandRegionSelection(objects, selection) {
   return new Set(indexed.filter(([idx]) => idx >= from && idx <= to).map(([, id]) => id));
 }
 
+/**
+ *
+ */
 export function orderByIndexedShapes(objects, selected) {
   const selectedSet = new Set(selected);
   const indexed = indexedShapes(objects, selectedSet);
   return indexed.map(([, id]) => id);
 }
 
+/**
+ *
+ */
 export function getIndexReplacement(shapes, objects) {
   const ordered = orderByIndexedShapes(objects, shapes);
   if (ordered.length === 0) return 0;
   return getPositionOnParent(objects, ordered[0]) + 1;
 }
 
+/**
+ *
+ */
 export function collectShapeMediaRefs(shape) {
   const refs = [];
   if (shape['fill-image']?.id) refs.push(shape['fill-image'].id);
@@ -484,6 +664,9 @@ export function collectShapeMediaRefs(shape) {
   return refs;
 }
 
+/**
+ *
+ */
 export function collectUsedMedia(data) {
   const pagesIndex = data.pagesIndex ?? data['pages-index'] ?? {};
   const components = data.components ?? {};
@@ -510,11 +693,17 @@ export function collectUsedMedia(data) {
   return result;
 }
 
+/**
+ *
+ */
 export function relinkRefs(data, lookupIndex) {
+  /**
+   *
+   */
   function processForm(form) {
     if (form == null || typeof form !== 'object' || Array.isArray(form)) return form;
 
-    let result = { ...form };
+    const result = { ...form };
 
     if (result.metadata && typeof result.metadata === 'object' && result.type === 'image') {
       if (result.metadata.id) result.metadata = { ...result.metadata, id: lookupIndex(result.metadata.id) };
@@ -562,6 +751,9 @@ export function relinkRefs(data, lookupIndex) {
   return processForm(data);
 }
 
+/**
+ *
+ */
 export function getFrameObjects(objects, frameId) {
   const ids = [frameId, ...getChildrenIds(objects, frameId)];
   const result = {};
@@ -571,6 +763,9 @@ export function getFrameObjects(objects, frameId) {
   return result;
 }
 
+/**
+ *
+ */
 export function objectsByFrame(objects) {
   const result = {};
   for (const [id, shape] of Object.entries(objects)) {
@@ -581,6 +776,9 @@ export function objectsByFrame(objects) {
   return result;
 }
 
+/**
+ *
+ */
 export function selectedSubtree(objects, selected) {
   const selectedSet = new Set(selected);
   for (const id of selected) {
@@ -601,6 +799,9 @@ export function selectedSubtree(objects, selected) {
   return result;
 }
 
+/**
+ *
+ */
 export function isChildQ(objects, parentId, candidateChildId) {
   let curId = candidateChildId;
   while (true) {
@@ -611,6 +812,9 @@ export function isChildQ(objects, parentId, candidateChildId) {
   }
 }
 
+/**
+ *
+ */
 export function reduceObjects(objects, checkChildrenQ, rootId, reducerFn, initVal) {
   if (typeof rootId === 'function') {
     return reduceObjects(objects, undefined, uuid.zero, checkChildrenQ, rootId);
@@ -647,6 +851,9 @@ export function reduceObjects(objects, checkChildrenQ, rootId, reducerFn, initVa
   return currentVal;
 }
 
+/**
+ *
+ */
 export function selectedWithChildren(objects, selected) {
   const result = new Set(selected);
   for (const id of selected) {
@@ -657,6 +864,9 @@ export function selectedWithChildren(objects, selected) {
   return result;
 }
 
+/**
+ *
+ */
 export function getShapeIdRootFrame(objects, shapeId) {
   const ids = [shapeId, ...getParentIds(objects, shapeId)];
   for (const id of ids) {
@@ -666,6 +876,9 @@ export function getShapeIdRootFrame(objects, shapeId) {
   return undefined;
 }
 
+/**
+ *
+ */
 export function commonParentFrame(objects, selected) {
   if (!selected || selected.length === 0) return undefined;
   let frameId = objects[selected[0]]?.frameId ?? objects[selected[0]]?.['frame-id'];
@@ -684,10 +897,16 @@ export function commonParentFrame(objects, selected) {
   return frameId;
 }
 
+/**
+ *
+ */
 export function fixedScrollQ(shape) {
   return !!(shape['fixed-scroll'] && shape.parentId === shape.frameId && shape.frameId !== uuid.zero);
 }
 
+/**
+ *
+ */
 export function fixedQ(objects, shapeId) {
   const idsToCheck = [
     shapeId,

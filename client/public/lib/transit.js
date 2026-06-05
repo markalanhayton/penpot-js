@@ -18,11 +18,8 @@ export function isGetCommand(command) {
 }
 
 const TRANSIT_TAG = '^';
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function isUUID(v) {
-  return typeof v === 'string' && UUID_RE.test(v);
-}
+import { isValid as isUUID } from '@penpot/shared/uuid.js';
 
 /**
  * Encode a JavaScript value to Transit+JSON string.
@@ -103,6 +100,21 @@ function decodeValue(val) {
   if (Array.isArray(val)) {
     if (val.length === 0) return [];
 
+    // Cognitect map encoding: ["^ ", k1, v1, k2, v2, ...]
+    // This is the standard Transit map encoding (not a tagged value).
+    // Must be checked BEFORE the generic tagged-map handler to avoid
+    // treating the empty-space tag as a type marker.
+    if (val[0] === '^ ') {
+      const result = {};
+      for (let i = 1; i < val.length; i += 2) {
+        const key = typeof val[i] === 'string' && val[i].startsWith('~:')
+          ? val[i].slice(2)
+          : decodeValue(val[i]);
+        result[key] = decodeValue(val[i + 1]);
+      }
+      return result;
+    }
+
     // Tagged map: ["^ tag", k1, v1, k2, v2, ...]
     if (val[0] && typeof val[0] === 'string' && val[0].startsWith('^')) {
       const tag = val[0].slice(2);
@@ -123,18 +135,6 @@ function decodeValue(val) {
     // List: ["~#list", [...items]]
     if (val[0] === '~#list') {
       return decodeValue(val[1]);
-    }
-
-    // Cognitect map encoding: ["^ ", k1, v1, k2, v2, ...]
-    if (val[0] === '^ ') {
-      const result = {};
-      for (let i = 1; i < val.length; i += 2) {
-        const key = typeof val[i] === 'string' && val[i].startsWith('~:')
-          ? val[i].slice(2)
-          : decodeValue(val[i]);
-        result[key] = decodeValue(val[i + 1]);
-      }
-      return result;
     }
 
     return val.map(decodeValue);
@@ -219,7 +219,7 @@ export function decodeRequest(body, contentType = '') {
   if (contentType.includes('application/json') || contentType.includes('text/plain') || !contentType) {
     try {
       return toKebabCase(typeof body === 'string' ? JSON.parse(body) : body);
-    } catch { /* not Transit or JSON, return empty object */ }
+    } catch (err) { console.warn('[transit] decodeResponseBody JSON parse failed:', err.message); }
   }
 
   return {};

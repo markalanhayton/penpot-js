@@ -13,7 +13,7 @@ function ensureContainer() {
   if (container) return container;
   container = document.createElement('div');
   container.id = 'penpot-notifications';
-  container.style.cssText = 'position:fixed;top:var(--penpot-spacing-l,16px);right:var(--penpot-spacing-l,16px);z-index:var(--penpot-z-notification,120);display:flex;flex-direction:column;gap:var(--penpot-spacing-s,8px);pointer-events:none;max-width:400px;';
+  container.style.cssText = 'position:fixed;top:var(--penpot-spacing-l,16px);right:var(--penpot-spacing-l,16px);z-index:var(--penpot-z-notification,800);display:flex;flex-direction:column;gap:var(--penpot-spacing-s,8px);pointer-events:none;max-width:400px;';
   document.body.appendChild(container);
   return container;
 }
@@ -69,6 +69,16 @@ if (!document.getElementById('penpot-notif-styles')) {
     @keyframes penpot-notif-exit { from { opacity:1; transform:translateX(0); } to { opacity:0; transform:translateX(20px); } }
   `;
   document.head.appendChild(style);
+}
+
+if (!window.__penpotNotifListener) {
+  window.__penpotNotifListener = true;
+  const variantMap = { info, success, warning, danger };
+  document.addEventListener('penpot-notification', (e) => {
+    const { type, message, duration } = e.detail || {};
+    const fn = variantMap[type] || info;
+    fn(message || '', duration);
+  });
 }
 
 export { showNotification, dismiss, info, success, warning, danger };

@@ -125,9 +125,7 @@ export default function registerAccessTokenCommands(register, pool) {
         let parsedScopes = [];
         try {
           parsedScopes = JSON.parse(row.scopes || '[]');
-        } catch {
-          parsedScopes = [];
-        }
+        } catch (err) { console.warn('[access-token] scopes JSON parse failed:', err.message); parsedScopes = []; }
         row.scopes = parsedScopes;
       }
       return result;

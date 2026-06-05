@@ -151,9 +151,7 @@ export async function fileGcFile(pool, fileId, scheduledRevn, now) {
       } else if (changeData) {
         collectUsedMediaIds(changeData, usedMediaIds);
       }
-    } catch {
-      // Ignore malformed change records
-    }
+    } catch (err) { console.warn('[file-gc] malformed change record:', err.message); }
   }
 
   // Step 5: Clean unused media objects
@@ -650,9 +648,7 @@ async function cleanDeletedComponents(pool, fileId, data, decode) {
           }
         }
       }
-    } catch {
-      // Skip files we can't decode
-    }
+    } catch (err) { console.warn('[file-gc] component ref scan, file decode failed for', fileId, err.message); }
   }
 
   // Determine which deleted components are truly unused

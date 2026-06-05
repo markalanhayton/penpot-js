@@ -6,10 +6,16 @@
 
 export const MAX_UNDO_SIZE = 100;
 
+/**
+ *
+ */
 export function makeStack() {
   return { index: -1, items: [] };
 }
 
+/**
+ *
+ */
 export function peek(stack) {
   if (stack.index >= 0 && stack.index < stack.items.length) {
     return stack.items[stack.index];
@@ -17,6 +23,9 @@ export function peek(stack) {
   return null;
 }
 
+/**
+ *
+ */
 export function append(stack, value) {
   if (stack && value === peek(stack)) return stack;
 
@@ -39,16 +48,25 @@ export function append(stack, value) {
   return { index, items };
 }
 
+/**
+ *
+ */
 export function fixup(stack, value) {
   const items = [...stack.items];
   items[stack.index] = value;
   return { ...stack, items };
 }
 
+/**
+ *
+ */
 export function undo(stack) {
   return { ...stack, index: Math.max(0, stack.index - 1) };
 }
 
+/**
+ *
+ */
 export function redo(stack) {
   if (stack.index < stack.items.length - 1) {
     return { ...stack, index: stack.index + 1 };
@@ -56,6 +74,9 @@ export function redo(stack) {
   return stack;
 }
 
+/**
+ *
+ */
 export function size(stack) {
   return stack.index + 1;
 }

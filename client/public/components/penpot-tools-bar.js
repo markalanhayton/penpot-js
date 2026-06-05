@@ -5,6 +5,7 @@ import { ICON_PATHS } from './penpot-icon.js';
 const template = document.createElement('template');
 template.innerHTML = `<style>
     penpot-tools-bar { display: flex; align-items: center; padding: 0 var(--penpot-spacing-s, 8px); border-bottom: 1px solid var(--penpot-border, #444); background: var(--penpot-surface, #2a2a2a); height: var(--penpot-toolsbar-height, 36px); flex-shrink: 0; gap: 2px; }
+    .penpot-tools__tool-group { display: flex; align-items: center; gap: 2px; }
     .penpot-tools__tool-btn { background: none; border: none; color: var(--penpot-text-dim, #999); padding: var(--penpot-spacing-xs, 4px); cursor: pointer; border-radius: var(--penpot-radius-s, 4px); font-size: 16px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; }
     .penpot-tools__tool-btn:hover { background: var(--penpot-surface-high, #333); color: var(--penpot-text, #e6e6e6); }
     .penpot-tools__tool-btn.penpot-tools__active { background: rgba(49,239,184,0.2); color: var(--penpot-primary, #31efb8); }

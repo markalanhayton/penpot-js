@@ -5,6 +5,9 @@ import { seek, insertAtIndex, notEmpty, unstableSort, withoutObj } from '../data
 import { instanceHeadQ, mainInstanceQ, inComponentCopyQ } from './component.js';
 import { gridLayoutQ } from './shape/layout.js';
 
+/**
+ *
+ */
 export function addShape(id, shape, container, frameId, parentId, index, ignoreTouched) {
   const updateParentShapes = (shapes) => {
     shapes = [...(shapes ?? [])];
@@ -14,7 +17,7 @@ export function addShape(id, shape, container, frameId, parentId, index, ignoreT
   };
 
   const updateParent = (parent) => {
-    let result = { ...parent, shapes: updateParentShapes(parent.shapes) };
+    const result = { ...parent, shapes: updateParentShapes(parent.shapes) };
     result.shapes = result.shapes.filter((s) => s != null);
     if (inComponentCopyQ(parent) && !ignoreTouched) {
       delete result['remote-synced'];
@@ -34,21 +37,33 @@ export function addShape(id, shape, container, frameId, parentId, index, ignoreT
   return { ...container, objects };
 }
 
+/**
+ *
+ */
 export function parentOfQ(parent, child) {
   return parent.id === child['parent-id'];
 }
 
+/**
+ *
+ */
 export function getShape(container, id) {
   return container.objects?.[id];
 }
 
+/**
+ *
+ */
 export function setShape(container, shape) {
   return { ...container, objects: { ...container.objects, [shape.id]: shape } };
 }
 
+/**
+ *
+ */
 export function deleteShape(container, shapeId, ignoreTouched = false) {
   const deleteFromParent = (parent) => {
-    let result = { ...parent, shapes: withoutObj(parent.shapes ?? [], shapeId) };
+    const result = { ...parent, shapes: withoutObj(parent.shapes ?? [], shapeId) };
     if (result['shape-ref'] && !ignoreTouched) {
       delete result['remote-synced'];
     }
@@ -61,7 +76,7 @@ export function deleteShape(container, shapeId, ignoreTouched = false) {
 
     const parentId = target['parent-id'] ?? target['frame-id'] ?? zero;
     const childrenIds = getChildrenIds(objects, shapeId);
-    let result = { ...objects };
+    const result = { ...objects };
     delete result[shapeId];
     for (const cid of childrenIds) delete result[cid];
     const parent = result[parentId];
@@ -72,6 +87,9 @@ export function deleteShape(container, shapeId, ignoreTouched = false) {
   return { ...container, objects: deleteFromObjects(container.objects) };
 }
 
+/**
+ *
+ */
 export function fixBrokenChildren(container, id) {
   const objects = container.objects;
   const shape = objects[id];
@@ -81,6 +99,9 @@ export function fixBrokenChildren(container, id) {
   return { ...container, objects: { ...objects, [id]: { ...shape, shapes: validShapes } } };
 }
 
+/**
+ *
+ */
 export function getFrames(objects, options) {
   const { skipComponents = false, skipCopies = false, ignoreIndex = false } = options ?? {};
   return Object.values(objects).filter((shape) => {
@@ -91,15 +112,24 @@ export function getFrames(objects, options) {
   });
 }
 
+/**
+ *
+ */
 export function getFrameIds(objects, options) {
   return getFrames(objects, options).map((f) => f.id);
 }
 
+/**
+ *
+ */
 export function getNestedFrames(objects, frameId) {
   const children = getChildren(objects, frameId);
   return new Set(children.filter(isFrameShape).map((f) => f.id));
 }
 
+/**
+ *
+ */
 export function getRootFrameIds(objects) {
   return Object.values(objects)
     .filter((s) => s['parent-id'] === zero || s['parent-id'] == null)
@@ -107,30 +137,48 @@ export function getRootFrameIds(objects) {
     .map((f) => f.id);
 }
 
+/**
+ *
+ */
 export function getRootObjects(objects) {
   return Object.values(objects)
     .filter((s) => s['parent-id'] === zero || s['parent-id'] == null);
 }
 
+/**
+ *
+ */
 export function getRootShapes(objects) {
   return Object.values(objects)
     .filter((s) => (s['parent-id'] === zero || s['parent-id'] == null) && !isFrameShape(s));
 }
 
+/**
+ *
+ */
 export function getRootShapeIds(objects) {
   return getRootShapes(objects).map((s) => s.id);
 }
 
+/**
+ *
+ */
 function isFrameShape(shape) {
   return shape?.type === 'frame';
 }
 
+/**
+ *
+ */
 function getChildren(objects, parentId) {
   const parent = objects[parentId];
   if (!parent || !parent.shapes) return [];
   return parent.shapes.map((id) => objects[id]).filter(Boolean);
 }
 
+/**
+ *
+ */
 function getChildrenIds(objects, parentId) {
   const result = [];
   const parent = objects[parentId];
@@ -145,6 +193,9 @@ function getChildrenIds(objects, parentId) {
   return result;
 }
 
+/**
+ *
+ */
 function getParentsWithSelf(objects, id) {
   const result = [];
   let current = id;
@@ -159,6 +210,9 @@ function getParentsWithSelf(objects, id) {
   return result;
 }
 
+/**
+ *
+ */
 function getParentIdsWithIndex(objects, id) {
   const parents = [];
   const indexMap = {};
@@ -179,6 +233,9 @@ function getParentIdsWithIndex(objects, id) {
   return [parents, indexMap];
 }
 
+/**
+ *
+ */
 function getBase(idA, idB, idParents) {
   const [parentsA] = idParents[idA] ?? [[], {}];
   const [parentsB] = idParents[idB] ?? [[], {}];
@@ -190,6 +247,9 @@ function getBase(idA, idB, idParents) {
   return baseId;
 }
 
+/**
+ *
+ */
 function isShapeOverShapeQ(objects, baseShapeId, overShapeId, bottomFrames, idParents) {
   const baseId = getBase(baseShapeId, overShapeId, idParents);
 
@@ -203,6 +263,9 @@ function isShapeOverShapeQ(objects, baseShapeId, overShapeId, bottomFrames, idPa
   return false;
 }
 
+/**
+ *
+ */
 export function sortZIndex(objects, ids, options) {
   const { bottomFrames = false } = options ?? {};
   const idParents = {};
@@ -216,6 +279,9 @@ export function sortZIndex(objects, ids, options) {
   });
 }
 
+/**
+ *
+ */
 export function sortZIndexObjects(objects, items, options) {
   const { bottomFrames = false } = options ?? {};
   const idParents = {};
@@ -229,6 +295,9 @@ export function sortZIndexObjects(objects, items, options) {
   }, items);
 }
 
+/**
+ *
+ */
 export function getFrameByPosition(objects, position, options) {
   if (!isPoint(position)) throw new Error('expected a point');
   const frames = getFrames(objects, options);
@@ -237,11 +306,17 @@ export function getFrameByPosition(objects, position, options) {
   return seek((f) => position != null && hasPointQ(f, position) && validator(f), sorted) ?? objects[zero];
 }
 
+/**
+ *
+ */
 export function getFrameIdByPosition(objects, position, options) {
   const frame = getFrameByPosition(objects, position, options);
   return frame?.id ?? null;
 }
 
+/**
+ *
+ */
 export function getFramesByPosition(objects, position, options) {
   return sortZIndexObjects(
     objects,
@@ -250,6 +325,9 @@ export function getFramesByPosition(objects, position, options) {
   );
 }
 
+/**
+ *
+ */
 export function topNestedFrame(objects, position, excluded) {
   const frames = getFramesByPosition(objects, position);
   const filtered = excluded
@@ -269,6 +347,9 @@ export function topNestedFrame(objects, position, excluded) {
   return zero;
 }
 
+/**
+ *
+ */
 export function getViewerFrames(objects, options) {
   const frames = getFrames(objects);
   const sorted = sortZIndexObjects(objects, frames);
@@ -276,17 +357,26 @@ export function getViewerFrames(objects, options) {
   return sorted.filter((f) => !f['hide-in-viewer']);
 }
 
+/**
+ *
+ */
 export function rotatedFrameQ(frame) {
   const rot = frame.rotation ?? 0;
   return !(-0.001 < rot && rot < 0.001);
 }
 
+/**
+ *
+ */
 function hasPointQ(shape, pt) {
   if (!shape.selrect) return false;
   const s = shape.selrect;
   return pt.x >= s.x && pt.x <= s.x + s.width && pt.y >= s.y && pt.y <= s.y + s.height;
 }
 
+/**
+ *
+ */
 export function cloneShape(shape, parentId, objects, { updateNewShape, updateOriginalShape, forceId, keepIds, frameId, destObjects } = {}) {
   if (typeof updateNewShape !== 'function') updateNewShape = (s) => s;
   if (typeof updateOriginalShape !== 'function') updateOriginalShape = (s) => s;
@@ -340,7 +430,7 @@ export function cloneShape(shape, parentId, objects, { updateNewShape, updateOri
     newShape = { ...newShape, shapes: newDirectChildren.map((c) => c.id) };
   }
 
-  let oldId = shape.id;
+  const oldId = shape.id;
   if (newShape.type === 'bool' && newShape['bool-content'] && newChildren.length > 0) {
     const idsMap = {};
     for (const cs of newChildren) {
@@ -369,6 +459,9 @@ export function cloneShape(shape, parentId, objects, { updateNewShape, updateOri
   return [newShape, newShapes, updatedShapes];
 }
 
+/**
+ *
+ */
 export function generateShapeGrid(shapes, startPosition, gap) {
   if (!shapes || shapes.length === 0) return [];
 
@@ -388,10 +481,16 @@ export function generateShapeGrid(shapes, startPosition, gap) {
   return positions;
 }
 
+/**
+ *
+ */
 export function startPageIndex(objects) {
   return { ...objects, _indexFrames: getFrameIds(objects) };
 }
 
+/**
+ *
+ */
 export function updatePageIndex(objects) {
   return { ...objects, _indexFrames: getFrameIds(objects) };
 }

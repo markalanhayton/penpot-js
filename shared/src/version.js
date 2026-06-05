@@ -7,6 +7,9 @@
 const VERSION_RE =
   /^(([A-Za-z]+)-?)?((\d+)\.(\d+)\.(\d+))(-?((RC|DEV)(\d+)?)?)?(-?(\d+))?(-?g(\w+))?$/;
 
+/**
+ *
+ */
 export function parse(data) {
   if (typeof data !== "string") {
     return null;

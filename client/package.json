@@ -4,7 +4,10 @@
   "type": "module",
   "description": "Penpot frontend — pure ES modules, Web Components, zero dependencies",
   "scripts": {
-    "dev": "node server.js"
+    "dev": "nodemon server.js",
+    "start": "node server.js",
+    "test": "node --test test/**/*.test.js",
+    "test:e2e": "npx playwright test"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.3",

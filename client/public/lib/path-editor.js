@@ -1,8 +1,8 @@
 'use strict';
-import * as path from '../../shared/src/types/path.js';
-import * as gpt from '../../shared/src/geom/point.js';
-import * as grc from '../../shared/src/geom/rect.js';
-import * as helpers from '../../shared/src/types/path/helpers.js';
+import * as path from '@penpot/shared/types/path.js';
+import * as gpt from '@penpot/shared/geom/point.js';
+import * as grc from '@penpot/shared/geom/rect.js';
+import * as helpers from '@penpot/shared/types/path/helpers.js';
 
 const CLOSE_THRESHOLD = 5;
 

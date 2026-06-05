@@ -186,17 +186,13 @@ export function tp(key, count, params = {}) {
 export function formatNumber(num, options = {}) {
   try {
     return new Intl.NumberFormat(currentLocale, options).format(num);
-  } catch {
-    return String(num);
-  }
+  } catch (err) { console.warn('[i18n] formatNumber failed for locale', currentLocale, err.message); return String(num); }
 }
 
 export function formatDate(date, options = {}) {
   try {
     return new Intl.DateTimeFormat(currentLocale, options).format(date);
-  } catch {
-    return String(date);
-  }
+  } catch (err) { console.warn('[i18n] formatDate failed for locale', currentLocale, err.message); return String(date); }
 }
 
 export function formatRelativeTime(date) {
@@ -207,9 +203,7 @@ export function formatRelativeTime(date) {
     if (Math.abs(diff) < 3600) return rtf.format(Math.round(diff / 60), 'minute');
     if (Math.abs(diff) < 86400) return rtf.format(Math.round(diff / 3600), 'hour');
     return rtf.format(Math.round(diff / 86400), 'day');
-  } catch {
-    return formatDate(date);
-  }
+  } catch (err) { console.warn('[i18n] formatRelativeTime failed for locale', currentLocale, err.message); return formatDate(date); }
 }
 
 export function getCurrentLocale() { return currentLocale; }

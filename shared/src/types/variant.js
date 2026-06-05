@@ -5,6 +5,9 @@ export const PROPERTY_REGEX = new RegExp(`${PROPERTY_PREFIX}(\\d+)`);
 export const PROPERTY_MAX_LENGTH = 60;
 export const VALUE_PREFIX = 'Value ';
 
+/**
+ *
+ */
 export function propertiesToName(properties) {
   return properties
     .map((p) => p.value)
@@ -12,6 +15,9 @@ export function propertiesToName(properties) {
     .join(', ');
 }
 
+/**
+ *
+ */
 export function nextPropertyNumber(properties) {
   let maxNum = 0;
   for (const p of properties) {
@@ -24,10 +30,16 @@ export function nextPropertyNumber(properties) {
   return Math.max(maxNum, properties.length) + 1;
 }
 
+/**
+ *
+ */
 export function addNewProp(props, value) {
   return [...props, { name: `${PROPERTY_PREFIX}${nextPropertyNumber(props)}`, value }];
 }
 
+/**
+ *
+ */
 export function addNewProps(props, values) {
   const nextNum = nextPropertyNumber(props);
   const newProps = values.map((v, i) => ({
@@ -37,6 +49,9 @@ export function addNewProps(props, values) {
   return [...props, ...newProps];
 }
 
+/**
+ *
+ */
 export function pathToProperties(path, properties, minProps = 0) {
   const cpath = splitPath(path);
   const totalProps = Math.max(cpath.length, minProps);
@@ -51,10 +66,16 @@ export function pathToProperties(path, properties, minProps = 0) {
   return addNewProps(assigned, remaining);
 }
 
+/**
+ *
+ */
 function splitPath(path) {
   return path.split(' / ');
 }
 
+/**
+ *
+ */
 export function propertiesMapToFormula(properties) {
   return properties
     .filter((p) => p.value && p.value.trim() !== '')
@@ -62,6 +83,9 @@ export function propertiesMapToFormula(properties) {
     .join(', ');
 }
 
+/**
+ *
+ */
 export function propertiesFormulaToMap(s) {
   return s
     .split(',')
@@ -70,6 +94,9 @@ export function propertiesFormulaToMap(s) {
     .map(([k, v]) => ({ name: k, value: v }));
 }
 
+/**
+ *
+ */
 export function validPropertiesFormulaQ(s) {
   const parts = s.split(',');
   return parts.every((part) => {
@@ -81,22 +108,34 @@ export function validPropertiesFormulaQ(s) {
   });
 }
 
+/**
+ *
+ */
 export function findPropertiesToRemove(prevProps, updProps) {
   const updNames = new Set(updProps.map((p) => p.name));
   return prevProps.filter((p) => !updNames.has(p.name));
 }
 
+/**
+ *
+ */
 export function findPropertiesToUpdate(prevProps, updProps) {
   return updProps.filter((upd) =>
     prevProps.some((prev) => prev.name === upd.name && prev.value !== upd.value)
   );
 }
 
+/**
+ *
+ */
 export function findPropertiesToAdd(prevProps, updProps) {
   const prevNames = new Set(prevProps.map((p) => p.name));
   return updProps.filter((p) => !prevNames.has(p.name));
 }
 
+/**
+ *
+ */
 function splitBaseNameAndNumber(item) {
   const pattern = /^(.+?)\s*\((\d+)\)\s*$/;
   const match = item.match(pattern);
@@ -104,6 +143,9 @@ function splitBaseNameAndNumber(item) {
   return [item.trim(), 0];
 }
 
+/**
+ *
+ */
 function groupNumbersByBaseName(items) {
   const result = {};
   for (const item of items) {
@@ -114,6 +156,9 @@ function groupNumbersByBaseName(items) {
   return result;
 }
 
+/**
+ *
+ */
 export function updateNumberInRepeatedItem(items, item) {
   const names = groupNumbersByBaseName(items);
   const [base, num] = splitBaseNameAndNumber(item);
@@ -123,6 +168,9 @@ export function updateNumberInRepeatedItem(items, item) {
   return n > 0 ? `${base} (${n})` : base;
 }
 
+/**
+ *
+ */
 export function updateNumberInRepeatedPropNames(props) {
   const result = [];
   for (const prop of props) {
@@ -134,6 +182,9 @@ export function updateNumberInRepeatedPropNames(props) {
   return result;
 }
 
+/**
+ *
+ */
 export function findIndexForPropertyName(props, name) {
   for (let i = 0; i < props.length; i++) {
     if (props[i].name === name) return i;
@@ -141,6 +192,9 @@ export function findIndexForPropertyName(props, name) {
   return null;
 }
 
+/**
+ *
+ */
 export function removePrefix(name, prefix) {
   const longName = `${prefix} / `;
   if (name.startsWith(longName)) return name.slice(longName.length);
@@ -148,6 +202,9 @@ export function removePrefix(name, prefix) {
   return name;
 }
 
+/**
+ *
+ */
 function matchingIndices(props1, props2) {
   const namesInP2 = new Set(props2.map((p) => p.name));
   const result = new Set();
@@ -157,6 +214,9 @@ function matchingIndices(props1, props2) {
   return result;
 }
 
+/**
+ *
+ */
 function findPosition(name, props, usedPos) {
   const idx = findIndexForPropertyName(props, name);
   if (idx != null) return idx;
@@ -165,6 +225,9 @@ function findPosition(name, props, usedPos) {
   return p;
 }
 
+/**
+ *
+ */
 export function mergeProperties(props1, props2) {
   const filtered = props2.filter((p) => p.value !== '');
   let currentProps = [...props1];
@@ -184,6 +247,9 @@ export function mergeProperties(props1, props2) {
   return currentProps;
 }
 
+/**
+ *
+ */
 export function compareProperties(propsList, distinctMark) {
   const grouped = {};
   for (const props of propsList) {
@@ -199,11 +265,17 @@ export function compareProperties(propsList, distinctMark) {
   });
 }
 
+/**
+ *
+ */
 export function sameVariantQ(components) {
   const variantIds = [...new Set(components.map((c) => c['variant-id']))];
   return variantIds.length === 1 && variantIds[0] != null && variantIds[0] !== '';
 }
 
+/**
+ *
+ */
 export function distance(props1, props2) {
   const total = Math.max(props1.length, props2.length);
   let result = 0;
@@ -217,6 +289,9 @@ export function distance(props1, props2) {
   return result;
 }
 
+/**
+ *
+ */
 export function variantNameToName(variant) {
   const namePart = variant['variant-name']?.replace(/, /g, ' / ') ?? '';
   return namePart ? `${variant.name} / ${namePart}` : variant.name;
@@ -228,10 +303,16 @@ const BOOLEAN_PAIRS = [
   ['true', 'false'],
 ];
 
+/**
+ *
+ */
 export function validVariantComponentQ(component) {
   return component != null && component['variant-id'] != null;
 }
 
+/**
+ *
+ */
 export function findBooleanPair(arr) {
   if (arr.length !== 2) return null;
   const a = String(arr[0]).trim().toLowerCase();

@@ -10,6 +10,9 @@ import * as ctm from '../../../modifiers.js';
 import * as ctl from '../../../types/shape/layout.js';
 import * as cfh from '../../../files/helpers.js';
 
+/**
+ *
+ */
 function dropChildAreas(frame, parentRect, childBounds, index, reverse, prevX, prevY, last) {
   const col = ctl.colQ(frame);
   const row = ctl.rowQ(frame);
@@ -59,6 +62,9 @@ function dropChildAreas(frame, parentRect, childBounds, index, reverse, prevX, p
   }
 }
 
+/**
+ *
+ */
 function dropLineArea(frame, lineData, prevX, prevY, last) {
   const col = ctl.colQ(frame);
   const row = ctl.rowQ(frame);
@@ -100,6 +106,9 @@ function dropLineArea(frame, lineData, prevX, prevY, last) {
   return grc.makeRect(x, y, width, height);
 }
 
+/**
+ *
+ */
 function getFlipModifiers(shape) {
   const { flipX, flipY, transform, transformInverse } = shape;
   if (flipX || flipY) {
@@ -115,6 +124,9 @@ function getFlipModifiers(shape) {
   return [shape, null];
 }
 
+/**
+ *
+ */
 function layoutDropAreas(frame, layoutData, children) {
   const reverse = layoutData.reverse;
   const enumeratedChildren = d.enumerate(children);
@@ -149,6 +161,9 @@ function layoutDropAreas(frame, layoutData, children) {
   return areas;
 }
 
+/**
+ *
+ */
 export function getDropAreas(frame, objects, bounds) {
   const [flippedFrame, modifiers] = getFlipModifiers(frame);
 
@@ -163,6 +178,9 @@ export function getDropAreas(frame, objects, bounds) {
   return layoutDropAreas(flippedFrame, layoutData, children);
 }
 
+/**
+ *
+ */
 export function getDropIndex(frameId, objects, position) {
   const frame = objects[frameId];
   const bounds = new Map(Object.keys(objects).map(id => [id, gco.shapeToPoints(objects[id])]));

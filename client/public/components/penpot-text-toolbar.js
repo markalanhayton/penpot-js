@@ -1,14 +1,14 @@
 'use strict';
 import { PenpotElement } from './base.js';
 
-import { SYSTEM_FONTS } from '@penpot/shared/constants';
+import { SYSTEM_FONTS, SYSTEM_FONT_SIZES } from '@penpot/shared/constants';
 
-const FONT_SIZES = [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 64, 72];
+const FONT_SIZES = SYSTEM_FONT_SIZES;
 
 const template = document.createElement('template');
 template.innerHTML = `<style>
 
-    penpot-text-toolbar { display: none; position: absolute; z-index: 50; background: var(--penpot-surface, #2a2a2a); border: 1px solid var(--penpot-border, #444); border-radius: var(--penpot-radius-m, 8px); padding: var(--penpot-spacing-xs, 4px) var(--penpot-spacing-s, 8px); gap: var(--penpot-spacing-xs, 4px); flex-wrap: wrap; align-items: center; box-shadow: var(--penpot-shadow-m, 0 4px 12px rgba(0,0,0,0.4)); }
+    penpot-text-toolbar { display: none; position: absolute; z-index: var(--penpot-z-dropdown, 400); background: var(--penpot-surface, #2a2a2a); border: 1px solid var(--penpot-border, #444); border-radius: var(--penpot-radius-m, 8px); padding: var(--penpot-spacing-xs, 4px) var(--penpot-spacing-s, 8px); gap: var(--penpot-spacing-xs, 4px); flex-wrap: wrap; align-items: center; box-shadow: var(--penpot-shadow-m, 0 4px 12px rgba(0,0,0,0.4)); }
     penpot-text-toolbar.penpot-ttoolbar__visible { display: flex; }
     .penpot-ttoolbar__tb-btn { background: none; border: none; color: var(--penpot-text-dim, #999); cursor: pointer; padding: var(--penpot-spacing-xs, 4px) var(--penpot-spacing-s, 8px); border-radius: var(--penpot-radius-xs, 2px); font-size: var(--penpot-font-size-m, 13px); display: flex; align-items: center; justify-content: center; min-width: 28px; height: 28px; }
     .penpot-ttoolbar__tb-btn:hover { background: var(--penpot-surface-high, #333); color: var(--penpot-text, #e6e6e6); }
@@ -20,7 +20,7 @@ template.innerHTML = `<style>
     .penpot-ttoolbar__font-trigger:focus { border-color: var(--penpot-primary, #31efb8); outline: none; }
     .penpot-ttoolbar__font-trigger-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .penpot-ttoolbar__font-trigger-arrow { font-size: 10px; color: var(--penpot-text-dim, #999); margin-left: 4px; }
-    .penpot-ttoolbar__font-dropdown { position: absolute; top: 100%; left: 0; background: var(--penpot-surface, #2a2a2a); border: 1px solid var(--penpot-border, #444); border-radius: var(--penpot-radius-s, 4px); max-height: 240px; overflow-y: auto; z-index: 100; display: none; min-width: 180px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+    .penpot-ttoolbar__font-dropdown { position: absolute; top: 100%; left: 0; background: var(--penpot-surface, #2a2a2a); border: 1px solid var(--penpot-border, #444); border-radius: var(--penpot-radius-s, 4px); max-height: 240px; overflow-y: auto; z-index: var(--penpot-z-dropdown, 400); display: none; min-width: 180px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
     .penpot-ttoolbar__font-dropdown.penpot-ttoolbar__open { display: block; }
     .penpot-ttoolbar__font-option { padding: 6px 10px; cursor: pointer; font-size: 12px; color: var(--penpot-text, #e6e6e6); border-bottom: 1px solid rgba(255,255,255,0.05); }
     .penpot-ttoolbar__font-option:hover { background: var(--penpot-surface-high, #333); }

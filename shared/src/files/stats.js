@@ -2,11 +2,17 @@ import * as uuid from '../uuid.js';
 
 export const emptyShapeCounts = { total: 0, byType: {} };
 
+/**
+ *
+ */
 function incType(byType, shapeType) {
   if (shapeType == null) return byType;
   return { ...byType, [shapeType]: (byType[shapeType] ?? 0) + 1 };
 }
 
+/**
+ *
+ */
 export function countShapesByType(objects) {
   if (!objects || Object.keys(objects).length === 0) return emptyShapeCounts;
   let total = 0;
@@ -19,6 +25,9 @@ export function countShapesByType(objects) {
   return { total, byType };
 }
 
+/**
+ *
+ */
 function mergeShapeCounts(a, b) {
   return {
     total: a.total + b.total,
@@ -26,6 +35,9 @@ function mergeShapeCounts(a, b) {
   };
 }
 
+/**
+ *
+ */
 function aggregateShapeCounts(pagesIndex) {
   let result = { ...emptyShapeCounts };
   for (const page of Object.values(pagesIndex)) {
@@ -34,6 +46,9 @@ function aggregateShapeCounts(pagesIndex) {
   return result;
 }
 
+/**
+ *
+ */
 export function calcFileStats(fdata) {
   const pagesIndex = fdata.pagesIndex ?? fdata['pages-index'] ?? {};
   const components = fdata.components ?? {};

@@ -5,6 +5,9 @@ for (let i = 0; i < 256; i++) {
 
 export { hexMap };
 
+/**
+ *
+ */
 export function hexToBuffer(input) {
   if (typeof input !== 'string') {
     throw new TypeError('Expected input to be a string');
@@ -25,6 +28,9 @@ export function hexToBuffer(input) {
   return view.buffer;
 }
 
+/**
+ *
+ */
 export function bufferToHex(source, isUuid) {
   if (source instanceof Uint8Array) {
     // already Uint8Array
@@ -65,6 +71,9 @@ export function bufferToHex(source, isUuid) {
   );
 }
 
+/**
+ *
+ */
 function getBaseCodec(ALPHABET) {
   if (ALPHABET.length >= 255) {
     throw new TypeError('Alphabet too long');
@@ -86,6 +95,9 @@ function getBaseCodec(ALPHABET) {
   const FACTOR = Math.log(BASE) / Math.log(256);
   const iFACTOR = Math.log(256) / Math.log(BASE);
 
+  /**
+   *
+   */
   function encode(source) {
     if (source instanceof Uint8Array) {
       // ok
@@ -108,7 +120,7 @@ function getBaseCodec(ALPHABET) {
       pbegin++;
       zeroes++;
     }
-    let size = ((pend - pbegin) * iFACTOR + 1) >>> 0;
+    const size = ((pend - pbegin) * iFACTOR + 1) >>> 0;
     const b58 = new Uint8Array(size);
     while (pbegin !== pend) {
       let carry = source[pbegin];
@@ -139,6 +151,9 @@ function getBaseCodec(ALPHABET) {
     return str;
   }
 
+  /**
+   *
+   */
   function decodeUnsafe(source) {
     if (typeof source !== 'string') {
       throw new TypeError('Expected String');
@@ -153,7 +168,7 @@ function getBaseCodec(ALPHABET) {
       zeroes++;
       psz++;
     }
-    let size = ((source.length - psz) * FACTOR + 1) >>> 0;
+    const size = ((source.length - psz) * FACTOR + 1) >>> 0;
     const b256 = new Uint8Array(size);
     while (source[psz]) {
       let carry = BASE_MAP[source.charCodeAt(psz)];
@@ -188,6 +203,9 @@ function getBaseCodec(ALPHABET) {
     return vch;
   }
 
+  /**
+   *
+   */
   function decode(string) {
     const buffer = decodeUnsafe(string);
     if (buffer) {
@@ -203,14 +221,23 @@ const BASE62 =
   'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 const base62 = getBaseCodec(BASE62);
 
+/**
+ *
+ */
 export function bufferToBase62(source) {
   return base62.encode(source);
 }
 
+/**
+ *
+ */
 export function base62ToBuffer(source) {
   return base62.decode(source);
 }
 
+/**
+ *
+ */
 export function bufferToBase62Unsafe(source) {
   return base62.decodeUnsafe(source);
 }

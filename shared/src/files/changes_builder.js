@@ -6,6 +6,9 @@ import { close as mthClose } from '../math.js';
 
 const UNDEFINED = Symbol('undefined');
 
+/**
+ *
+ */
 export function emptyChanges(origin, pageId) {
   const changes = {
     'redo-changes': [],
@@ -18,32 +21,53 @@ export function emptyChanges(origin, pageId) {
   return changes;
 }
 
+/**
+ *
+ */
 export function setSaveUndoQ(changes, saveUndo) {
   return { ...changes, 'save-undo?': saveUndo };
 }
 
+/**
+ *
+ */
 export function setStackUndoQ(changes, stackUndo) {
   return { ...changes, 'stack-undo?': stackUndo };
 }
 
+/**
+ *
+ */
 export function setUndoGroup(changes, undoGroup) {
   if (undoGroup == null) return changes;
   return { ...changes, 'undo-group': undoGroup };
 }
 
+/**
+ *
+ */
 export function setTranslationQ(changes, translation) {
   if (!translation) return changes;
   return { ...changes, 'translation?': true };
 }
 
+/**
+ *
+ */
 export function withPage(changes, page) {
   return withMeta(changes, { page, 'page-id': page.id });
 }
 
+/**
+ *
+ */
 export function withPageId(changes, pageId) {
   return withMeta(changes, { 'page-id': pageId });
 }
 
+/**
+ *
+ */
 export function withContainer(changes, container) {
   if (container.type === 'page') {
     return withMeta(changes, { 'page-id': container.id });
@@ -51,6 +75,9 @@ export function withContainer(changes, container) {
   return withMeta(changes, { 'component-id': container.id });
 }
 
+/**
+ *
+ */
 export function withObjects(changes, objects) {
   let fdata = makeFileData(uuidNext(), uuidZero);
   fdata = {
@@ -60,6 +87,9 @@ export function withObjects(changes, objects) {
   return withMeta(changes, { 'file-data': fdata, 'applied-changes-count': 0 });
 }
 
+/**
+ *
+ */
 export function withFileData(changes, fdata) {
   const pageId = getMeta(changes, 'page-id');
   const updatedFdata = {
@@ -69,10 +99,16 @@ export function withFileData(changes, fdata) {
   return withMeta(changes, { 'file-data': updatedFdata, 'applied-changes-count': 0 });
 }
 
+/**
+ *
+ */
 export function withLibraryData(changes, data) {
   return withMeta(changes, { 'library-data': data });
 }
 
+/**
+ *
+ */
 export function amendLastChange(changes, f) {
   const redo = changes['redo-changes'];
   if (redo.length === 0) return changes;
@@ -81,10 +117,16 @@ export function amendLastChange(changes, f) {
   return { ...changes, 'redo-changes': [...redo.slice(0, -1), updated] };
 }
 
+/**
+ *
+ */
 export function amendChanges(changes, f) {
   return { ...changes, 'redo-changes': changes['redo-changes'].map(f) };
 }
 
+/**
+ *
+ */
 export function concatChanges(changes1, changes2) {
   return {
     ...changes1,
@@ -93,11 +135,17 @@ export function concatChanges(changes1, changes2) {
   };
 }
 
+/**
+ *
+ */
 export function lookupObjects(changes) {
   const data = getMeta(changes, 'file-data');
   return getIn(data, ['pages-index', uuidZero, 'objects']);
 }
 
+/**
+ *
+ */
 export function applyChangesLocal(changes, options = {}) {
   const fileData = getMeta(changes, 'file-data');
   if (!fileData) return changes;
@@ -122,36 +170,57 @@ export function applyChangesLocal(changes, options = {}) {
   });
 }
 
+/**
+ *
+ */
 export function getLibraryData(changes) {
   return getMeta(changes, 'library-data');
 }
 
+/**
+ *
+ */
 export function getObjects(changes) {
   return getIn(getMeta(changes, 'file-data'), ['pages-index', uuidZero, 'objects']);
 }
 
+/**
+ *
+ */
 export function getPage(changes) {
   return getMeta(changes, 'page');
 }
 
+/**
+ *
+ */
 export function getPageId(changes) {
   return getMeta(changes, 'page-id');
 }
 
 // --- Page changes ---
 
+/**
+ *
+ */
 export function addEmptyPage(changes, id, name) {
   changes = { ...changes, 'redo-changes': [...changes['redo-changes'], { type: 'add-page', id, name }] };
   changes = { ...changes, 'undo-changes': [{ type: 'del-page', id }, ...changes['undo-changes']] };
   return applyChangesLocal(changes);
 }
 
+/**
+ *
+ */
 export function addPage(changes, id, page) {
   changes = { ...changes, 'redo-changes': [...changes['redo-changes'], { type: 'add-page', id, page }] };
   changes = { ...changes, 'undo-changes': [{ type: 'del-page', id }, ...changes['undo-changes']] };
   return applyChangesLocal(changes);
 }
 
+/**
+ *
+ */
 export function modPage(changes, page, options) {
   const pageId = page?.id ?? getPageId(changes);
   const redo = { type: 'mod-page', id: pageId };
@@ -167,18 +236,27 @@ export function modPage(changes, page, options) {
   return applyChangesLocal(changes);
 }
 
+/**
+ *
+ */
 export function delPage(changes, page) {
   changes = { ...changes, 'redo-changes': [...changes['redo-changes'], { type: 'del-page', id: page.id }] };
   changes = { ...changes, 'undo-changes': [{ type: 'add-page', id: page.id, page }, ...changes['undo-changes']] };
   return applyChangesLocal(changes);
 }
 
+/**
+ *
+ */
 export function movePage(changes, pageId, index, prevIndex) {
   changes = { ...changes, 'redo-changes': [...changes['redo-changes'], { type: 'mov-page', id: pageId, index }] };
   changes = { ...changes, 'undo-changes': [{ type: 'mov-page', id: pageId, index: prevIndex }, ...changes['undo-changes']] };
   return applyChangesLocal(changes);
 }
 
+/**
+ *
+ */
 export function setGuide(changes, id, guide) {
   const pageId = getPageId(changes);
   const page = getPage(changes);
@@ -189,6 +267,9 @@ export function setGuide(changes, id, guide) {
   return changes;
 }
 
+/**
+ *
+ */
 export function setFlow(changes, id, flow) {
   const pageId = getPageId(changes);
   const page = getPage(changes);
@@ -201,6 +282,9 @@ export function setFlow(changes, id, flow) {
 
 // --- Shape tree changes ---
 
+/**
+ *
+ */
 export function addObject(changes, obj, options = {}) {
   const { index, 'ignore-touched': ignoreTouched = false } = options;
   const pageId = getPageId(changes);
@@ -244,6 +328,9 @@ export function addObject(changes, obj, options = {}) {
   });
 }
 
+/**
+ *
+ */
 export function addObjects(changes, objects, options) {
   let result = changes;
   for (const obj of objects) {
@@ -252,6 +339,9 @@ export function addObjects(changes, objects, options) {
   return result;
 }
 
+/**
+ *
+ */
 export function changeParent(changes, parentId, shapes, index, options = {}) {
   const pageId = getPageId(changes);
   const objects = lookupObjects(changes);
@@ -298,6 +388,9 @@ export function changeParent(changes, parentId, shapes, index, options = {}) {
   });
 }
 
+/**
+ *
+ */
 export function changedAttrs(object, objects, updateFn, options = {}) {
   const { attrs, 'with-objects?': withObjects } = options;
   const newObj = withObjects ? updateFn(object, objects) : updateFn(object);
@@ -307,6 +400,9 @@ export function changedAttrs(object, objects, updateFn, options = {}) {
   return allAttrs.filter((attr) => object[attr] !== newObj[attr]);
 }
 
+/**
+ *
+ */
 export function updateShapes(changes, ids, updateFn, options = {}) {
   const { attrs, 'ignore-geometry?': ignoreGeometry = false, 'ignore-touched': ignoreTouched = false, 'with-objects?': withObjects = false } = options;
   const pageId = getPageId(changes);
@@ -352,6 +448,9 @@ export function updateShapes(changes, ids, updateFn, options = {}) {
   return applyChangesLocal(result);
 }
 
+/**
+ *
+ */
 export function removeObjects(changes, ids, options = {}) {
   const { 'ignore-touched': ignoreTouched = false } = options;
   const pageId = getPageId(changes);
@@ -401,12 +500,18 @@ export function removeObjects(changes, ids, options = {}) {
 
 // --- Library changes ---
 
+/**
+ *
+ */
 export function addColor(changes, color) {
   changes = { ...changes, 'redo-changes': [...changes['redo-changes'], { type: 'add-color', color }] };
   changes = { ...changes, 'undo-changes': [{ type: 'del-color', id: color.id }, ...changes['undo-changes']] };
   return applyChangesLocal(changes);
 }
 
+/**
+ *
+ */
 export function updateColor(changes, color) {
   const libraryData = getLibraryData(changes);
   const prevColor = libraryData?.colors?.[color.id];
@@ -415,6 +520,9 @@ export function updateColor(changes, color) {
   return applyChangesLocal(changes);
 }
 
+/**
+ *
+ */
 export function deleteColor(changes, colorId) {
   const libraryData = getLibraryData(changes);
   const prevColor = libraryData?.colors?.[colorId];
@@ -423,12 +531,18 @@ export function deleteColor(changes, colorId) {
   return applyChangesLocal(changes);
 }
 
+/**
+ *
+ */
 export function addMedia(changes, object) {
   changes = { ...changes, 'redo-changes': [...changes['redo-changes'], { type: 'add-media', object }] };
   changes = { ...changes, 'undo-changes': [{ type: 'del-media', id: object.id }, ...changes['undo-changes']] };
   return applyChangesLocal(changes);
 }
 
+/**
+ *
+ */
 export function updateMedia(changes, object) {
   const libraryData = getLibraryData(changes);
   const prevObject = libraryData?.media?.[object.id];
@@ -437,6 +551,9 @@ export function updateMedia(changes, object) {
   return applyChangesLocal(changes);
 }
 
+/**
+ *
+ */
 export function deleteMedia(changes, id) {
   const libraryData = getLibraryData(changes);
   const prevObject = libraryData?.media?.[id];
@@ -445,12 +562,18 @@ export function deleteMedia(changes, id) {
   return applyChangesLocal(changes);
 }
 
+/**
+ *
+ */
 export function addTypography(changes, typography) {
   changes = { ...changes, 'redo-changes': [...changes['redo-changes'], { type: 'add-typography', typography }] };
   changes = { ...changes, 'undo-changes': [{ type: 'del-typography', id: typography.id }, ...changes['undo-changes']] };
   return applyChangesLocal(changes);
 }
 
+/**
+ *
+ */
 export function updateTypography(changes, typography) {
   const libraryData = getLibraryData(changes);
   const prevTypography = libraryData?.typographies?.[typography.id];
@@ -459,6 +582,9 @@ export function updateTypography(changes, typography) {
   return applyChangesLocal(changes);
 }
 
+/**
+ *
+ */
 export function deleteTypography(changes, typographyId) {
   const libraryData = getLibraryData(changes);
   const prevTypography = libraryData?.typographies?.[typographyId];
@@ -467,6 +593,9 @@ export function deleteTypography(changes, typographyId) {
   return applyChangesLocal(changes);
 }
 
+/**
+ *
+ */
 export function addComponent(changes, id, path, name, updatedShapes, mainInstanceId, mainInstancePage, annotation, variantId, variantProperties, options = {}) {
   const pageId = getPageId(changes);
   const objects = lookupObjects(changes);
@@ -510,6 +639,9 @@ export function addComponent(changes, id, path, name, updatedShapes, mainInstanc
   return applyChangesLocal(result, options['apply-changes-local-library?'] ? { 'apply-to-library?': true } : {});
 }
 
+/**
+ *
+ */
 export function updateComponent(changes, id, updateFn, options = {}) {
   const libraryData = getLibraryData(changes);
   const prevComponent = libraryData?.components?.[id];
@@ -541,12 +673,18 @@ export function updateComponent(changes, id, updateFn, options = {}) {
   return applyChangesLocal(result, options['apply-changes-local-library?'] ? { 'apply-to-library?': true } : {});
 }
 
+/**
+ *
+ */
 export function deleteComponent(changes, id, pageId) {
   changes = { ...changes, 'redo-changes': [...changes['redo-changes'], { type: 'del-component', id }] };
   changes = { ...changes, 'undo-changes': [{ type: 'restore-component', id, 'page-id': pageId }, ...changes['undo-changes']] };
   return changes;
 }
 
+/**
+ *
+ */
 export function restoreComponent(changes, id, pageId, delta) {
   changes = { ...changes, 'redo-changes': [...changes['redo-changes'], { type: 'restore-component', id, 'page-id': pageId }] };
   changes = { ...changes, 'undo-changes': [{ type: 'del-component', id, delta }, ...changes['undo-changes']] };
@@ -555,6 +693,9 @@ export function restoreComponent(changes, id, pageId, delta) {
 
 // --- Design Tokens changes ---
 
+/**
+ *
+ */
 export function setTokensLib(changes, tokensLib) {
   const libraryData = getLibraryData(changes);
   const prevTokensLib = libraryData?.['tokens-lib'];
@@ -563,6 +704,9 @@ export function setTokensLib(changes, tokensLib) {
   return applyChangesLocal(changes);
 }
 
+/**
+ *
+ */
 export function setTokenSet(changes, setId, tokenSet) {
   const libraryData = getLibraryData(changes);
   const prevTokensLib = libraryData?.['tokens-lib'];
@@ -572,6 +716,9 @@ export function setTokenSet(changes, setId, tokenSet) {
   return applyChangesLocal(changes);
 }
 
+/**
+ *
+ */
 export function setActiveTokenThemes(changes, activeThemePaths) {
   const libraryData = getLibraryData(changes);
   const prevActivePaths = libraryData?.['tokens-lib']?.['active-theme-paths'] ?? new Set();
@@ -580,6 +727,9 @@ export function setActiveTokenThemes(changes, activeThemePaths) {
   return applyChangesLocal(changes);
 }
 
+/**
+ *
+ */
 export function setBaseFontSize(changes, newBaseFontSize) {
   const fileData = getMeta(changes, 'file-data');
   const previousFontSize = fileData?.options?.['base-font-size'] ?? '16px';
@@ -590,6 +740,9 @@ export function setBaseFontSize(changes, newBaseFontSize) {
 
 // --- Misc changes ---
 
+/**
+ *
+ */
 export function reorderChildren(changes, id, children) {
   const pageId = getPageId(changes);
   const objects = lookupObjects(changes);
@@ -605,10 +758,16 @@ export function reorderChildren(changes, id, children) {
   return applyChangesLocal(changes);
 }
 
+/**
+ *
+ */
 export function reorderGridChildren(changes, ids) {
   return changes;
 }
 
+/**
+ *
+ */
 export function setTextContent(changes, id, content, prevContent) {
   const pageId = getPageId(changes);
   const redoChange = { type: 'mod-obj', 'page-id': pageId, id, operations: [{ type: 'set', attr: 'content', val: content }] };
@@ -617,6 +776,9 @@ export function setTextContent(changes, id, content, prevContent) {
   return { ...changes, 'redo-changes': [...changes['redo-changes'], redoChange], 'undo-changes': [undoChange, ...changes['undo-changes']] };
 }
 
+/**
+ *
+ */
 export function moveTokenSet(changes, opts) {
   const redo = {
     type: 'move-token-set',
@@ -637,6 +799,9 @@ export function moveTokenSet(changes, opts) {
   return applyChangesLocal(changes);
 }
 
+/**
+ *
+ */
 export function moveTokenSetGroup(changes, opts) {
   const redo = {
     type: 'move-token-set-group',
@@ -659,14 +824,23 @@ export function moveTokenSetGroup(changes, opts) {
 
 // --- Helper functions ---
 
+/**
+ *
+ */
 function withMeta(obj, meta) {
   return Object.assign(Object.create(null), obj, { __meta: { ...(obj.__meta ?? {}), ...meta } });
 }
 
+/**
+ *
+ */
 function getMeta(obj, key) {
   return obj?.__meta?.[key];
 }
 
+/**
+ *
+ */
 function getPrevSibling(objects, id) {
   if (!objects) return null;
   const shape = objects[id];
@@ -678,6 +852,9 @@ function getPrevSibling(objects, id) {
   return index > 0 ? shapes[index - 1] : null;
 }
 
+/**
+ *
+ */
 function getPositionOnParent(objects, id) {
   if (!objects) return 0;
   const shape = objects[id];
@@ -687,6 +864,9 @@ function getPositionOnParent(objects, id) {
   return (parent.shapes ?? []).indexOf(id);
 }
 
+/**
+ *
+ */
 function processChanges(data, changes) {
   if (!data || !changes || changes.length === 0) return data;
   let result = { ...data };
@@ -696,6 +876,9 @@ function processChanges(data, changes) {
   return result;
 }
 
+/**
+ *
+ */
 function applySingleChange(data, change) {
   if (!data) return data;
   switch (change.type) {
@@ -787,6 +970,9 @@ function applySingleChange(data, change) {
   }
 }
 
+/**
+ *
+ */
 function setIn(obj, path, value) {
   if (path.length === 0) return value;
   const key = path[0];

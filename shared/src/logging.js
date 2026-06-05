@@ -32,12 +32,18 @@ let logRecord = null;
 
 const handlers = [];
 
+/**
+ *
+ */
 function levelToInt(level) {
   const n = LEVEL_INT[level];
   if (n == null) throw new Error(`invalid level: ${level}`);
   return n;
 }
 
+/**
+ *
+ */
 function enabled(logger, level) {
   const levelInt = levelToInt(level);
   let current = logger;
@@ -55,6 +61,9 @@ function enabled(logger, level) {
   return levelInt >= defaultLevel;
 }
 
+/**
+ *
+ */
 function buildMessage(props) {
   const parts = [];
   let body = null;
@@ -74,6 +83,9 @@ function buildMessage(props) {
   return message;
 }
 
+/**
+ *
+ */
 function formatValue(v) {
   if (v == null) return 'null';
   if (typeof v === 'string') return v;
@@ -84,6 +96,9 @@ function formatValue(v) {
   }
 }
 
+/**
+ *
+ */
 function formatTimestamp(ts) {
   const d = new Date(ts);
   const h = String(d.getHours()).padStart(2, '0');
@@ -93,6 +108,9 @@ function formatTimestamp(ts) {
   return `${h}:${m}:${s}.${ms}`;
 }
 
+/**
+ *
+ */
 function consoleLogHandler(record) {
   if (!enabled(record.logger, record.level)) return;
 
@@ -132,6 +150,9 @@ function consoleLogHandler(record) {
 
 handlers.push(consoleLogHandler);
 
+/**
+ *
+ */
 function emitLog(props, cause, loggerCtx, logger, level, sync) {
   if (!enabled(logger, level)) return;
 
@@ -161,64 +182,109 @@ function emitLog(props, cause, loggerCtx, logger, level, sync) {
   }
 }
 
+/**
+ *
+ */
 export function log(level, logger, ...params) {
   emitLog(params, null, null, logger || 'app', level, false);
 }
 
+/**
+ *
+ */
 export function info(logger, ...params) {
   emitLog(params, null, null, logger || 'app', 'info', false);
 }
 
+/**
+ *
+ */
 export function inf(logger, ...params) {
   emitLog(params, null, null, logger || 'app', 'info', false);
 }
 
+/**
+ *
+ */
 export function warn(logger, ...params) {
   emitLog(params, null, null, logger || 'app', 'warn', false);
 }
 
+/**
+ *
+ */
 export function wrn(logger, ...params) {
   emitLog(params, null, null, logger || 'app', 'warn', false);
 }
 
+/**
+ *
+ */
 export function error(logger, ...params) {
   emitLog(params, null, null, logger || 'app', 'error', false);
 }
 
+/**
+ *
+ */
 export function err(logger, ...params) {
   emitLog(params, null, null, logger || 'app', 'error', false);
 }
 
+/**
+ *
+ */
 export function debug(logger, ...params) {
   emitLog(params, null, null, logger || 'app', 'debug', false);
 }
 
+/**
+ *
+ */
 export function dbg(logger, ...params) {
   emitLog(params, null, null, logger || 'app', 'debug', false);
 }
 
+/**
+ *
+ */
 export function trace(logger, ...params) {
   emitLog(params, null, null, logger || 'app', 'trace', false);
 }
 
+/**
+ *
+ */
 export function trc(logger, ...params) {
   emitLog(params, null, null, logger || 'app', 'trace', false);
 }
 
+/**
+ *
+ */
 export function setLevel(logger, level) {
   loggerLevels.set(logger, levelToInt(level));
 }
 
+/**
+ *
+ */
 export function setup(config) {
   for (const [logger, level] of Object.entries(config)) {
     setLevel(logger, level);
   }
 }
 
+/**
+ *
+ */
 export function setContext(ctx) {
   context = ctx;
 }
 
+/**
+ *
+ */
 export function getLogRecord() {
   return logRecord;
 }

@@ -68,7 +68,7 @@ export async function generateAndUploadThumbnail(fileId, pageId, page, options =
   const base64 = arrayBufferToBase64(arrayBuffer);
 
   try {
-    await cmd('create-file-object-thumbnail', {
+    const result = await cmd('create-file-object-thumbnail', {
       'file-id': fileId,
       'page-id': pageId,
       'object-id': '',
@@ -79,7 +79,7 @@ export async function generateAndUploadThumbnail(fileId, pageId, page, options =
         height: options.height || THUMBNAIL_HEIGHT,
       },
     });
-    return true;
+    return result || true;
   } catch (err) {
     console.error('[thumbnail] Upload failed:', err);
     return false;

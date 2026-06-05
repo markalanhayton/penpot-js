@@ -12,7 +12,8 @@ template.innerHTML = `<style>
     .penpot-lside__sidebar-tab:hover { color: var(--penpot-text, #e6e6e6); background: var(--penpot-surface-high, #333); }
     .penpot-lside__sidebar-tab.penpot-lside__active { color: var(--penpot-primary, #31efb8); border-bottom-color: var(--penpot-primary, #31efb8); }
     .penpot-lside__sidebar-content { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
-    .penpot-lside__page-section { border-bottom: 1px solid var(--penpot-border, #444); flex-shrink: 0; }
+    .penpot-lside__page-section { border-bottom: 1px solid var(--penpot-border, #444); flex-shrink: 0; display: none; }
+    .penpot-lside__page-section.penpot-lside__visible { display: block; }
     .penpot-lside__page-section-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; }
     .penpot-lside__page-section-title { font-size: 10px; color: var(--penpot-text-dim, #999); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
     .penpot-lside__page-section-toggle { background: none; border: none; color: var(--penpot-text-dim, #999); cursor: pointer; font-size: 10px; padding: 2px; }
@@ -30,8 +31,8 @@ template.innerHTML = `<style>
     .penpot-lside__page-item:hover .penpot-lside__page-menu-btn { opacity: 1; }
     .penpot-lside__page-item .penpot-lside__page-menu-btn:hover { color: var(--penpot-text, #e6e6e6); }
     .penpot-lside__page-rename-input { flex: 1; background: var(--penpot-input-bg, #333); border: 1px solid var(--penpot-primary, #31efb8); color: var(--penpot-text, #e6e6e6); font-size: 11px; padding: 0 4px; font-family: inherit; outline: none; }
-    .penpot-lside__panel-container { flex: 1; overflow: hidden; }
-    .penpot-lside__panel-container[hidden] { display: none; }
+    .penpot-lside__panel-container { flex: 1; overflow: hidden; min-height: 0; display: flex; flex-direction: column; }
+    .penpot-lside__panel-container[hidden] { display: none !important; }
   
   </style>
   <div class="penpot-lside__sidebar-tabs" role="tablist" aria-label="Left sidebar">
@@ -64,7 +65,7 @@ export class PenpotLeftSidebar extends PenpotElement {
   #currentPageIndex = 0;
   #selectedIds = new Set();
   #activeTab = 'layers';
-  #pagesCollapsed = false;
+  #pagesCollapsed = true;
 
   constructor() {
     super();
@@ -90,6 +91,10 @@ export class PenpotLeftSidebar extends PenpotElement {
       this.querySelector('#page-list').style.display = this.#pagesCollapsed ? 'none' : '';
       toggle.textContent = this.#pagesCollapsed ? '\u25B6' : '\u25BC';
     });
+
+    // Initialize pages section as collapsed
+    this.querySelector('#page-list').style.display = 'none';
+    toggle.textContent = '\u25B6';
 
     this.querySelector('#page-add-btn').addEventListener('click', () => {
       this.emit('penpot-page-add', {});
@@ -181,6 +186,9 @@ export class PenpotLeftSidebar extends PenpotElement {
     assetPanel.addEventListener('penpot-typography-rename', (e) => {
       this.emit('penpot-typography-rename', e.detail);
     });
+
+    // Initialize panel visibility
+    this.#updatePanelVisibility();
   }
 
   set pages(val) {
@@ -212,15 +220,17 @@ export class PenpotLeftSidebar extends PenpotElement {
     const assetsPanel = this.querySelector('#assets-panel');
     const pagesSection = this.querySelector('#pages-section');
 
+    // Show pages section for layers and pages tabs, hide for assets tab
+    const showPages = this.#activeTab === 'layers' || this.#activeTab === 'pages';
+    if (showPages) {
+      pagesSection.classList.add('penpot-lside__visible');
+    } else {
+      pagesSection.classList.remove('penpot-lside__visible');
+    }
+
+    // Show the appropriate panel
     layersPanel.hidden = this.#activeTab !== 'layers';
     assetsPanel.hidden = this.#activeTab !== 'assets';
-
-    if (this.#activeTab === 'pages') {
-      pagesSection.style.display = '';
-      layersPanel.hidden = true;
-    } else {
-      pagesSection.style.display = '';
-    }
 
     if (this.#activeTab === 'layers') {
       this.#updateLayerPanel();
@@ -299,7 +309,7 @@ export class PenpotLeftSidebar extends PenpotElement {
 
     const menu = document.createElement('div');
     menu.className = 'penpot-lside__page-context-menu';
-    menu.style.cssText = 'position:absolute;background:var(--penpot-surface-high,#333);border:1px solid var(--penpot-border,#444);border-radius:4px;padding:4px 0;z-index:100;min-width:120px;';
+    menu.style.cssText = 'position:absolute;background:var(--penpot-surface-high,#333);border:1px solid var(--penpot-border,#444);border-radius:4px;padding:4px 0;z-index:var(--penpot-z-dropdown,400);min-width:120px;';
     const rect = btn.getBoundingClientRect();
     const hostRect = this.getBoundingClientRect();
     menu.style.left = (rect.left - hostRect.left + 20) + 'px';

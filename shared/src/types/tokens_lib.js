@@ -1,7 +1,13 @@
 import { next } from '../uuid.js';
 import { now as timeNow } from '../time.js';
 
+/**
+ *
+ */
 export class Token {
+  /**
+   *
+   */
   constructor(attrs = {}) {
     this.id = attrs.id ?? next();
     this.name = attrs.name ?? '';
@@ -12,10 +18,16 @@ export class Token {
   }
 }
 
+/**
+ *
+ */
 export function isToken(o) {
   return o instanceof Token;
 }
 
+/**
+ *
+ */
 export function makeToken(attrs = {}) {
   return new Token({
     ...attrs,
@@ -25,38 +37,65 @@ export function makeToken(attrs = {}) {
   });
 }
 
+/**
+ *
+ */
 export function tokenGetId(token) {
   return token?.id;
 }
 
+/**
+ *
+ */
 export function tokenGetName(token) {
   return token?.name;
 }
 
+/**
+ *
+ */
 export function tokenGetDescription(token) {
   return token?.description;
 }
 
+/**
+ *
+ */
 export function tokenGetModifiedAt(token) {
   return token?.['modified-at'];
 }
 
+/**
+ *
+ */
 export function tokenRename(token, newName) {
   return new Token({ ...token, name: newName, 'modified-at': timeNow() });
 }
 
+/**
+ *
+ */
 export function tokenReid(token, newId) {
   return new Token({ ...token, id: newId, 'modified-at': timeNow() });
 }
 
+/**
+ *
+ */
 export function tokenSetDescription(token, desc) {
   return new Token({ ...token, description: desc, 'modified-at': timeNow() });
 }
 
+/**
+ *
+ */
 export function getTokenPath(token) {
   return token?.name?.split('.') ?? [];
 }
 
+/**
+ *
+ */
 export function groupByType(tokens) {
   const arr = Array.isArray(tokens)
     ? tokens
@@ -72,7 +111,13 @@ export function groupByType(tokens) {
   return result;
 }
 
+/**
+ *
+ */
 export class TokenSet {
+  /**
+   *
+   */
   constructor(attrs = {}) {
     this.id = attrs.id ?? next();
     this.name = attrs.name ?? '';
@@ -84,10 +129,16 @@ export class TokenSet {
   }
 }
 
+/**
+ *
+ */
 export function isTokenSet(o) {
   return o instanceof TokenSet;
 }
 
+/**
+ *
+ */
 export function makeTokenSet(attrs = {}) {
   return new TokenSet({
     ...attrs,
@@ -96,14 +147,23 @@ export function makeTokenSet(attrs = {}) {
   });
 }
 
+/**
+ *
+ */
 export function tokenSetAddToken(set, token) {
   return new TokenSet({ ...set, tokens: [...set.tokens, token.id], 'modified-at': timeNow() });
 }
 
+/**
+ *
+ */
 export function tokenSetUpdateToken(set, tokenId, f) {
   return new TokenSet({ ...set, 'modified-at': timeNow() });
 }
 
+/**
+ *
+ */
 export function tokenSetDeleteToken(set, tokenId) {
   return new TokenSet({
     ...set,
@@ -112,10 +172,16 @@ export function tokenSetDeleteToken(set, tokenId) {
   });
 }
 
+/**
+ *
+ */
 export function tokenSetGetToken(set, tokensMap, tokenId) {
   return tokensMap?.[tokenId];
 }
 
+/**
+ *
+ */
 export function tokenSetGetTokenByName(set, tokensMap, name) {
   for (const id of set.tokens) {
     const t = tokensMap?.[id];
@@ -124,11 +190,20 @@ export function tokenSetGetTokenByName(set, tokensMap, name) {
   return undefined;
 }
 
+/**
+ *
+ */
 export function tokenSetGetTokens(set, tokensMap) {
   return set.tokens.map((id) => tokensMap?.[id]).filter(Boolean);
 }
 
+/**
+ *
+ */
 export class TokenTheme {
+  /**
+   *
+   */
   constructor(attrs = {}) {
     this.id = attrs.id ?? next();
     this.name = attrs.name ?? '';
@@ -140,10 +215,16 @@ export class TokenTheme {
   }
 }
 
+/**
+ *
+ */
 export function isTokenTheme(o) {
   return o instanceof TokenTheme;
 }
 
+/**
+ *
+ */
 export function makeTokenTheme(attrs = {}) {
   return new TokenTheme({
     ...attrs,
@@ -157,6 +238,9 @@ export const HIDDEN_THEME_GROUP = '$$hidden$$';
 export const HIDDEN_THEME_NAME = '$$hidden$$';
 export const HIDDEN_THEME_PATH = [HIDDEN_THEME_GROUP, HIDDEN_THEME_NAME];
 
+/**
+ *
+ */
 export function makeHiddenTheme() {
   return makeTokenTheme({
     id: HIDDEN_THEME_ID,
@@ -165,7 +249,13 @@ export function makeHiddenTheme() {
   });
 }
 
+/**
+ *
+ */
 export class TokensLib {
+  /**
+   *
+   */
   constructor(attrs = {}) {
     this.sets = attrs.sets ?? {};
     this.themes = attrs.themes ?? {};
@@ -173,19 +263,31 @@ export class TokensLib {
   }
 }
 
+/**
+ *
+ */
 export function isTokensLib(o) {
   return o instanceof TokensLib;
 }
 
+/**
+ *
+ */
 export function makeTokensLib(attrs = {}) {
   return new TokensLib(attrs);
 }
 
+/**
+ *
+ */
 export function ensureTokensLib(lib) {
   if (isTokensLib(lib)) return lib;
   return makeTokensLib(lib);
 }
 
+/**
+ *
+ */
 export function emptyLibQ(lib) {
   if (!lib) return true;
   return Object.keys(lib.sets ?? {}).length === 0 &&
@@ -193,6 +295,9 @@ export function emptyLibQ(lib) {
          Object.keys(lib.tokens ?? {}).length === 0;
 }
 
+/**
+ *
+ */
 export function setPathExistsQ(lib, path) {
   const sets = lib.sets ?? {};
   for (const set of Object.values(sets)) {
@@ -201,6 +306,9 @@ export function setPathExistsQ(lib, path) {
   return false;
 }
 
+/**
+ *
+ */
 export function addTokenToLib(lib, token) {
   const t = isToken(token) ? token : makeToken(token);
   const sets = lib.sets ?? {};
@@ -210,10 +318,16 @@ export function addTokenToLib(lib, token) {
   });
 }
 
+/**
+ *
+ */
 export function getTokenFromLib(lib, tokenId) {
   return lib.tokens?.[tokenId];
 }
 
+/**
+ *
+ */
 export function getTokenByName(lib, name) {
   for (const t of Object.values(lib.tokens ?? {})) {
     if (t.name === name) return t;
@@ -221,6 +335,9 @@ export function getTokenByName(lib, name) {
   return undefined;
 }
 
+/**
+ *
+ */
 export function updateTokenInLib(lib, tokenId, f) {
   const tokens = lib.tokens ?? {};
   const token = tokens[tokenId];
@@ -231,11 +348,17 @@ export function updateTokenInLib(lib, tokenId, f) {
   });
 }
 
+/**
+ *
+ */
 export function deleteTokenFromLib(lib, tokenId) {
   const { [tokenId]: _, ...rest } = lib.tokens ?? {};
   return new TokensLib({ ...lib, tokens: rest });
 }
 
+/**
+ *
+ */
 export function addSet(lib, set) {
   const s = isTokenSet(set) ? set : makeTokenSet(set);
   return new TokensLib({
@@ -244,15 +367,24 @@ export function addSet(lib, set) {
   });
 }
 
+/**
+ *
+ */
 export function deleteSet(lib, setId) {
   const { [setId]: _, ...rest } = lib.sets ?? {};
   return new TokensLib({ ...lib, sets: rest });
 }
 
+/**
+ *
+ */
 export function getSet(lib, setId) {
   return lib.sets?.[setId];
 }
 
+/**
+ *
+ */
 export function getSetByName(lib, name) {
   for (const s of Object.values(lib.sets ?? {})) {
     if (s.name === name) return s;
@@ -260,18 +392,30 @@ export function getSetByName(lib, name) {
   return undefined;
 }
 
+/**
+ *
+ */
 export function getSets(lib) {
   return Object.values(lib.sets ?? {});
 }
 
+/**
+ *
+ */
 export function getSetNames(lib) {
   return Object.values(lib.sets ?? {}).map((s) => s.name);
 }
 
+/**
+ *
+ */
 export function setCount(lib) {
   return Object.keys(lib.sets ?? {}).length;
 }
 
+/**
+ *
+ */
 export function addTheme(lib, theme) {
   const t = isTokenTheme(theme) ? theme : makeTokenTheme(theme);
   return new TokensLib({
@@ -280,15 +424,24 @@ export function addTheme(lib, theme) {
   });
 }
 
+/**
+ *
+ */
 export function deleteTheme(lib, themeId) {
   const { [themeId]: _, ...rest } = lib.themes ?? {};
   return new TokensLib({ ...lib, themes: rest });
 }
 
+/**
+ *
+ */
 export function getTheme(lib, themeId) {
   return lib.themes?.[themeId];
 }
 
+/**
+ *
+ */
 export function getThemeByName(lib, name) {
   for (const t of Object.values(lib.themes ?? {})) {
     if (t.name === name) return t;
@@ -296,22 +449,37 @@ export function getThemeByName(lib, name) {
   return undefined;
 }
 
+/**
+ *
+ */
 export function getThemes(lib) {
   return Object.values(lib.themes ?? {});
 }
 
+/**
+ *
+ */
 export function themeCount(lib) {
   return Object.keys(lib.themes ?? {}).length;
 }
 
+/**
+ *
+ */
 export function getAllTokens(lib) {
   return Object.values(lib.tokens ?? {});
 }
 
+/**
+ *
+ */
 export function getAllTokensMap(lib) {
   return { ...(lib.tokens ?? {}) };
 }
 
+/**
+ *
+ */
 export function getTokensInActiveSets(lib) {
   const activeThemes = getThemes(lib).filter((t) => !t.isChanged && t.id !== HIDDEN_THEME_ID);
   const activeSetIds = new Set();
@@ -333,19 +501,31 @@ export function getTokensInActiveSets(lib) {
   return result;
 }
 
+/**
+ *
+ */
 export function topLevelThemeGroupQ(group) {
   return group == null || group === '';
 }
 
+/**
+ *
+ */
 export function splitSetName(name) {
   if (name == null) return [];
   return name.split(' / ');
 }
 
+/**
+ *
+ */
 export function joinSetPath(parts) {
   return parts.join(' / ');
 }
 
+/**
+ *
+ */
 export function normalizeSetName(name) {
   if (name == null) return '';
   return name.trim();
@@ -353,17 +533,26 @@ export function normalizeSetName(name) {
 
 // --- Theme activation/deactivation ---
 
+/**
+ *
+ */
 export function enableSet(theme, setName) {
   const sets = new Set(theme.sets ?? []);
   sets.add(setName);
   return new TokenTheme({ ...theme, sets: [...sets] });
 }
 
+/**
+ *
+ */
 export function disableSet(theme, setName) {
   const sets = (theme.sets ?? []).filter((s) => s !== setName);
   return new TokenTheme({ ...theme, sets });
 }
 
+/**
+ *
+ */
 export function toggleSet(theme, setName) {
   const sets = theme.sets ?? [];
   if (sets.includes(setName)) {
@@ -372,6 +561,9 @@ export function toggleSet(theme, setName) {
   return enableSet(theme, setName);
 }
 
+/**
+ *
+ */
 export function enableSets(theme, setNames) {
   const currentSet = new Set(theme.sets ?? []);
   for (const name of setNames) {
@@ -380,12 +572,18 @@ export function enableSets(theme, setNames) {
   return new TokenTheme({ ...theme, sets: [...currentSet] });
 }
 
+/**
+ *
+ */
 export function disableSets(theme, setNames) {
   const nameSet = new Set(setNames);
   const sets = (theme.sets ?? []).filter((s) => !nameSet.has(s));
   return new TokenTheme({ ...theme, sets });
 }
 
+/**
+ *
+ */
 export function activateTheme(lib, id) {
   const theme = getTheme(lib, id);
   if (!theme) return lib;
@@ -407,6 +605,9 @@ export function activateTheme(lib, id) {
   return new TokensLib({ ...lib, 'active-themes': activeThemePaths });
 }
 
+/**
+ *
+ */
 export function deactivateTheme(lib, id) {
   const theme = getTheme(lib, id);
   if (!theme) return lib;
@@ -417,6 +618,9 @@ export function deactivateTheme(lib, id) {
   return new TokensLib({ ...lib, 'active-themes': activeThemePaths });
 }
 
+/**
+ *
+ */
 export function toggleThemeActive(lib, id) {
   if (themeActiveQ(lib, id)) {
     return deactivateTheme(lib, id);
@@ -424,10 +628,16 @@ export function toggleThemeActive(lib, id) {
   return activateTheme(lib, id);
 }
 
+/**
+ *
+ */
 export function getActiveThemePaths(lib) {
   return lib['active-themes'] ?? new Set();
 }
 
+/**
+ *
+ */
 export function getActiveThemesSetNames(lib) {
   const activePaths = getActiveThemePaths(lib);
   const result = new Set();
@@ -445,6 +655,9 @@ export function getActiveThemesSetNames(lib) {
   return result;
 }
 
+/**
+ *
+ */
 export function themeActiveQ(lib, id) {
   const theme = getTheme(lib, id);
   if (!theme) return false;
@@ -452,10 +665,16 @@ export function themeActiveQ(lib, id) {
   return activePaths.has(getThemePath(theme));
 }
 
+/**
+ *
+ */
 export function getHiddenTheme(lib) {
   return getTheme(lib, HIDDEN_THEME_ID);
 }
 
+/**
+ *
+ */
 export function getThemePath(theme) {
   if (!theme) return [];
   const group = theme.group ?? '';
@@ -469,6 +688,9 @@ export function getThemePath(theme) {
 const SET_GROUP_PREFIX = 'G-';
 const SET_ITEM_PREFIX = 'S-';
 
+/**
+ *
+ */
 function addSetPathGroupPrefix(path) {
   if (Array.isArray(path)) {
     return path.map((segment, i) => {
@@ -479,6 +701,9 @@ function addSetPathGroupPrefix(path) {
   return path;
 }
 
+/**
+ *
+ */
 function splitSetStrPathPrefix(key) {
   if (key.startsWith(SET_GROUP_PREFIX)) {
     return key.slice(SET_GROUP_PREFIX.length);
@@ -489,6 +714,9 @@ function splitSetStrPathPrefix(key) {
   return key;
 }
 
+/**
+ *
+ */
 function setGroupPathToSetGroupPrefixedPath(path) {
   if (Array.isArray(path)) {
     return path.map((segment, i) => {
@@ -499,6 +727,9 @@ function setGroupPathToSetGroupPrefixedPath(path) {
   return path;
 }
 
+/**
+ *
+ */
 export function getSetsAtPath(lib, path) {
   const prefixedPath = addSetPathGroupPrefix(path);
   let current = lib.sets ?? {};
@@ -509,6 +740,9 @@ export function getSetsAtPath(lib, path) {
   if (current == null) return [];
 
   const result = [];
+  /**
+   *
+   */
   function walk(node) {
     if (node == null) return;
     if (isTokenSet(node)) {
@@ -525,6 +759,9 @@ export function getSetsAtPath(lib, path) {
   return result;
 }
 
+/**
+ *
+ */
 export function setsAtPathAllActiveQ(lib, groupPath) {
   const activeSetNames = getActiveThemesSetNames(lib);
   const setsAtGroup = getSetsAtPath(lib, groupPath);
@@ -548,11 +785,17 @@ export function setsAtPathAllActiveQ(lib, groupPath) {
   return 'none';
 }
 
+/**
+ *
+ */
 export function walkSetsTreeSeq(nodes, options = {}) {
   const { skipChildrenPred, newEditingSetPath } = options;
 
   const result = [];
 
+  /**
+   *
+   */
   function walk(node, parentPath = [], depth = 0) {
     if (node == null) return;
 
@@ -606,10 +849,16 @@ export function walkSetsTreeSeq(nodes, options = {}) {
   return result;
 }
 
+/**
+ *
+ */
 export function getSetTree(lib) {
   return lib.sets ?? {};
 }
 
+/**
+ *
+ */
 export function setGroupPathExistsQ(lib, path) {
   const prefixedPath = setGroupPathToSetGroupPrefixedPath(path);
   let current = lib.sets;
@@ -622,10 +871,16 @@ export function setGroupPathExistsQ(lib, path) {
 
 // --- Theme set management via hidden theme ---
 
+/**
+ *
+ */
 export function setThemeSets(theme, sets) {
   return new TokenTheme({ ...theme, sets: [...sets] });
 }
 
+/**
+ *
+ */
 export function getActiveTheme(lib) {
   const activePaths = getActiveThemePaths(lib);
   const themes = lib.themes ?? {};

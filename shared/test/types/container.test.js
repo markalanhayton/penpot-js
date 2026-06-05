@@ -13,6 +13,9 @@ import {
 } from '../../src/types/container.js';
 import { zero, next } from '../../src/uuid.js';
 
+/**
+ *
+ */
 function makeObjects(shapes) {
   const objects = {};
   for (const s of shapes) {

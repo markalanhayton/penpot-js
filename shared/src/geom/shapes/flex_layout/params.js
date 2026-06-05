@@ -4,6 +4,9 @@ import * as gco from '../common.js';
 import * as mth from '../../../math.js';
 import * as ctt from '../../../types/shape_tree.js';
 
+/**
+ *
+ */
 export function calculateParams(objects, shapes, parent) {
   if (!d.notEmpty(shapes)) return null;
 

@@ -80,16 +80,23 @@ export function registerAssetRoutes(fastify, pool) {
   /**
    * Serve a file media object thumbnail.
    * Thumbnails are always publicly accessible.
+   *
+   * Flow: `file_media_object.id` → `file_tagged_object_thumbnail` (tag='frame')
+   * → `storage_object.id` for the thumbnail image.
    */
   fastify.get('/assets/by-file-media-id/:id/thumbnail', async (request, reply) => {
     const { id } = request.params;
+
     const thumbnail = pool.get(
-      'SELECT sot.id, sot.content_type, sot.bucket FROM storage_object sot JOIN file_thumbnail ft ON ft.media_id = sot.id WHERE ft.file_media_object_id = ? AND sot.deleted_at IS NULL ORDER BY ft.revn DESC LIMIT 1',
+      `SELECT sot.id, sot.content_type, sot.bucket
+       FROM storage_object sot
+       JOIN file_tagged_object_thumbnail ftot ON ftot.media_id = sot.id
+       WHERE ftot.object_id = ? AND sot.deleted_at IS NULL
+       ORDER BY ftot.updated_at DESC LIMIT 1`,
       { id }
     );
 
     if (!thumbnail) {
-      // Fall back to serving the original media object directly
       const mediaObject = pool.get(
         'SELECT media_id FROM file_media_object WHERE id = ? AND deleted_at IS NULL',
         { id }
@@ -161,8 +168,9 @@ async function serveStorageObject(pool, storageId, request, reply) {
   const filePath = getStorageObjectPath(storageId);
 
   try {
-    const fs = await import('node:fs/promises');
-    const stat = await fs.stat(filePath);
+    const fsPromises = await import('node:fs/promises');
+    const fs = await import('node:fs');
+    const stat = await fsPromises.stat(filePath);
 
     return reply
       .code(200)
@@ -171,9 +179,7 @@ async function serveStorageObject(pool, storageId, request, reply) {
       .header('Cache-Control', `public, max-age=${cacheMaxAge}`)
       .header('Last-Modified', stat.mtime.toUTCString())
       .send(fs.createReadStream(filePath));
-  } catch {
-    return reply.code(404).send({ type: 'not-found', code: 'object-not-found', hint: 'File not found' });
-  }
+  } catch (err) { console.warn('[assets] file serve failed for', request.params.id, err.message); return reply.code(404).send({ type: 'not-found', code: 'object-not-found', hint: 'File not found' }); }
 }
 
 /**

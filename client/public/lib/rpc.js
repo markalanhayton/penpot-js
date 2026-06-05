@@ -130,7 +130,7 @@ export function cmdStream(command, params) {
             const data = line.slice(5).trim();
             if (data) {
               try { controller.enqueue(transitDecode(data)); }
-              catch { /* fallback: enqueue raw data if transit decode fails */ controller.enqueue(data); }
+              catch (err) { console.warn('[rpc] transit SSE decode failed, using raw data:', err.message); controller.enqueue(data); }
             }
           }
         }
@@ -171,7 +171,7 @@ async function handleResponse(response) {
   if (!text) return undefined;
   if (isTransit) return transitDecode(text);
   try { return JSON.parse(text); }
-  catch { /* not JSON, return raw text */ return text; }
+  catch (err) { console.warn('[rpc] response JSON parse failed, returning raw text:', err.message); return text; }
 }
 
 async function parseRpcError(response, contentType, isTransit) {
@@ -184,7 +184,7 @@ async function parseRpcError(response, contentType, isTransit) {
       const code = decoded.code || decoded['~:code'] || `http-${response.status}`;
       const hint = decoded.hint || decoded['~:hint'] || decoded.message || text;
       return new RpcError(type, code, hint, response.status);
-    } catch { /* transit decode failed, try JSON next */ }
+    } catch (err) { console.warn('[rpc] transit error decode failed:', err.message); }
   }
 
   if (text) {
@@ -196,7 +196,7 @@ async function parseRpcError(response, contentType, isTransit) {
         json.hint || json.message || text,
         response.status
       );
-    } catch { /* JSON parse also failed, return raw text error below */ }
+    } catch (err) { console.warn('[rpc] JSON error decode failed:', err.message); }
   }
 
   return new RpcError('unknown', `http-${response.status}`, text || response.statusText, response.status);

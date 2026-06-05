@@ -1,10 +1,19 @@
 const VALID_COMMANDS = new Set('ZzMmLlCcQqAaHhVvSsTt');
 
+/**
+ *
+ */
 function isSpace(ch) {
   return ch <= ' ' && (ch === ' ' || ch === '\n' || ch === '\t' || ch === '\r' || ch === '\f');
 }
 
+/**
+ *
+ */
 class Parser {
+  /**
+   *
+   */
   constructor(string) {
     this._string = string;
     this._currentIndex = 0;
@@ -13,15 +22,24 @@ class Parser {
     this._skipOptionalSpaces();
   }
 
+  /**
+   *
+   */
   [Symbol.iterator]() {
     return this;
   }
 
+  /**
+   *
+   */
   next() {
     if (!this.hasNext()) return { done: true };
     return { done: false, value: this.parseSegment() };
   }
 
+  /**
+   *
+   */
   hasNext() {
     if (this._currentIndex === 0) {
       const ch = this._string[this._currentIndex];
@@ -33,8 +51,11 @@ class Parser {
     return false;
   }
 
+  /**
+   *
+   */
   parseSegment() {
-    let ch = this._string[this._currentIndex];
+    const ch = this._string[this._currentIndex];
     let command = VALID_COMMANDS.has(ch) ? ch : null;
 
     if (command === null) {
@@ -71,6 +92,9 @@ class Parser {
     return { command, params };
   }
 
+  /**
+   *
+   */
   _skipOptionalSpaces() {
     while (this._currentIndex < this._endIndex && isSpace(this._string[this._currentIndex])) {
       this._currentIndex += 1;
@@ -78,6 +102,9 @@ class Parser {
     return this._currentIndex < this._endIndex;
   }
 
+  /**
+   *
+   */
   _skipOptionalSpacesOrDelimiter() {
     if (this._currentIndex < this._endIndex && !isSpace(this._string[this._currentIndex]) && this._string[this._currentIndex] !== ',') {
       return false;
@@ -91,6 +118,9 @@ class Parser {
     return this._currentIndex < this._endIndex;
   }
 
+  /**
+   *
+   */
   _parseNumber() {
     let exponent = 0, integer = 0, frac = 1, decimal = 0, sign = 1, expsign = 1;
     const startIndex = this._currentIndex;
@@ -153,6 +183,9 @@ class Parser {
     return number;
   }
 
+  /**
+   *
+   */
   _parseArcFlag() {
     if (this._currentIndex >= this._endIndex) return null;
     const flagChar = this._string[this._currentIndex];
@@ -166,6 +199,9 @@ class Parser {
   }
 }
 
+/**
+ *
+ */
 function absolutizePathData(pdata) {
   let currentX = 0, currentY = 0, subpathX = 0, subpathY = 0;
   for (const segment of pdata) {
@@ -237,6 +273,9 @@ function absolutizePathData(pdata) {
   return pdata;
 }
 
+/**
+ *
+ */
 function unitVectorAngle(ux, uy, vx, vy) {
   const sign = (ux * vy - uy * vx) < 0 ? -1.0 : 1.0;
   let dot = ux * vx + uy * vy;
@@ -244,6 +283,9 @@ function unitVectorAngle(ux, uy, vx, vy) {
   return sign * Math.acos(dot);
 }
 
+/**
+ *
+ */
 function getArcCenter(x1, y1, x2, y2, fa, fs, rx, ry, sinPhi, cosPhi) {
   const x1p = cosPhi * ((x1 - x2) / 2) + sinPhi * ((y1 - y2) / 2);
   const y1p = -sinPhi * ((x1 - x2) / 2) + cosPhi * ((y1 - y2) / 2);
@@ -255,13 +297,16 @@ function getArcCenter(x1, y1, x2, y2, fa, fs, rx, ry, sinPhi, cosPhi) {
   const cy = sinPhi * cxp + cosPhi * cyp + (y1 + y2) / 2;
   const v1x = (x1p - cxp) / rx, v1y = (y1p - cyp) / ry;
   const v2x = (-x1p - cxp) / rx, v2y = (-y1p - cyp) / ry;
-  let theta1 = unitVectorAngle(1, 0, v1x, v1y);
+  const theta1 = unitVectorAngle(1, 0, v1x, v1y);
   let dtheta = unitVectorAngle(v1x, v1y, v2x, v2y);
   if (fs === 0 && dtheta > 0) dtheta -= Math.PI * 2;
   if (fs === 1 && dtheta < 0) dtheta += Math.PI * 2;
   return [cx, cy, theta1, dtheta];
 }
 
+/**
+ *
+ */
 function approximateUnitArc(theta1, dtheta) {
   const alpha = (4.0 / 3.0) * Math.tan(dtheta / 4);
   const x1 = Math.cos(theta1), y1 = Math.sin(theta1);
@@ -269,6 +314,9 @@ function approximateUnitArc(theta1, dtheta) {
   return [x1, y1, x1 - y1 * alpha, y1 + x1 * alpha, x2 + y2 * alpha, y2 - x2 * alpha, x2, y2];
 }
 
+/**
+ *
+ */
 function processCurve(curve, cx, cy, rx, ry, sinPhi, cosPhi) {
   const [x0, y0, x1, y1, x2, y2, x3, y3] = curve.map((v, i) => {
     const scaled = i % 2 === 0 ? v * rx : v * ry;
@@ -284,6 +332,9 @@ function processCurve(curve, cx, cy, rx, ry, sinPhi, cosPhi) {
   curve[7] = sinPhi * x3 + cosPhi * y3 + cy;
 }
 
+/**
+ *
+ */
 export function arcToBeziers(x1, y1, x2, y2, fa, fs, rx, ry, phi) {
   const tau = Math.PI * 2;
   const phiTau = (phi * tau) / 360;
@@ -310,6 +361,9 @@ export function arcToBeziers(x1, y1, x2, y2, fa, fs, rx, ry, phi) {
   return result;
 }
 
+/**
+ *
+ */
 function simplifyPathData(pdata) {
   const result = [];
   let lastCommand = null, lastControlX = 0, lastControlY = 0;
@@ -402,6 +456,9 @@ function simplifyPathData(pdata) {
   return result;
 }
 
+/**
+ *
+ */
 export function parseSvgPath(string) {
   if (!string || string.length === 0) return [];
   try {

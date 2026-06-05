@@ -1,0 +1,273 @@
+:root {
+  --penpot-sidebar-width: 260px;
+  --penpot-topbar-height: 44px;
+  --penpot-toolsbar-height: 36px;
+  --penpot-rulers-size: 20px;
+}
+
+@media (max-width: 1023px) {
+  :root {
+    --penpot-sidebar-width: 220px;
+    --penpot-toolsbar-height: 36px;
+  }
+
+  .penpot-toolbar__toolbar-actions .penpot-toolbar__toolbar-btn[title^="Align"] {
+    display: none;
+  }
+
+  .penpot-toolbar__toolbar-actions .penpot-toolbar__separator:nth-of-type(2) {
+    display: none;
+  }
+
+  .penpot-toolbar__file-name {
+    max-width: 180px;
+  }
+}
+
+@media (max-width: 767px) {
+  :root {
+    --penpot-sidebar-width: 280px;
+    --penpot-topbar-height: 48px;
+    --penpot-toolsbar-height: 44px;
+  }
+
+  penpot-workspace {
+    position: relative;
+  }
+
+  .penpot-app__workspace {
+    position: relative;
+  }
+
+  .penpot-app__canvas-area {
+    position: relative;
+    width: 100%;
+  }
+
+  penpot-left-sidebar {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    width: var(--penpot-sidebar-width);
+    height: 100%;
+    z-index: var(--penpot-z-modal, 600);
+    transition: left var(--penpot-transition-normal, 0.2s ease);
+    box-shadow: none;
+  }
+
+  penpot-left-sidebar.penpot-sidebar--open {
+    left: 0;
+    box-shadow: var(--penpot-shadow-l, 0 8px 24px rgba(0,0,0,0.5));
+  }
+
+  penpot-right-sidebar {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: var(--penpot-sidebar-width);
+    height: 100%;
+    z-index: var(--penpot-z-modal, 600);
+    transition: right var(--penpot-transition-normal, 0.2s ease);
+    box-shadow: none;
+  }
+
+  penpot-right-sidebar.penpot-sidebar--open {
+    right: 0;
+    box-shadow: var(--penpot-shadow-l, 0 8px 24px rgba(0,0,0,0.5));
+  }
+
+  .penpot-sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: calc(var(--penpot-z-modal, 600) - 1);
+  }
+
+  .penpot-sidebar-backdrop.penpot-sidebar--visible {
+    display: block;
+  }
+
+  penpot-toolbar .penpot-toolbar__back-btn {
+    font-size: 0;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  penpot-toolbar .penpot-toolbar__back-btn::before {
+    content: '\\2190';
+    font-size: 16px;
+  }
+
+  .penpot-toolbar__toolbar-actions .penpot-toolbar__toolbar-btn[title^="Align"],
+  .penpot-toolbar__toolbar-actions .penpot-toolbar__toolbar-btn[title="Version History"],
+  .penpot-toolbar__toolbar-actions .penpot-toolbar__toolbar-btn[title="MCP Panel (Ctrl+Shift+M)"],
+  .penpot-toolbar__toolbar-actions .penpot-toolbar__toolbar-btn[title="Plugins (Ctrl+Shift+P)"] {
+    display: none;
+  }
+
+  penpot-toolbar {
+    gap: var(--penpot-spacing-xs, 4px) !important;
+    padding: 0 var(--penpot-spacing-s, 8px) !important;
+  }
+
+  .penpot-toolbar__file-name {
+    max-width: 120px;
+    font-size: var(--penpot-font-size-s, 11px);
+  }
+
+  .penpot-toolbar__toolbar-btn {
+    padding: var(--penpot-spacing-xs, 4px) !important;
+    font-size: var(--penpot-font-size-xs, 10px) !important;
+  }
+
+  .penpot-toolbar__toolbar-actions {
+    gap: 2px !important;
+  }
+
+  penpot-tools-bar {
+    height: var(--penpot-toolsbar-height) !important;
+  }
+
+  .penpot-tools__tool-btn {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 18px !important;
+  }
+
+  .penpot-mobile-sidebar-toggle {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: none;
+    border: 1px solid var(--penpot-border, #444);
+    border-radius: var(--penpot-radius-s, 4px);
+    color: var(--penpot-text, #e6e6e6);
+    cursor: pointer;
+    font-size: 16px;
+  }
+
+  .penpot-mobile-sidebar-toggle:hover {
+    background: var(--penpot-surface-high, #333);
+  }
+
+  penpot-dashboard .penpot-app__main {
+    width: 100%;
+  }
+
+  penpot-dashboard .penpot-app__toolbar {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: var(--penpot-topbar-height);
+    padding: var(--penpot-spacing-xs, 4px) var(--penpot-spacing-s, 8px);
+  }
+
+  penpot-dashboard .penpot-app__project-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: var(--penpot-spacing-s, 8px);
+  }
+
+  penpot-dashboard .penpot-app__file-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: var(--penpot-spacing-s, 8px);
+  }
+
+  .penpot-app__search-input {
+    width: 140px;
+  }
+
+  penpot-auth-screen {
+    padding: var(--penpot-spacing-m, 12px);
+  }
+
+  penpot-auth-screen .penpot-auth__container {
+    max-width: 100%;
+    margin: 0;
+    padding: var(--penpot-spacing-l, 16px);
+  }
+
+  .penpot-share__dialog,
+  .penpot-import__dialog,
+  .penpot-export__dialog,
+  .penpot-sc__dialog {
+    min-width: 0 !important;
+    width: calc(100vw - 2 * var(--penpot-spacing-l, 16px)) !important;
+    max-width: calc(100vw - 2 * var(--penpot-spacing-l, 16px)) !important;
+  }
+}
+
+@media (max-width: 479px) {
+  :root {
+    --penpot-topbar-height: 52px;
+    --penpot-toolsbar-height: 48px;
+  }
+
+  .penpot-toolbar__file-name {
+    max-width: 80px;
+    font-size: var(--penpot-font-size-xs, 10px);
+  }
+
+  penpot-toolbar .penpot-toolbar__toolbar-btn:not(.penpot-toolbar__primary) {
+    padding: var(--penpot-spacing-xs, 4px) !important;
+  }
+
+  .penpot-toolbar__toolbar-btn span,
+  .penpot-toolbar__toolbar-btn:not([id="undo-btn"]):not([id="redo-btn"]):not([id="component-btn"]):not([id="export-btn"]):not([id="share-btn"]):not([id="save-btn"]):not([id="comment-btn"]) {
+    /* Keep icon-only buttons compact */
+  }
+
+  .penpot-tools__tool-btn {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  .penpot-tools__zoom-controls span {
+    font-size: var(--penpot-font-size-xxs, 9px);
+    min-width: 32px;
+  }
+
+  penpot-dashboard .penpot-app__project-grid {
+    grid-template-columns: 1fr;
+  }
+
+  penpot-dashboard .penpot-app__file-grid {
+    grid-template-columns: 1fr;
+  }
+
+  penpot-auth-screen .penpot-auth__container {
+    padding: var(--penpot-spacing-s, 8px);
+    border-radius: 0;
+  }
+
+  penpot-auth-screen input {
+    font-size: 16px !important;
+  }
+}
+
+.penpot-mobile-sidebar-toggle {
+  display: none;
+}
+
+.penpot-hidden-mobile {
+  display: none !important;
+}
+
+.penpot-visible-mobile {
+  display: flex !important;
+}
+
+@media (min-width: 768px) {
+  .penpot-visible-mobile {
+    display: none !important;
+  }
+
+  .penpot-hidden-mobile {
+    display: flex !important;
+  }
+}

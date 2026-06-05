@@ -29,10 +29,16 @@ export const defaultInteraction = {
 
 export const defaultDelay = 600;
 
+/**
+ *
+ */
 export function makeDissolveAnimation(duration, easing) {
   return { 'animation-type': 'dissolve', duration: duration ?? 300, easing: easing ?? 'ease' };
 }
 
+/**
+ *
+ */
 export function makeSlideAnimation(duration, easing, way, direction, offsetEffect) {
   return {
     'animation-type': 'slide',
@@ -44,6 +50,9 @@ export function makeSlideAnimation(duration, easing, way, direction, offsetEffec
   };
 }
 
+/**
+ *
+ */
 export function makePushAnimation(duration, easing, direction) {
   return {
     'animation-type': 'push',
@@ -53,26 +62,44 @@ export function makePushAnimation(duration, easing, direction) {
   };
 }
 
+/**
+ *
+ */
 export function hasDelayQ(interaction) {
   return interaction?.['event-type'] === 'after-delay';
 }
 
+/**
+ *
+ */
 export function hasDestinationQ(interaction) {
   return ['navigate', 'open-overlay', 'toggle-overlay', 'close-overlay'].includes(interaction?.['action-type']);
 }
 
+/**
+ *
+ */
 export function hasOverlayPositionQ(interaction) {
   return ['open-overlay', 'toggle-overlay'].includes(interaction?.['action-type']);
 }
 
+/**
+ *
+ */
 export function hasUrlQ(interaction) {
   return interaction?.['action-type'] === 'open-url';
 }
 
+/**
+ *
+ */
 export function hasAnimationQ(interaction) {
   return interaction?.animation != null;
 }
 
+/**
+ *
+ */
 export function allowedAnimationQ(interaction, animation) {
   if (!animation) return true;
   const actionType = interaction?.['action-type'];
@@ -80,6 +107,9 @@ export function allowedAnimationQ(interaction, animation) {
   return true;
 }
 
+/**
+ *
+ */
 export function setEventType(interaction, eventType, shape) {
   if (!eventTypes.has(eventType)) throw new Error(`Invalid event type: ${eventType}`);
   if (interaction['event-type'] === eventType) return interaction;
@@ -90,6 +120,9 @@ export function setEventType(interaction, eventType, shape) {
   return { ...interaction, 'event-type': eventType };
 }
 
+/**
+ *
+ */
 export function setActionType(interaction, actionType) {
   if (!actionTypes.has(actionType)) throw new Error(`Invalid action type: ${actionType}`);
   if (interaction['action-type'] === actionType) return interaction;
@@ -121,66 +154,111 @@ export function setActionType(interaction, actionType) {
   }
 }
 
+/**
+ *
+ */
 export function setDestination(interaction, destination) {
   return { ...interaction, destination };
 }
 
+/**
+ *
+ */
 export function setOverlayPosition(interaction, position) {
   return { ...interaction, 'overlay-position': position };
 }
 
+/**
+ *
+ */
 export function setOverlayPosType(interaction, posType) {
   return { ...interaction, 'overlay-pos-type': posType };
 }
 
+/**
+ *
+ */
 export function setCloseClickOutside(interaction, value) {
   return { ...interaction, 'close-click-outside': value };
 }
 
+/**
+ *
+ */
 export function setBackgroundOverlay(interaction, value) {
   return { ...interaction, 'background-overlay': value };
 }
 
+/**
+ *
+ */
 export function setPreserveScroll(interaction, value) {
   return { ...interaction, 'preserve-scroll': value };
 }
 
+/**
+ *
+ */
 export function setPositionRelativeTo(interaction, id) {
   return { ...interaction, 'position-relative-to': id };
 }
 
+/**
+ *
+ */
 export function setUrl(interaction, url) {
   return { ...interaction, url };
 }
 
+/**
+ *
+ */
 export function setDelay(interaction, delay) {
   return { ...interaction, delay };
 }
 
+/**
+ *
+ */
 export function setAnimation(interaction, animation) {
   if (!allowedAnimationQ(interaction, animation)) return interaction;
   return { ...interaction, animation };
 }
 
+/**
+ *
+ */
 export function removeAnimation(interaction) {
   const { animation, ...rest } = interaction;
   return rest;
 }
 
+/**
+ *
+ */
 export function removeDestination(interaction) {
   const { destination, ...rest } = interaction;
   return rest;
 }
 
+/**
+ *
+ */
 export function removeDelay(interaction) {
   const { delay, ...rest } = interaction;
   return rest;
 }
 
+/**
+ *
+ */
 export function makeInteraction(attrs = {}) {
   return { ...defaultInteraction, ...attrs };
 }
 
+/**
+ *
+ */
 export function interactionEq(a, b) {
   if (a == null && b == null) return true;
   if (a == null || b == null) return false;
@@ -190,6 +268,9 @@ export function interactionEq(a, b) {
     && a.url === b.url;
 }
 
+/**
+ *
+ */
 export function calcOverlayPosInitial(frame, shape, positionType, positionRelativeTo, objects) {
   const frameRect = frame.selrect ?? frame;
   const shapeRect = shape.selrect ?? shape;
@@ -218,6 +299,9 @@ export function calcOverlayPosInitial(frame, shape, positionType, positionRelati
   }
 }
 
+/**
+ *
+ */
 export function validateInteraction(interaction) {
   if (!interaction) return null;
   const errors = [];
@@ -229,6 +313,9 @@ export function validateInteraction(interaction) {
   return errors.length > 0 ? errors : null;
 }
 
+/**
+ *
+ */
 export function isValidInteractionQ(interaction) {
   return !validateInteraction(interaction);
 }

@@ -14,15 +14,24 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 const registry = new Map();
 
+/**
+ *
+ */
 function registerSchema(type, schema) {
   registry.set(type, schema);
   return schema;
 }
 
+/**
+ *
+ */
 export function lookup(type) {
   return registry.get(type);
 }
 
+/**
+ *
+ */
 export function validate(type, value) {
   const schema = typeof type === "string" ? registry.get(type) : type;
   if (!schema) return true;
@@ -37,6 +46,9 @@ export function validate(type, value) {
   return true;
 }
 
+/**
+ *
+ */
 export function valid(type, value) {
   try {
     return validate(type, value);
@@ -45,6 +57,9 @@ export function valid(type, value) {
   }
 }
 
+/**
+ *
+ */
 export function check(type, value, { hint = "check error", code = "data-validation" } = {}) {
   if (!validate(type, value)) {
     const errors = explain(type, value);
@@ -58,10 +73,16 @@ export function check(type, value, { hint = "check error", code = "data-validati
   return value;
 }
 
+/**
+ *
+ */
 export function checkFn(type, opts = {}) {
   return (value) => check(type, value, opts);
 }
 
+/**
+ *
+ */
 export function explain(type, value) {
   const schema = typeof type === "string" ? registry.get(type) : type;
   if (!schema) return null;
@@ -88,16 +109,25 @@ export function explain(type, value) {
   return null;
 }
 
+/**
+ *
+ */
 export function simplifyErrors(errors) {
   if (!errors) return null;
   return errors.map((e) => e.message || String(e));
 }
 
+/**
+ *
+ */
 export function validationErrors(value, type) {
   const errors = explain(type, value);
   return errors ? simplifyErrors(errors) : null;
 }
 
+/**
+ *
+ */
 export function coerce(typeOrSchema, value, transformer) {
   if (transformer) {
     return transformer(value);
@@ -105,6 +135,9 @@ export function coerce(typeOrSchema, value, transformer) {
   return decode(typeOrSchema, value);
 }
 
+/**
+ *
+ */
 export function coercer(type, opts = {}) {
   return (data) => {
     const decoded = coerce(type, data);
@@ -112,6 +145,9 @@ export function coercer(type, opts = {}) {
   };
 }
 
+/**
+ *
+ */
 export function validator(type) {
   const schema = typeof type === "string" ? registry.get(type) : type;
   if (!schema) return () => true;
@@ -126,6 +162,9 @@ export function validator(type) {
   return () => true;
 }
 
+/**
+ *
+ */
 export function lazyValidator(type) {
   let cached = null;
   return (value) => {
@@ -134,18 +173,27 @@ export function lazyValidator(type) {
   };
 }
 
+/**
+ *
+ */
 export function parseLong(v) {
   if (typeof v !== "string") return v;
   const n = parseInt(v, 10);
   return isNaN(n) ? v : n;
 }
 
+/**
+ *
+ */
 export function parseDouble(v) {
   if (typeof v !== "string") return v;
   const n = parseFloat(v);
   return isNaN(n) ? v : n;
 }
 
+/**
+ *
+ */
 export function parseBoolean(v) {
   if (typeof v !== "string") return v;
   const lower = v.toLowerCase();
@@ -154,6 +202,9 @@ export function parseBoolean(v) {
   return v;
 }
 
+/**
+ *
+ */
 export function parseKeyword(v) {
   if (typeof v === "string") {
     const kebab = v.replace(/([A-Z])/g, (_, c) => `-${c.toLowerCase()}`);
@@ -162,16 +213,25 @@ export function parseKeyword(v) {
   return v;
 }
 
+/**
+ *
+ */
 export function parseEmail(s) {
   if (typeof s !== "string") return null;
   const match = s.match(EMAIL_RE);
   return match ? match[0] : null;
 }
 
+/**
+ *
+ */
 export function emailStringP(s) {
   return typeof s === "string" && EMAIL_RE.test(s);
 }
 
+/**
+ *
+ */
 function compileIntSchema({ max, min } = {}) {
   let pred = (v) => Number.isInteger(v);
   if (min !== undefined) {
@@ -185,6 +245,9 @@ function compileIntSchema({ max, min } = {}) {
   return pred;
 }
 
+/**
+ *
+ */
 function compileDoubleSchema({ max, min } = {}) {
   let pred = (v) => typeof v === "number" && !Number.isNaN(v);
   if (min !== undefined) {
@@ -198,6 +261,9 @@ function compileDoubleSchema({ max, min } = {}) {
   return pred;
 }
 
+/**
+ *
+ */
 function compileNumberSchema({ max, min } = {}) {
   let pred = (v) => typeof v === "number";
   if (min !== undefined) {
@@ -211,6 +277,9 @@ function compileNumberSchema({ max, min } = {}) {
   return pred;
 }
 
+/**
+ *
+ */
 function compileTextSchema({ min, max } = {}) {
   return (v) => {
     if (typeof v !== "string") return false;
@@ -473,6 +542,9 @@ registerSchema("contains-any", {
   },
 });
 
+/**
+ *
+ */
 export function encode(type, value, transformer) {
   const schema = typeof type === "string" ? registry.get(type) : type;
   if (!schema) return value;
@@ -484,6 +556,9 @@ export function encode(type, value, transformer) {
   return value;
 }
 
+/**
+ *
+ */
 export function decode(type, value, transformer) {
   const schema = typeof type === "string" ? registry.get(type) : type;
   if (!schema) return value;
@@ -495,6 +570,9 @@ export function decode(type, value, transformer) {
   return value;
 }
 
+/**
+ *
+ */
 export function encoder(type) {
   const schema = typeof type === "string" ? registry.get(type) : type;
   if (!schema?.typeProperties) return (v) => v;
@@ -502,6 +580,9 @@ export function encoder(type) {
   return enc ? (v) => enc(v) : (v) => v;
 }
 
+/**
+ *
+ */
 export function decoder(type) {
   const schema = typeof type === "string" ? registry.get(type) : type;
   if (!schema?.typeProperties) return (v) => v;
@@ -509,6 +590,9 @@ export function decoder(type) {
   return dec ? (v) => dec(v) : (v) => v;
 }
 
+/**
+ *
+ */
 export function lazyDecoder(type) {
   let cached = null;
   return (v) => {
@@ -520,6 +604,9 @@ export function lazyDecoder(type) {
 const xfFilterWordStrings = (arr) =>
   arr.filter((x) => typeof x === "string" && x.length > 0 && x.trim().length > 0);
 
+/**
+ *
+ */
 function compileSetSchema({ min, max, kind } = {}) {
   const childPred = kind
     ? typeof kind === "function"
@@ -565,6 +652,9 @@ function compileSetSchema({ min, max, kind } = {}) {
   };
 }
 
+/**
+ *
+ */
 function compileVecSchema({ min, max, kind } = {}) {
   const childPred = kind
     ? typeof kind === "function"
@@ -610,6 +700,9 @@ function compileVecSchema({ min, max, kind } = {}) {
   };
 }
 
+/**
+ *
+ */
 function compileOneOfSchema({ format } = {}) {
   return (options) => {
     const optsSet = new Set(options);
@@ -627,6 +720,9 @@ function compileOneOfSchema({ format } = {}) {
   };
 }
 
+/**
+ *
+ */
 function compileContainsAnySchema({ strict } = {}) {
   return (choices) => {
     const pred = strict

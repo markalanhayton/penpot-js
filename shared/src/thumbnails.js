@@ -6,18 +6,30 @@
 
 import * as uuid from "./uuid.js";
 
+/**
+ *
+ */
 export function fmtObjectId(object) {
   return fmtObjectIdParts(object.fileId, object.pageId, object.frameId, object.tag);
 }
 
+/**
+ *
+ */
 export function fmtObjectIdParts(fileId, pageId, frameId, tag) {
   return `${fileId}/${pageId}/${frameId}/${tag}`;
 }
 
+/**
+ *
+ */
 export function isFileId(objectId, fileId) {
   return objectId.startsWith(`${fileId}/`);
 }
 
+/**
+ *
+ */
 export function parseObjectId(objectId) {
   const [fileId, pageId, frameId, tag] = objectId.split("/");
   return {
@@ -28,6 +40,9 @@ export function parseObjectId(objectId) {
   };
 }
 
+/**
+ *
+ */
 export function getFileId(objectId) {
   const idx = objectId.indexOf("/");
   if (idx < 0) return null;

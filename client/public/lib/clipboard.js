@@ -5,7 +5,8 @@ const CLIPBOARD_MIME_TYPE = 'application/json+penpot';
 export function copyShapesToClipboard(shapes) {
   const data = JSON.stringify({ type: 'penpot-shapes', shapes });
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    return navigator.clipboard.writeText(data).catch(() => {
+    return navigator.clipboard.writeText(data).catch((err) => {
+      console.warn('[clipboard] writeText failed, using fallback:', err.message);
       fallbackCopyToClipboard(data);
     });
   }
@@ -14,7 +15,8 @@ export function copyShapesToClipboard(shapes) {
 
 export function copyTextToClipboard(text) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    return navigator.clipboard.writeText(text).catch(() => {
+    return navigator.clipboard.writeText(text).catch((err) => {
+      console.warn('[clipboard] writeText failed, using fallback:', err.message);
       fallbackCopyToClipboard(text);
     });
   }
@@ -71,7 +73,7 @@ function tryParsePenpotData(text) {
     if (parsed.type === 'penpot-shapes' && Array.isArray(parsed.shapes)) {
       return { source: 'penpot', shapes: parsed.shapes };
     }
-  } catch {}
+  } catch (err) { console.warn('[clipboard] penpot-shapes parse failed:', err.message); }
   if (text.trim().startsWith('<svg') || text.trim().startsWith('<?xml')) {
     return { source: 'svg', text };
   }

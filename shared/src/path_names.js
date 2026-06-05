@@ -4,6 +4,9 @@
 //
 // Copyright (c) KALEIDOS INC
 
+/**
+ *
+ */
 export function splitPath(pathStr, separator = "/") {
   return pathStr
     .split(separator)
@@ -11,6 +14,9 @@ export function splitPath(pathStr, separator = "/") {
     .filter((s) => s.length > 0);
 }
 
+/**
+ *
+ */
 export function joinPath(path, separator = "/", withSpaces = true) {
   if (withSpaces) {
     return path.join(` ${separator} `);
@@ -18,6 +24,9 @@ export function joinPath(path, separator = "/", withSpaces = true) {
   return path.join(separator);
 }
 
+/**
+ *
+ */
 export function splitGroupName(
   pathStr,
   separator = "/",
@@ -29,14 +38,23 @@ export function splitGroupName(
   return [groupStr, name];
 }
 
+/**
+ *
+ */
 export function joinPathWithDot(pathVec) {
   return pathVec.join("\u00A0\u2022\u00A0");
 }
 
+/**
+ *
+ */
 export function cleanPath(path) {
   return joinPath(splitPath(path));
 }
 
+/**
+ *
+ */
 export function mergePathItem(path, name) {
   if (path && path.length > 0) {
     if (name && name.length > 0) {
@@ -47,6 +65,9 @@ export function mergePathItem(path, name) {
   return name;
 }
 
+/**
+ *
+ */
 export function mergePathItemWithDot(path, name) {
   if (path && path.length > 0) {
     if (name && name.length > 0) {
@@ -57,6 +78,9 @@ export function mergePathItemWithDot(path, name) {
   return name;
 }
 
+/**
+ *
+ */
 export function compactPath(path, maxLength, dot = false) {
   const pathSplit = splitPath(path);
   const lastItem = pathSplit[pathSplit.length - 1];
@@ -77,6 +101,9 @@ export function compactPath(path, maxLength, dot = false) {
   return [otherPath, lastItem, false];
 }
 
+/**
+ *
+ */
 export function butlastPath(path) {
   const split = splitPath(path);
   if (split.length === 1) {
@@ -85,6 +112,9 @@ export function butlastPath(path) {
   return joinPath(split.slice(0, -1));
 }
 
+/**
+ *
+ */
 export function butlastPathWithDots(path) {
   const split = splitPath(path);
   if (split.length === 1) {
@@ -93,11 +123,17 @@ export function butlastPathWithDots(path) {
   return joinPathWithDot(split.slice(0, -1));
 }
 
+/**
+ *
+ */
 export function lastPath(path) {
   const split = splitPath(path);
   return split[split.length - 1];
 }
 
+/**
+ *
+ */
 export function insidePath(child, parent) {
   const childPath = splitPath(child);
   const parentPath = splitPath(parent);
@@ -107,6 +143,9 @@ export function insidePath(child, parent) {
   );
 }
 
+/**
+ *
+ */
 export function splitByLastPeriod(s) {
   const lastPeriod = s.lastIndexOf(".");
   if (lastPeriod >= 0) {
@@ -115,6 +154,9 @@ export function splitByLastPeriod(s) {
   return [s, ""];
 }
 
+/**
+ *
+ */
 function sortByChildren(segments, separator) {
   return [...segments].sort((a, b) => {
     const aLen = splitPath(a.name, separator).length;
@@ -125,6 +167,9 @@ function sortByChildren(segments, separator) {
   });
 }
 
+/**
+ *
+ */
 function groupByFirstSegment(segments, separator) {
   const groups = new Map();
   for (const segment of segments) {
@@ -143,11 +188,17 @@ function groupByFirstSegment(segments, separator) {
   return groups;
 }
 
+/**
+ *
+ */
 function sortAndGroupSegments(segments, separator) {
   const sorted = sortByChildren(segments, separator);
   return groupByFirstSegment(sorted, separator);
 }
 
+/**
+ *
+ */
 function buildTreeNode(segmentName, remainingSegments, separator, parentPath, depth) {
   const currentPath = parentPath
     ? `${parentPath}.${segmentName}`
@@ -184,6 +235,9 @@ function buildTreeNode(segmentName, remainingSegments, separator, parentPath, de
   };
 }
 
+/**
+ *
+ */
 export function buildTreeRoot(segments, separator) {
   const grouped = sortAndGroupSegments(segments, separator);
   return Array.from(grouped.entries()).map(([segmentName, remainingSegments]) =>

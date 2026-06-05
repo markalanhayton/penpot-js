@@ -56,6 +56,8 @@ import { init, subscribe, current, navigate } from './lib/router.js';
 import { cmd, setAuthToken, clearAuthToken } from './lib/rpc.js';
 import { appStore } from './lib/store.js';
 import { connectWS, disconnectWS } from './lib/ws.js';
+import { initResponsiveLayout } from './lib/responsive.js';
+import { DEFAULT_FLAGS } from './lib/flags.js';
 
 function getCookie(name) {
   const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
@@ -120,6 +122,7 @@ function render(route) {
 
 async function bootstrap() {
   init();
+  initResponsiveLayout();
 
   try {
     const serverFlags = await cmd('get-enabled-flags');
@@ -129,7 +132,8 @@ async function bootstrap() {
     } else {
       appStore.set('flags', { ...DEFAULT_FLAGS });
     }
-  } catch {
+  } catch (err) {
+    console.warn('[app] get-enabled-flags failed, using defaults:', err.message);
     appStore.set('flags', { ...DEFAULT_FLAGS });
   }
 

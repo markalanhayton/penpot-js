@@ -208,40 +208,6 @@ export function createRpcHandler(pool) {
     if (contentType.includes('multipart/form-data')) {
       params = {};
       try {
-        const data = await request.file();
-        if (data) {
-          const fileFields = {};
-          const otherFields = {};
-
-          if (data.fields) {
-            for (const [key, value] of Object.entries(data.fields)) {
-              if (value && typeof value === 'object' && value.file) {
-                fileFields[key] = value;
-              } else {
-                const val = value?.value ?? value?.toString?.() ?? value;
-                try { otherFields[key] = JSON.parse(val); } catch { otherFields[key] = val; }
-              }
-            }
-          }
-
-          if (data.file) {
-            const tmpFile = data.file;
-            const tmpMtype = tmpFile.mimetype || data.mimetype || 'application/octet-stream';
-            const tmpSize = tmpFile.file?.bytesRead ?? tmpFile.file?.byteLength ?? 0;
-            params = {
-              ...otherFields,
-              content: {
-                path: tmpFile.filepath,
-                mtype: tmpMtype,
-                size: tmpSize,
-                filename: tmpFile.filename || 'upload',
-              },
-            };
-          } else {
-            params = otherFields;
-          }
-        }
-
         const parts = request.parts ? request.parts() : null;
         if (parts) {
           for await (const part of parts) {
@@ -258,7 +224,7 @@ export function createRpcHandler(pool) {
             }
           }
         }
-      } catch { /* multipart parsing failed */ }
+      } catch (err) { console.warn('[dispatcher] multipart parsing failed:', err.message); }
     } else if (typeof rawBody === 'string' && contentType.includes('transit+json')) {
       // Transit+JSON request — decode with Transit parser
       params = decodeRequest(rawBody, contentType);
@@ -269,9 +235,7 @@ export function createRpcHandler(pool) {
       // Plain string body — try JSON parse then convert keys
       try {
         params = toKebabCase(JSON.parse(rawBody));
-      } catch {
-        params = { body: rawBody };
-      }
+      } catch (err) { console.warn('[dispatcher] plain body JSON parse failed:', err.message); params = { body: rawBody }; }
     } else {
       params = {};
     }

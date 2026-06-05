@@ -511,7 +511,7 @@ export class PenpotMcpPanel extends PenpotElement {
         if (prop.type === 'number') value = Number(value);
         else if (prop.type === 'boolean') value = el.checked;
         else if (prop.type === 'object' || prop.type === 'array') {
-          try { value = JSON.parse(value); } catch { /* keep as string */ }
+          try { value = JSON.parse(value); } catch (err) { console.warn('[mcp] JSON parse for', key, 'failed, keeping as string:', err.message); }
         }
         if (value !== '' || required.includes(key)) args[key] = value;
       }

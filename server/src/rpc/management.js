@@ -113,9 +113,7 @@ async function readLocalTemplateFile(filePath) {
   try {
     const content = await readFile(filePath);
     return Buffer.from(content);
-  } catch {
-    return null;
-  }
+  } catch (err) { console.warn('[management] readFile failed for', filePath, err.message); return null; }
 }
 
 function checkEditionPermissions(pool, profileId, teamId) {

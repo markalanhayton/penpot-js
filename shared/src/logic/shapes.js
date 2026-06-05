@@ -6,6 +6,9 @@ export const TEXT_TYPOGRAPHY_STYLE_ATTRS = new Set([
   'grow-type',
 ]);
 
+/**
+ *
+ */
 export function generateUpdateShapes(changes, ids, updateFn, objects, options = {}) {
   const { attrs, changedSubAttr, ignoreTree, ignoreTouched, withObjects = false, translation = false } = options;
   let result = { ...changes };
@@ -34,27 +37,45 @@ export function generateUpdateShapes(changes, ids, updateFn, objects, options = 
   return result;
 }
 
+/**
+ *
+ */
 export function generateDeleteShapes(changes, file, page, objects, ids, options = {}) {
   return [new Set(), changes];
 }
 
+/**
+ *
+ */
 export function generateRelocate(changes, parentId, toIndex, ids, options = {}) {
   return changes;
 }
 
+/**
+ *
+ */
 function updateShapes(changes, ids, updateFn, options) {
   return changes;
 }
 
+/**
+ *
+ */
 function gridLayoutQ(objects, id) {
   const shape = objects?.[id];
   return shape?.layout === 'grid';
 }
 
+/**
+ *
+ */
 function assignCellPositions(changes, ids, objects) {
   return changes;
 }
 
+/**
+ *
+ */
 function generateUnapplyTokens(changes, objects, changedSubAttr) {
   return changes;
 }
