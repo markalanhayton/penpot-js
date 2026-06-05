@@ -95,3 +95,14 @@
 /.idea
 /.claude
 /.playwright-mcp
+
+# JS port — runtime and test artifacts
+/assets/            # file storage objects (thumbnails, uploads, etc.)
+/client/test-results/
+/client/penpot.sqlite
+/client/penpot.sqlite-shm
+/client/penpot.sqlite-wal
+/penpot.sqlite
+/penpot.sqlite-shm
+/penpot.sqlite-wal
+/server/test-debug.sqlite
