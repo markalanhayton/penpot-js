@@ -1,6 +1,6 @@
 # Client Migration Plan: ClojureScript → ES JS + Web Components
 
-**Date**: 2026-05-31
+**Date**: 2026-06-06
 **Status**: P0–P2 core complete, P3+ features almost done, ~100% functional parity (see tracking.md §Phase 2b Gap Analysis)
 **Constraint**: No third-party frameworks. No TypeScript. No React. Pure Modern ES JS (ES2022+), HTML5, CSS3, Web Components, Node.js ESM.
 

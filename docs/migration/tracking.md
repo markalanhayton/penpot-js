@@ -1,6 +1,6 @@
 # Penpot Migration Tracking
 
-> Last updated: 2026-05-31
+> Last updated: 2026-06-06
 
 Migration from Clojure/ClojureScript to pure ES2022+ JavaScript.
 Full plan: [`migration-plan.md`](migration-plan.md)
@@ -273,7 +273,7 @@ Full plan: [`migration-plan.md`](migration-plan.md)
 | 3 | Redis pub/sub | ~~P1~~ Done | Replaced with pure Node.js EventBus (`ws/msgbus.js`) — SQLite is single-instance, no Redis needed |
 | FTS5 full-text search | P2 | `search-files` uses FTS5 with LIKE fallback; migration 0009 |
 | File GC cross-library checks | ~~P2~~ Done | Cross-library component GC implemented in scheduler |
-| ~~74 failing tests~~ | ~~P2~~ Done | All 1,152 tests pass (1 pre-existing fail in integration.test.js) |
+| ~~74 failing tests~~ | ~~P2~~ Done | All 1,137 tests pass (1 pre-existing fail in integration.test.js) |
 | Wire compatibility tests | ✅ **Complete** | 34 tests in `test/wire-compat.test.js`; auto-skips when backends offline |
 | Migrations parity | ✅ **Complete** | 22 SQL migrations achieving full PG schema parity: indexes, constraints, triggers, data migrations, cascade logic, deletion protection, CHECK constraints, PK restructures, expression indexes, access token scopes, file pinning |
 
@@ -282,9 +282,9 @@ Full plan: [`migration-plan.md`](migration-plan.md)
 | Metric | Value |
 |--------|-------|
 | Test files | 80 |
-| Test cases | 1,152 |
+| Test cases | 1,137 |
 | Handler-level RPC tests | 20+ new files covering teams, profiles, comments, fonts, media, webhooks, viewer, access tokens, binfile, verify-token, search, files, files-update, files-snapshots, files-thumbnails, management, demo, feedback, export, email-filter, feature-flags |
-| Passing | 1,151 |
+| Passing | 1,136 |
 | Failing | 1 (pre-existing: `returns enabled flags from RPC` in integration.test.js) |
 | Note | All tests pass; previously 1 failure in `test-debug-mig.mjs` has been resolved |
 | Cancelled | 0 |
@@ -495,8 +495,8 @@ shared/ (Phase 1) ✅
 | Lines of JS | ~25,900 | ~16,900 | ~31,400 (11,200 lib + 19,200 components + 600 tools/other + ~400 responsive) |
 | Lines of original code | ~67,000 | ~48,000 | ~129,000 |
 | Port completion | 100% | ~95% | ~100% |
-| Test suites | 232 | 339 | 55 E2E spec files, 767 E2E tests |
-| Test cases passing | 1,596 | 1,152 | 767 E2E tests |
+| Test suites | 232 | 333 | 55 E2E spec files, 767 E2E tests |
+| Test cases passing | 1,592 | 1,137 | 767 E2E tests |
 | Test cases failing | 0 | 0 | 0 |
 
 ---
@@ -785,7 +785,7 @@ shared/ (Phase 1) ✅
 
 ## Phase 2b: Client Functional Correctness Audit
 
-> Last updated: 2026-05-30
+> Last updated: 2026-06-06
 > 
 > Comprehensive audit of why buttons don't work despite ~100% feature coverage. Root causes: unwired events, hardcoded fakes, and silent error swallowing.
 

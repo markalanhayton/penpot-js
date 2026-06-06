@@ -12,7 +12,7 @@ Penpot JS port migration from Clojure/ClojureScript to modern ES2022+ JavaScript
 | [`server-reference.md`](server-reference.md) | Server (Fastify + SQLite) — architecture, patterns, running, testing |
 | [`server-next-steps.md`](server-next-steps.md) | Server next steps — pending features, schema parity gaps, known issues |
 | [`exporter.md`](exporter.md) | Exporter service — Playwright renderer, HTTP API, configuration |
-| [`shared-status.md`](shared-status.md) | Shared modules status — 151 JS files, 1,596 tests, Phase 1 complete |
+| [`shared-status.md`](shared-status.md) | Shared modules status — 150 JS files, 1,592 tests, Phase 1 complete |
 | [`root-agents.md`](root-agents.md) | Root agent guide — architecture, modules, dependency graph |
 
 ## Module Directory Mapping

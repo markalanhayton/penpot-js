@@ -422,7 +422,7 @@ describe('Rate Limiter', () => {
 
 ### 5.1 Overview
 
-The `shared/` module has 232 test suites with 1,596 assertions across 65 test files. Tests cover pure functions — geometry calculations, type definitions, data transformations, codecs, and validation logic.
+The `shared/` module has 232 test suites with 1,592 assertions across 64 test files. Tests cover pure functions — geometry calculations, type definitions, data transformations, codecs, and validation logic.
 
 ### 5.2 Test Organization
 

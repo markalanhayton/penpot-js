@@ -369,7 +369,7 @@ Testing tools available:
 - `components/tools/base.js` — `#getBounds(points)` delegates to `pointsToRect()` from `@penpot/shared/geom/rect.js`
 - `components/tools/pen-bezier.js` — `#getBounds()` delegates to `pointsToRect()` from `@penpot/shared/geom/rect.js`
 
-**Tests:** 61 new tests (69 total in file suite), all passing. Full shared suite: 1,596 tests, 0 failures.
+**Tests:** 61 new tests (69 total in file suite), all passing. Full shared suite: 1,592 tests, 0 failures.
 
 **Acceptance criteria:**
 - [x] All 36+ missing functions ported from upstream `common/src/app/common/types/file.cljc`
@@ -540,7 +540,7 @@ Testing tools available:
 **Acceptance criteria:**
 - [x] 600+ E2E tests across 40+ spec files — 767 tests, 55 specs
 - [x] All existing features covered by at least 1 E2E test
-- [x] No test flakiness (all tests pass 10/10 runs) — shared: 1,596 pass ×10, server: 1,117 pass ×10, exporter: 22 pass ×10
+- [x] No test flakiness (all tests pass 10/10 runs) — shared: 1,592 pass ×10, server: 1,117 pass ×10, exporter: 22 pass ×10
 
 ---
 
@@ -647,7 +647,7 @@ Transit roundtrip tests (112 tests across 19 test suites):
 - [x] Handler-level tests for all 2 files_share commands
 - [x] Handler-level tests for all 4 webhooks commands
 - [x] Handler-level tests for both files_update commands (already existed)
-- [x] 950+ passing tests — ✅ Currently at 1,152 (1 pre-existing fail in integration.test.js)
+- [x] 950+ passing tests — ✅ Currently at 1,137 (1 pre-existing fail in integration.test.js)
 - [x] All edge cases (authorization, validation, not-found) for above modules covered
 
 ---

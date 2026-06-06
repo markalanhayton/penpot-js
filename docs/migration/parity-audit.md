@@ -1,6 +1,6 @@
 # Parity Audit: JS Port vs Upstream
 
-> Last updated: 2026-05-30
+> Last updated: 2026-06-06
 
 This document tracks the functional parity between the upstream Penpot codebase (Clojure/ClojureScript) and the JS port (penpot-js). It covers all major modules and identifies what is ported, what is intentionally skipped, and what gaps remain.
 
@@ -203,7 +203,7 @@ This document tracks the functional parity between the upstream Penpot codebase 
 | Logic | 5 | 5 | 0 | 0 | 0 |
 | **Total** | **134** | **134** | **0** | **0** | **4** |
 
-**shared/ completion: 100%** (all modules fully ported; 0 stubs; 0 missing; 4 intentionally excluded JVM-only modules; ~29,600 lines JS; 1,596 tests)
+**shared/ completion: 100%** (all modules fully ported; 0 stubs; 0 missing; 4 intentionally excluded JVM-only modules; ~29,600 lines JS; 1,592 tests)
 
 **Recent update (SC-1):** `types/file.js` expanded from 19 → 51 exported functions. 32 new functions ported from upstream `common/src/app/common/types/file.cljc`, including all component lookup helpers (`findRefShape`, `findNearMatch`, `findRefComponent`, `findRemoteShape`, `getComponentContainer`, `getComponentShape`, `getRefShape`, `getShapeInCopy`), component lifecycle functions (`loadComponentObjects`, `deleteComponentData`, `restoreComponent`, `purgeComponent`), asset management (`usesAssetQ`, `findAssetTypeUsages`, `usedInQ`, `usedAssetsChangedSince`, `absorbAssets`, `detachExternalReferences`), tree traversal (`updateObjectsTree`), ref chain helpers (`getRefChainUntilTargetRef`, `getTouchedFromRefChainUntilTargetRef`), and debug helpers (`dumpShape`, `dumpComponent`). Stub implementations in 4 consumer files replaced with real implementations. Bug fix: `Object.assign` mutation → spread syntax; `detachText` was a no-op → now properly strips external refs from text nodes.
 
@@ -477,7 +477,7 @@ Tests: 22 tests in 1 file, 6 test suites.
 |---|---|
 | Test files | 65 |
 | Test suites | 232 |
-| Test cases | 1,596 |
+| Test cases | 1,592 |
 | Failures | 0 |
 
 Coverage spans: geometry (point, rect, matrix, shapes, flex_layout bounds, grid layout), types (color, component, container, file, fills, path, shape_tree, text, variant, identity, tokens_lib, typographies_list), files (changes, changes_builder, helpers_stats_focus_indices, page_diff_tokens, builder, shapes_builder, migrations, repair), colors, data (undo_stack), core (UUID, time, math, json, encoding, exceptions, flags, features, observable, schema, modifiers, migration, transit, media), text (content tree, per-range styles, updateTextRange, updateTextAttrs, createDefaultContent, isContentTree, contentToPlainText, decorateRangeInfo), bool-ops (convex decomposition, Sutherland-Hodgman, point-in-polygon), path (svg_parser complex).
@@ -903,7 +903,7 @@ Implemented the full file GC pipeline matching upstream's `process-file!` flow, 
 
 ## 9. Code Quality Audit — Mock Data, Fake Stubs, and Error Handling
 
-> Last updated: 2026-05-25
+> Last updated: 2026-06-06
 
 A systematic audit of the JS port revealed instances of hardcoded mock data, stub implementations masquerading as real functionality, silent error swallowing, and missing `'use strict'` directives. All have been addressed except as noted below.
 
@@ -1005,7 +1005,7 @@ Notable bugs found and fixed during porting:
 
 ## 10. Functional Correctness Audit — Why Buttons Don't Work
 
-> Last updated: 2026-05-25
+> Last updated: 2026-06-06
 
 The parity audit shows ~100% feature **coverage** (code exists for every upstream feature), but coverage ≠ correctness. A systematic audit of the JS client codebase revealed three root causes for broken functionality: **unwired events**, **hardcoded fakes**, and **silent error swallowing**. All three have been partially fixed, but gaps remain.
 
