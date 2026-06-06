@@ -226,8 +226,8 @@ export class PenpotRightSidebar extends PenpotElement {
 
     html += `<div class="penpot-rside__properties-section">`;
     html += `<h4>Size${this.#overrideDot('geometry-group')}</h4>`;
-    html += `<div class="penpot-rside__prop-row"><span class="penpot-rside__prop-label">W</span><input class="penpot-rside__prop-input" value="${Math.round(s.width || 0)}" type="number" data-prop="w" id="prop-w"></div>`;
-    html += `<div class="penpot-rside__prop-row"><span class="penpot-rside__prop-label">H</span><input class="penpot-rside__prop-input" value="${Math.round(s.height || 0)}" type="number" data-prop="h" id="prop-h"></div>`;
+    html += `<div class="penpot-rside__prop-row"><span class="penpot-rside__prop-label">W</span><input class="penpot-rside__prop-input" value="${Math.round(s.width || 0)}" type="number" min="0" data-prop="w" id="prop-w"></div>`;
+    html += `<div class="penpot-rside__prop-row"><span class="penpot-rside__prop-label">H</span><input class="penpot-rside__prop-input" value="${Math.round(s.height || 0)}" type="number" min="0" data-prop="h" id="prop-h"></div>`;
     html += `<div class="penpot-rside__prop-row" style="gap:4px;margin-top:4px;">`;
     html += `<button class="penpot-rside__bool-btn" data-action="flip-h" title="Flip Horizontal" style="flex:1;">\u2194 Flip H</button>`;
     html += `<button class="penpot-rside__bool-btn" data-action="flip-v" title="Flip Vertical" style="flex:1;">\u2195 Flip V</button>`;

@@ -118,7 +118,7 @@ This document tracks the functional parity between the upstream Penpot codebase 
 | `types/grid.cljc` | `types/grid.js` | Full |
 | `types/library.cljc` | `types/library.js` | Full |
 | `types/modifiers.cljc` | `modifiers.js` (top-level) | Full |
-| `types/nitrate_permissions.cljc` | `types/nitrate_permissions.js` | Full |
+| ~~`types/nitrate_permissions.cljc`~~ | ~~`types/nitrate_permissions.js`~~ | **Removed in v2.17** (nitrate deprecated) |
 | `types/objects_map.cljc` | `objects_map.js` (top-level) | Full |
 | `types/organization.cljc` | `types/organization.js` | Full |
 | `types/page.cljc` | `types/page.js` | Full |
@@ -343,7 +343,7 @@ This document tracks the functional parity between the upstream Penpot codebase 
 | Path editor | Full (anchor editing, toolbar, shortcuts) |
 | Text v3 (per-range styles) | Full (content tree model, tspan rendering, contentEditable commit) |
 | Mobile/responsive layout | Full (3-tier breakpoints, sidebar overlay, touch gestures) |
-| E2E tests | 42 spec files, 605+ tests, all passing |
+| E2E tests | 55 spec files, 767 tests, all passing |
 | Unit tests | 55 |
 | **Overall** | **~100% functional parity** |
 
@@ -400,7 +400,7 @@ Lines comparison: ~35,000 lines (JS + CSS) vs ~129,000 lines (cljs + scss). The 
 | `feedback` | `rpc/feedback.js` | Full |
 | `audit` | `rpc/audit.js` | Full |
 | `management` | `rpc/management.js` | Full |
-| `nitrate` (enterprise) | `rpc/nitrate.js` | Full (stubs) |
+| ~~`nitrate` (enterprise)~~ | ~~`rpc/nitrate.js`~~ | **Removed in v2.17** (out of scope) |
 | `ldap` | `rpc/ldap.js` | Full (stubs) |
 | `viewer` | `rpc/viewer.js` | Full |
 | `demo` | `rpc/demo.js` | Full |
@@ -487,11 +487,11 @@ Coverage spans: geometry (point, rect, matrix, shapes, flex_layout bounds, grid 
 | Metric | Value |
 |---|---|
 | Test files | 80 |
-| Test cases | 1,201 |
-| Test suites | 413 |
-| Failures | 0 |
+| Test cases | 1,137 |
+| Test suites | 333 |
+| Failures | 1 (pre-existing: `returns enabled flags from RPC` expects 204, endpoint returns 200) |
 
-Coverage spans: config, auth, tokens, password, permissions, quotes, rate-limit, transit, dispatcher, SQLite, storage (FS, S3), media, RPC modules (files, teams, comments, webhooks, profile, fonts, access_token, viewer, search, binfile, files_share, files_snapshots, files_thumbnails, management, demo, feedback, export, email-filter, feature-flags, verify_token, oidc, ldap, nitrate), SSE, metrics, logging, scheduler, worker, setup, integration, wire-compat, blob, changes, file-gc.
+Coverage spans: config, auth, tokens, password, permissions, quotes, rate-limit, transit, dispatcher, SQLite, storage (FS, S3), media, RPC modules (files, teams, comments, webhooks, profile, fonts, access_token, viewer, search, binfile, files_share, files_snapshots, files_thumbnails, management, demo, feedback, export, email-filter, feature-flags, verify_token, oidc, ldap), SSE, metrics, logging, scheduler, worker, setup, integration, wire-compat, blob, changes, file-gc.
 
 ### 5.3 client/ Tests
 
@@ -519,9 +519,9 @@ Categories: auth (6), P0 flow (11), workspace shell (14), components (18), tools
 
 | Module | Upstream Lines | JS Port Lines | Port Completion | Test Coverage |
 |---|---|---|---|---|
-| **shared/** | ~67,000 | ~29,600 | **100%** (0 stubs, 0 missing) | 1,596 pass, 297 suites |
+| **shared/** | ~67,000 | ~29,600 | **100%** (0 stubs, 0 missing) | 1,592 pass, 232 suites |
 | **client/** | ~129,000 | ~35,000 | **~100%** | 55 spec files, 767 E2E, 55 unit |
-| **server/** | ~48,000 | ~19,000 | **~95%** | 1,201 pass, 413 suites, 0 fail |
+| **server/** | ~48,000 | ~19,000 | **~95%** | 1,137 pass, 333 suites, 1 pre-existing fail |
 | **server/exporter/** | ~4,000 | ~1,500 | **100%** (+ WebP) | 22 tests, 6 suites |
 
 ## 7. Intentional Skips
@@ -992,7 +992,6 @@ Notable bugs found and fixed during porting:
 | `profile.js` | `profile-rpc-handler.test.js` | 6 commands (delete-profile, delete-photo, notifications, email-change, props, subscription-usage) | 23 | P1 |
 | `comments.js` | `comments-rpc-handler.test.js` | 9 commands (delete-comment, delete-thread, thread-status, update-thread, position, frame, update-comment, profiles, mark-read) | 25 | P1 |
 | `media.js` | `media-rpc-handler.test.js` | 5 commands (from-url, session, chunk, assemble, clone) | 14 | P1 |
-| `nitrate.js` | `nitrate-rpc-handler.test.js` | All 5 commands | 14 | P2 |
 | `demo.js` | `demo-rpc-handler.test.js` | `create-demo-profile` | 5 | P2 |
 | `feedback.js` | `feedback-rpc-handler.test.js` | `send-user-feedback` | 6 | P2 |
 | `ldap.js` | `ldap-rpc-handler.test.js` | `login-with-ldap` | 6 | P2 |

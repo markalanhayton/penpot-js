@@ -107,11 +107,13 @@ Implemented. The handler now reads `file_data` rows with `backend='db'`,
 writes data to the storage filesystem via `putStorageObject`, and updates the
 row to `backend='storage'` with a `storage-ref-id` metadata reference.
 
-### 2.10 [x] ~~Nitrate / enterprise commands (`nitrate.js`)~~
-Implemented. `rpc/nitrate.js` provides `get-nitrate-connectivity`,
-`redeem-nitrate-activation-code`, `leave-org`, `remove-team-from-org`, and
-`add-team-to-organization`. All require `PENPOT_NITRATE_HOST` to be configured.
-The activation code redemption, team org operations perform actual DB queries.
+### 2.10 [x] ~~Nitrate / enterprise commands~~
+
+Removed. Nitrate (enterprise) features are out of scope for the open-source port.
+The 5 stub commands (`get-nitrate-connectivity`, `redeem-nitrate-activation-code`,
+`leave-org`, `remove-team-from-org`, `add-team-to-organization`) and their tests
+have been deleted. The `types/nitrate_permissions.js` module and `nitrate` feature
+flag have also been removed.
 
 ### 2.11 [x] ~~Built-in templates (`management.js`)~~
 `setup/index.js` provides instance bootstrapping: persistent instance ID in
@@ -212,7 +214,7 @@ Key test file categories:
 - Transit/data: `transit.test.js`, `blob.test.js`, `changes.test.js`
 - Database: `sqlite.test.js`, `sqlite-extras.test.js`, `migrate.test.js`
 - Storage: `storage-fs.test.js`, `storage-fs-highlevel.test.js`, `storage-s3.test.js`, `storage-gc.test.js`, `assets-http.test.js`
-- RPC commands: `files-rpc.test.js`, `files-rpc-handler.test.js`, `files-create.test.js`, `files-update.test.js`, `files-update-handler.test.js`, `files-share-rpc.test.js`, `files-snapshots-handler.test.js`, `files-thumbnails-handler.test.js`, `binfile.test.js`, `teams-projects.test.js`, `teams-rpc-handler.test.js`, `teams-invitations-rpc.test.js`, `profile-rpc.test.js`, `profile-rpc-handler.test.js`, `comments-rpc.test.js`, `comments-rpc-handler.test.js`, `fonts-rpc.test.js`, `media-rpc.test.js`, `media-rpc-handler.test.js`, `webhooks-rpc.test.js`, `viewer-rpc.test.js`, `access-token-rpc.test.js`, `search.test.js`, `management-rpc.test.js`, `demo-rpc-handler.test.js`, `feedback-rpc-handler.test.js`, `export-rpc-handler.test.js`, `ldap-rpc-handler.test.js`, `nitrate-rpc-handler.test.js`, `verify-token-handler.test.js`
+- RPC commands: `files-rpc.test.js`, `files-rpc-handler.test.js`, `files-create.test.js`, `files-update.test.js`, `files-update-handler.test.js`, `files-share-rpc.test.js`, `files-snapshots-handler.test.js`, `files-thumbnails-handler.test.js`, `binfile.test.js`, `teams-projects.test.js`, `teams-rpc-handler.test.js`, `teams-invitations-rpc.test.js`, `profile-rpc.test.js`, `profile-rpc-handler.test.js`, `comments-rpc.test.js`, `comments-rpc-handler.test.js`, `fonts-rpc.test.js`, `media-rpc.test.js`, `media-rpc-handler.test.js`, `webhooks-rpc.test.js`, `viewer-rpc.test.js`, `access-token-rpc.test.js`, `search.test.js`, `management-rpc.test.js`, `demo-rpc-handler.test.js`, `feedback-rpc-handler.test.js`, `export-rpc-handler.test.js`, `ldap-rpc-handler.test.js`, `verify-token-handler.test.js`
 - Middleware: `errors-middleware.test.js`, `cond.test.js`, `retry.test.js`, `quotes.test.js`
 - Infrastructure: `dispatcher.test.js`, `integration.test.js`, `loggers.test.js`, `metrics.test.js`, `scheduler.test.js`, `telemetry.test.js`, `worker.test.js`, `ws.test.js`, `sse.test.js`, `setup.test.js`, `audit-logger.test.js`, `email.test.js`, `email-filter.test.js`, `webhook-client.test.js`, `wire-compat.test.js`
 - File GC: `file-gc.test.js`
@@ -288,11 +290,12 @@ and team invitation emails.
 `storage/fs.js` — complete FS-based object storage with put/get/delete and
 streaming support.
 
-### 5.10 [x] All 24 RPC namespaces ported
+### 5.10 [x] All 23 RPC namespaces ported
 auth, files, files_update, files_share, files_snapshots, files_thumbnails,
-teams, teams_invitations, profile, management, nitrate, ldap, viewer, demo,
+teams, teams_invitations, profile, management, ldap, viewer, demo,
 search, webhooks, feedback, audit, comments, fonts, media, binfile,
 access_token, projects — all have corresponding modules in `src/rpc/`.
+(Nitrate was removed in v2.17 — out of scope for open-source.)
 
 ### 5.11 [x] Middleware (auth + rate limiting)
 `middleware/auth.js` and `middleware/rate-limit.js` with JWE verification,
@@ -481,7 +484,7 @@ removes only truly unused deleted components from the library file's data.
 | P2 | Setup / welcome-file seeding | 2.11, 2.12 | ✅ Done |
 | P2 | RPC permissions middleware | 3.6 (partial) | ✅ Done |
 | P2 | Message bus | 3.2 | ✅ N/A (WS+SSE cover this) |
-| P2 | Nitrate / enterprise stubs | 2.10 | ✅ Done |
+| P2 | Nitrate / enterprise stubs | 2.10 | ✅ Removed (out of scope) |
 | P2 | RPC quotes middleware | 3.6 | ✅ Done |
 | P2 | RPC retry middleware | 3.6 | ✅ Done |
 | P2 | RPC cond/ETag middleware | 3.6 | ✅ Done |

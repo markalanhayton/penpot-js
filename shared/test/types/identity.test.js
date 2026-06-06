@@ -1,6 +1,5 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { allowed } from '@penpot/shared/types/nitrate-permissions';
 import { VALID_ROLES, permissionsForRole, validTeamName } from '@penpot/shared/types/team';
 import { validProfile } from '@penpot/shared/types/profile';
 import { validProject } from '@penpot/shared/types/project';
@@ -12,32 +11,6 @@ import { makeTypography } from '@penpot/shared/types/typography';
 import { ROOT_ID, makeEmptyPage, getFrameFlow, isPageEmpty } from '@penpot/shared/types/page';
 
 describe('types identity modules', () => {
-  it('allowed - create team any', () => {
-    assert.ok(allowed('create-team', {
-      orgPerms: { permissions: { 'create-teams': 'any' } },
-      profileId: 'user1'
-    }));
-  });
-
-  it('allowed - create team only owner', () => {
-    assert.ok(!allowed('create-team', {
-      orgPerms: { permissions: { 'create-teams': 'onlyMe' }, 'owner-id': 'owner1' },
-      profileId: 'user1'
-    }));
-  });
-
-  it('allowed - delete team onlyOwners', () => {
-    assert.ok(allowed('delete-team', {
-      orgPerms: { permissions: { 'delete-teams': 'onlyOwners' } },
-      profileId: 'user1',
-      teamPerms: { 'is-owner': true }
-    }));
-  });
-
-  it('allowed - unknown action', () => {
-    assert.ok(!allowed('unknown', { orgPerms: {}, profileId: 'x' }));
-  });
-
   it('VALID_ROLES', () => {
     assert.ok(VALID_ROLES.has('owner'));
     assert.ok(VALID_ROLES.has('viewer'));

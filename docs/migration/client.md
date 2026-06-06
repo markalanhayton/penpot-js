@@ -232,7 +232,7 @@ client/
 ├── package.json                  # @penpot/client v0.1.0
 ├── server.js                     # Dev server (proxies /api/* → localhost:6060)
 ├── playwright.config.js           # Playwright E2E test config (with snapshotPathTemplate)
-├── e2e/                          # 42 Playwright E2E spec files (632 tests, all passing)
+├── e2e/                          # 55 Playwright E2E spec files (767 tests, all passing)
 │   ├── auth.spec.js              # Auth flow (6 tests)
 │   ├── p0-flow.spec.js           # P0: Full login→dashboard→workspace flow (11 tests)
 │   ├── p1-workspace.spec.js      # P1: Workspace shell (14 tests)
@@ -303,7 +303,7 @@ client/
 - Flex/Grid layout editor: direction, gap, wrap, padding, justify, align, grid rows/columns
 - Design tokens: colors, typography, sets, themes tabs
 - Boolean path operations: union, difference, intersection, exclusion
-- E2E coverage: 632 tests across 42 spec files, all passing
+- E2E coverage: 767 tests across 55 spec files, all passing
 
 ---
 
@@ -885,7 +885,7 @@ describe('Store', () => {
 
 ### 11.2 E2E Tests
 
-Playwright tests in `client/e2e/` — **632 tests passing across 42 spec files**:
+Playwright tests in `client/e2e/` — **767 tests passing across 55 spec files**:
 
 | Phase | Spec File | Tests | Status |
 |-------|-----------|-------|--------|
@@ -1120,7 +1120,7 @@ ES JS:
 - [x] Canvas rulers (horizontal + vertical with zoom)
 - [x] SVG import (drag-drop + file picker, `lib/svg-import.js`)
 - [x] Dashboard sub-pages (search, fonts, libraries)
-- [x] E2E tests: 632 tests pass across 42 spec files
+- [x] E2E tests: 767 tests pass across 55 spec files
 - [x] Alignment & distribution tools (align-left/center/right/top/middle/bottom, distribute-h/v)
 - [x] Stroke property editing (add/remove/edit, color, width, style solid/dashed/dotted, cap round/butt/square)
 - [x] Blur editing (layer blur with SVG feGaussianBlur filter)
@@ -1218,4 +1218,4 @@ ES JS:
 
 - [x] ~~**PA-15** OAuth login buttons~~ (already implemented in `penpot-auth-screen.js`)
 - [x] **PA-16** Mobile/responsive layout — `styles/responsive.css` (230 lines) + `lib/responsive.js` (170 lines): three-tier breakpoints (mobile <768px, tablet 768–1023px, desktop ≥1024px), mobile sidebar overlay panels with backdrop dismiss, touch gestures (pinch-to-zoom, two-finger pan), responsive dashboard grids, token discrepancy fix
-- [ ] **BE-10** Enterprise/nitrate management API (P4, deferred)
+- [x] **BE-10** ~~Enterprise/nitrate management API~~ (P4) — **Removed in v2.17**, out of scope for open-source port

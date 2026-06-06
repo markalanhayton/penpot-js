@@ -2,6 +2,16 @@
 
 ## 2.17.0 (Unreleased)
 
+### :sparkles: New features & Enhancements
+
+### :bug: Bugs fixed
+
+### :wastebasket: Removals
+
+- **Remove Nitrate (enterprise) integration**: The Nitrate enterprise management API has been removed from the open-source port as it's out of scope for community deployment. This removes 5 stub RPC commands (`get-nitrate-connectivity`, `redeem-nitrate-activation-code`, `leave-org`, `remove-team-from-org`, `add-team-to-organization`), the `nitrate` feature flag, the `types/nitrate_permissions.js` module, and the `nitrate-rpc-handler.test.js` test file. No `PENPOT_NITRATE_*` environment variables are read or required. Enterprise Nitrate features can be added back by contributors who need them.
+
+## 2.16.0 (Unreleased)
+
 ### :boom: Breaking changes & Deprecations
 
 ### :rocket: Epics and highlights
@@ -84,6 +94,8 @@ Six new SQLite migrations achieving full PostgreSQL schema parity:
 - **Fix team options (⋯) button has no click handler**: The kebab menu button in `penpot-team-sidebar.js` was a non-functional UI stub. Added `showTeamOptionsMenu()` with Rename and Delete options, calling `update-team` and `delete-team` RPCs. Default team delete is disabled.
 - **Fix duplicate `#settings-btn` IDs in dashboard**: The team sidebar's gear button and the dashboard's "Settings" button both had `id="settings-btn"`, causing only the first to receive click handlers. Renamed dashboard's button to `#profile-settings-btn`.
 - **Fix right sidebar re-render race condition (`NotFoundError: removeChild`)**: The right sidebar's `selectedShape` and `selectedIds` setters called `render()` synchronously during input blur events, causing the DOM to be replaced while the browser was still processing the blur on the now-detached input. Fixed by deferring `render()` to the next animation frame via a `#scheduleRender()` method that coalesces multiple setter calls with a `#renderQueued` flag.
+- **Fix TextTool `NotFoundError: removeChild` on commit**: `components/tools/base.js` `#removeInput()` tried to `removeChild` a node that had already been moved. Fixed by nulling out `#input` before removal and checking `parentNode.contains(input)` before calling `removeChild`.
+- **Fix negative SVG `<rect>` width/height from property inputs**: The right sidebar's W/H inputs accepted negative values, producing invalid SVG (`<rect> width="-50">`) and browser console errors. Fixed by adding `min="0"` to the W/H inputs, clamping in `tool-manager.js` `updateShapeProp()` for `w`/`h` props, and clamping in `penpot-workspace.js` `#handlePropertyChange()` before recording to change history. Negative X/Y are preserved (valid for positioned shapes). Flip H/V still uses `scaleX: -1` / `scaleY: -1` transform.
 - Use the noun "copia" instead of the verb "copiar" as the Spanish duplicate-suffix when duplicating design tokens [Github #9623](https://github.com/penpot/penpot/issues/9623)
 - Harden Nginx responses with standard security headers and hide upstream `X-Powered-By` headers
 - Expose Source Sans Pro semibold (weight 600) variants in the builtin fonts list, matching the bundled font assets and CSS @font-face declarations [Github #7378](https://github.com/penpot/penpot/issues/7378)
@@ -94,9 +106,7 @@ Six new SQLite migrations achieving full PostgreSQL schema parity:
 - Fix copy and paste actions crashing the workspace on insecure origins (plain HTTP / non-`localhost`) where the Clipboard API is unavailable (by @MilosM348) [Github #6514](https://github.com/penpot/penpot/issues/6514)
 - Fix blend-mode dropdown leaving the canvas rendered with the last hover-preview blend mode when dismissed without selecting an option; the WASM render is now reverted to the saved blend mode on pointer-leave (by @edwin-rivera-dev) [Github #XXXX](https://github.com/penpot/penpot/issues/XXXX)
 
-## 2.16.0 (Unreleased)
-
-### :boom: Breaking changes & Deprecations
+## 2.15.4 (Unreleased)
 
 ### :rocket: Epics and highlights
 

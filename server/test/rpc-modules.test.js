@@ -206,18 +206,6 @@ describe('Binfile RPC', async () => {
   });
 });
 
-describe('Nitrate RPC', async () => {
-  const mod = await import('../src/rpc/nitrate.js');
-  let pool;
-  beforeEach(() => { pool = createTestPool(); });
-  afterEach(() => { destroyTestPool(pool); });
-
-  it('registers nitrate commands', () => {
-    const methods = getRpcHandlers(mod.default, pool);
-    assert.ok(Object.keys(methods).length > 0);
-  });
-});
-
 describe('LDAP RPC', async () => {
   const mod = await import('../src/rpc/ldap.js');
   let pool;

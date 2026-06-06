@@ -82,7 +82,6 @@ export const varia = new Set([
   'sec-fetch-metadata-middleware',
   'client-header-check-middleware',
   'redis-cache',
-  'nitrate',
   'mcp',
   'background-blur',
   'stroke-path'

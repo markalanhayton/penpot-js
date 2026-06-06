@@ -838,10 +838,11 @@ export class TextTool extends PenpotTool {
   }
 
   #removeInput() {
-    if (this.#input?.parentNode) {
-      this.#input.parentNode.removeChild(this.#input);
-    }
+    const input = this.#input;
     this.#input = null;
+    if (input?.parentNode && input.parentNode.contains(input)) {
+      input.parentNode.removeChild(input);
+    }
   }
 }
 

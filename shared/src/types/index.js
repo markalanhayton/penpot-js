@@ -2,7 +2,6 @@ export * from './color.js';
 export * from './stroke.js';
 export * from './fills.js';
 export * from './shape/index.js';
-export * from './nitrate_permissions.js';
 export * from './team.js';
 export * from './profile.js';
 export * from './project.js';

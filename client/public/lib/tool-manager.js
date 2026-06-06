@@ -400,7 +400,8 @@ export class ToolManager {
     if (prop === 'w') {
       shapeProp = 'width';
       numericValue = Number(value);
-      if (!isNaN(numericValue) && shape.width !== numericValue) {
+      if (isNaN(numericValue) || numericValue < 0) numericValue = 0;
+      if (shape.width !== numericValue) {
         this.#history.push({ type: 'update', shapeId, prop: 'width', oldValue: shape.width, newValue: numericValue, pageId: page.id });
         shape.width = numericValue;
         changed = true;
@@ -408,7 +409,8 @@ export class ToolManager {
     } else if (prop === 'h') {
       shapeProp = 'height';
       numericValue = Number(value);
-      if (!isNaN(numericValue) && shape.height !== numericValue) {
+      if (isNaN(numericValue) || numericValue < 0) numericValue = 0;
+      if (shape.height !== numericValue) {
         this.#history.push({ type: 'update', shapeId, prop: 'height', oldValue: shape.height, newValue: numericValue, pageId: page.id });
         shape.height = numericValue;
         changed = true;

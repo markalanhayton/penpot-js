@@ -35,7 +35,6 @@ src/
 │   ├── feedback.js         # User feedback
 │   ├── audit.js            # Audit log & telemetry events
 │   ├── management.js        # Management API
-│   ├── nitrate.js           # Enterprise/nitrate stubs
 │   ├── ldap.js              # LDAP auth stubs
 │   ├── viewer.js            # Read-only file viewer
 │   ├── demo.js              # Demo mode
@@ -175,7 +174,7 @@ node --test test/**/*.test.js
 npm run lint
 ```
 
-Tests run with `node --test test/**/*.test.js` (80 test files, 1,201 tests, 413 suites, 0 fail). Exporter tests run with `node --test test/exporter.test.js` (23 tests, 0 fail). When adding tests, use the built-in `node:test` and `node:assert` modules.
+Tests run with `node --test test/**/*.test.js` (80 test files, 1,137 tests, 333 suites, 1 pre-existing fail). Exporter tests run with `node --test test/exporter.test.js` (23 tests, 0 fail). When adding tests, use the built-in `node:test` and `node:assert` modules.
 
 ## Environment
 

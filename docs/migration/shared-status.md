@@ -4,7 +4,7 @@ Shared ES2022+ JavaScript modules for the Penpot JS port — dual-env (browser +
 
 ## Status
 
-**Phase 1 complete** — 151 JS files, 1,662 tests across 297 test suites, 0 failures.
+**Phase 1 complete** — 150 JS files, 1,592 tests across 232 test suites, 0 failures.
 
 Ported modules include: uuid, exceptions, time, data, encoding, observable, math, json, transit, geom (point, rect, matrix), colors, modifiers, schema, spec, features, flags, i18n, version, path names, buffer, perf, pprint, record, objects map, weak maps, SVG, media, thumbnails, and all types/* modules (fills, component, container, file, library, page, path, shape, text, token, typography, variant, identity).
 

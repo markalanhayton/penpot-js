@@ -1681,7 +1681,11 @@ export class PenpotWorkspace extends PenpotElement {
       const propMap = { x: 'x', y: 'y', w: 'width', h: 'height', rotation: 'rotation', opacity: 'opacity' };
       const mappedProp = propMap[prop] || prop;
       const numericProps = new Set(['x', 'y', 'width', 'height', 'rotation', 'opacity', 'fontSize', 'lineHeight', 'letterSpacing', 'blur']);
-      const finalValue = numericProps.has(mappedProp) ? (Number(value) || value) : value;
+      let finalValue = numericProps.has(mappedProp) ? (Number(value) || value) : value;
+      if (mappedProp === 'width' || mappedProp === 'height') {
+        const n = Number(finalValue);
+        if (!Number.isFinite(n) || n < 0) finalValue = 0;
+      }
       enqueueChange(makeModifyChange(page.id, shapeId, { [mappedProp]: finalValue }));
     }
   }

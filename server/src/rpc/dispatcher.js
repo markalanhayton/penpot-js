@@ -403,7 +403,6 @@ export async function registerAllCommands(pool) {
     '../rpc/feedback.js',
     '../rpc/ldap.js',
     '../rpc/management.js',
-    '../rpc/nitrate.js',
     '../rpc/search.js',
     '../rpc/viewer.js',
     '../rpc/webhooks.js',

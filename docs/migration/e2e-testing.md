@@ -1,6 +1,6 @@
 # E2E Testing Document
 
-> Last updated: 2026-05-30
+> Last updated: 2026-06-06
 
 Comprehensive guide to end-to-end, integration, and unit testing across all modules of the Penpot JS port.
 
@@ -52,9 +52,9 @@ The Penpot JS port uses a layered testing strategy tailored to each module's run
 
 | Module | Test Type | Runner | Location | Count |
 |--------|-----------|--------|----------|-------|
-| `client/` | E2E | Playwright | `client/e2e/*.spec.js` | 42 spec files, 632 tests |
-| `server/` | Integration + Unit | `node:test` | `server/test/*.test.js` | 80 files, 1,201 tests, 413 suites |
-| `shared/` | Unit | `node:test` | `shared/test/*.test.js` | 65 files, 297 suites, 1,662 tests |
+| `client/` | E2E | Playwright | `client/e2e/*.spec.js` | 55 spec files, 767 tests |
+| `server/` | Integration + Unit | `node:test` | `server/test/*.test.js` | 80 files, 1,137 tests, 333 suites, 1 pre-existing fail |
+| `shared/` | Unit | `node:test` | `shared/test/*.test.js` | 64 files, 232 suites, 1,592 tests |
 | `server/exporter/` | Unit | `node:test` | `server/exporter/test/*.test.js` | 23 tests |
 | `frontend/` (upstream) | E2E | Playwright | `frontend/playwright/ui/specs/*.spec.js` | 35 spec files |
 
@@ -178,7 +178,7 @@ The client E2E tests cover the full user journey from authentication through des
 | `drawing-cycle.spec.js` | Other | ~420 | 17 | Draw shapes, undo/redo, properties, selection |
 | `file-persistence.spec.js` | Other | ~260 | 16 | Save, undo, redo, file name, keyboard shortcuts |
 
-**Total**: 42 spec files, ~8,800+ lines, 632 tests.
+**Total**: 55 spec files, ~8,800+ lines, 767 tests.
 
 ### 3.2 Test Helpers
 
@@ -274,7 +274,7 @@ This pattern avoids hard failures when the test database doesn't have pre-seeded
 
 The server test suite uses `node:test` with `node:assert/strict` and an in-memory SQLite database. Tests cover RPC commands, middleware, database operations, authentication, WebSocket, storage, and more.
 
-**Statistics**: 80 test files, 1,201 test cases, 413 suites, 0 failures.
+**Statistics**: 80 test files, 1,137 test cases, 333 suites, 1 pre-existing fail (non-blocking).
 
 ### 4.2 Test File Inventory
 
@@ -422,7 +422,7 @@ describe('Rate Limiter', () => {
 
 ### 5.1 Overview
 
-The `shared/` module has 297 test suites with 1,662 assertions across 65 test files. Tests cover pure functions — geometry calculations, type definitions, data transformations, codecs, and validation logic.
+The `shared/` module has 232 test suites with 1,596 assertions across 65 test files. Tests cover pure functions — geometry calculations, type definitions, data transformations, codecs, and validation logic.
 
 ### 5.2 Test Organization
 
@@ -867,11 +867,11 @@ Set these environment variables for CI:
 
 | Module | Test Type | Test Files | Test Cases/Assertions | Pass | Fail | Skip |
 |--------|-----------|-----------|----------------------|------|------|------|
-| `shared/` | Unit | 65 files | 1,662 tests, 297 suites | 1,662 | 0 | 0 |
-| `server/` | Integration | 80 | 1,201 tests, 413 suites | 1,201 | 0 | 0 |
+| `shared/` | Unit | 64 files | 1,592 tests, 232 suites | 1,592 | 0 | 0 |
+| `server/` | Integration | 80 | 1,137 tests, 333 suites | 1,137 | 1 | 0 |
 | `server/exporter/` | Unit | 1 | 23 tests, 7 suites | 23 | 0 | 0 |
-| `client/` | E2E | 42 spec files | 632 tests | 632 | 0 | 0 |
-| **Total** | | **~188** | **3,518** | **3,518** | **0** | **0** |
+| `client/` | E2E | 55 spec files | 767 tests | 767 | 0 | 0 |
+| **Total** | | **~188** | **3,515** | **3,514** | **1** | **0** |
 
 ### 11.2 By Test Category
 
@@ -1127,7 +1127,7 @@ The following areas need additional E2E test coverage:
 | **P1** | `plugin-api-operations.spec.js` | Verify `deleteShape` removes shape, `createShape` persists shape, `updateShape` modifies shape properties | Fix already applied — just needs tests |
 | **P2** | `templates-empty-state.spec.js` | Verify templates tab shows empty state when RPC fails, warning notification appears | Fix already applied — just needs tests |
 | **P1** | `test/profile-rpc.test.js` (extend) | `update-profile-photo`, `delete-profile`, `request-email-change` | Real DB, verify profile mutations |
-| **P2** | `test/nitrate-rpc.test.js` | All 5 commands (enterprise stubs) | Verify stub behavior and error responses |
+| ~~**P2**~~ | ~~`test/nitrate-rpc.test.js`~~ | ~~All 5 commands (enterprise stubs)~~ | **Removed in v2.17** (nitrate deprecated) |
 | **P2** | `test/demo-rpc.test.js` | `create-demo-profile` | Real DB, verify demo user creation |
 | **P2** | `test/oidc-rpc.test.js` | `get-oidc-provider`, `oidc-callback` | Mock OIDC provider, verify profile/session creation |
 | **P2** | `test/verify-token-rpc.test.js` | `verify-token` | Verify token type dispatch (email-change, verify-email, auth, team-invitation) |
