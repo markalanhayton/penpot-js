@@ -1,5 +1,6 @@
 'use strict';
 import { parse as parseColorShared } from '@penpot/shared/colors.js';
+import { transformPathD } from './path-d.js';
 export function parseSVG(svgText) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(svgText, 'image/svg+xml');
@@ -194,13 +195,20 @@ export function parseSVG(svgText) {
         const d = node.getAttribute('d');
         if (d) {
           const pathBBox = estimatePathBBox(d);
+          // Convert d from world coords to local coords (subtract bbox origin)
+          // so renderPath can apply translate(shape.x, shape.y) and the path
+          // lands at the correct world position.
+          const localD = transformPathD(d, {
+            dx: -(pathBBox.x || 0),
+            dy: -(pathBBox.y || 0),
+          });
           shapes.push({
             type: 'path',
             x: parentX + (pathBBox.x || 0) - offsetX,
             y: parentY + (pathBBox.y || 0) - offsetY,
             width: Math.max(1, pathBBox.width || 50),
             height: Math.max(1, pathBBox.height || 50),
-            d,
+            d: localD,
             fills,
             strokes: strokes.length > 0 ? strokes : [{ color: '#000', width: 1 }],
             opacity,
@@ -213,13 +221,21 @@ export function parseSVG(svgText) {
         const points = node.getAttribute('points') || '';
         if (points.trim()) {
           const d = polygonToPath(points, tag === 'polygon');
+          // Compute bbox in the d's own coordinate space, then convert to
+          // local coords so the d's top-left is at (0, 0) and shape.x/y is
+          // the world position of that top-left.
+          const pathBBox = estimatePathBBox(d);
+          const localD = transformPathD(d, {
+            dx: -(pathBBox.x || 0),
+            dy: -(pathBBox.y || 0),
+          });
           shapes.push({
             type: 'path',
-            x: parentX - offsetX,
-            y: parentY - offsetY,
-            width: 100,
-            height: 100,
-            d,
+            x: parentX + (pathBBox.x || 0) - offsetX,
+            y: parentY + (pathBBox.y || 0) - offsetY,
+            width: Math.max(1, pathBBox.width || 50),
+            height: Math.max(1, pathBBox.height || 50),
+            d: localD,
             fills: tag === 'polygon' ? fills : [],
             strokes: strokes.length > 0 ? strokes : [{ color: '#000', width: 1 }],
             opacity,

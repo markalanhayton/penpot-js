@@ -1,5 +1,7 @@
 # Migration Documentation
 
+> Last updated: 2026-06-08
+
 Penpot JS port migration from Clojure/ClojureScript to modern ES2022+ JavaScript.
 
 ## Documents

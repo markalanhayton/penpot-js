@@ -2,6 +2,7 @@
 import { PenpotTool } from './base.js';
 import { createShape } from '../../lib/types.js';
 import { pointsToRect } from '@penpot/shared/geom/rect.js';
+import { transformPathD } from '../../lib/path-d.js';
 
 export class PenBezierTool extends PenpotTool {
   #points = [];
@@ -300,12 +301,20 @@ export class PenBezierTool extends PenpotTool {
     const pathData = this.#buildPathData();
     const bounds = this.#getBounds();
 
+    // Convert d from world coords to local coords (top-left at (0, 0)) so
+    // that renderPath's translate(shape.x, shape.y) puts the d's top-left at
+    // the bbox's top-left.
+    const localD = transformPathD(pathData, {
+      dx: -Math.round(bounds.x),
+      dy: -Math.round(bounds.y),
+    });
+
     const shape = createShape('path', {
       x: Math.round(bounds.x),
       y: Math.round(bounds.y),
       width: Math.round(bounds.width),
       height: Math.round(bounds.height),
-      d: pathData,
+      d: localD,
       fills: this.#mode === 'freehand' ? [] : [],
       strokes: [{ style: 'solid', color: '#333333', width: 2, cap: 'round', join: 'round', alignment: 'center' }],
     });

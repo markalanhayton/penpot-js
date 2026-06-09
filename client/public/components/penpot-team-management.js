@@ -81,6 +81,8 @@ template.innerHTML = `<style>
 <div class="penpot-tm__tabs" id="tabs">
   <button class="penpot-tm__tab penpot-tm__active" data-tab="members">Members</button>
   <button class="penpot-tm__tab" data-tab="invitations">Invitations</button>
+  <button class="penpot-tm__tab" data-tab="access">Access Requests</button>
+  <button class="penpot-tm__tab" data-tab="webhooks">Webhooks</button>
   <button class="penpot-tm__tab" data-tab="settings">Settings</button>
 </div>
 <div class="penpot-tm__content" id="content"></div>`;
@@ -95,6 +97,8 @@ export class PenpotTeamManagement extends PenpotElement {
   #activeTab = 'members';
   #members = [];
   #invitations = [];
+  #accessRequests = [];
+  #webhooks = [];
   #openMenuId = null;
 
   constructor() {
@@ -132,6 +136,8 @@ export class PenpotTeamManagement extends PenpotElement {
       this.querySelector('#team-title').textContent = this.escHtml(team?.name || 'Team');
       await this.loadMembers();
       await this.loadInvitations();
+      await this.loadAccessRequests();
+      await this.loadWebhooks();
       this.render();
     } catch (err) {
       console.warn('[team-management] loadTeam error:', err.message);
@@ -160,6 +166,24 @@ export class PenpotTeamManagement extends PenpotElement {
     }
   }
 
+  async loadAccessRequests() {
+    try {
+      const requests = await cmd('get-team-access-requests', { teamId: this.#teamId });
+      this.#accessRequests = Array.isArray(requests) ? requests : [];
+    } catch (err) {
+      this.#accessRequests = [];
+    }
+  }
+
+  async loadWebhooks() {
+    try {
+      const webhooks = await cmd('get-webhooks', { teamId: this.#teamId });
+      this.#webhooks = Array.isArray(webhooks) ? webhooks : [];
+    } catch (err) {
+      this.#webhooks = [];
+    }
+  }
+
   render() {
     const content = this.querySelector('#content');
     if (!content) return;
@@ -168,6 +192,10 @@ export class PenpotTeamManagement extends PenpotElement {
       content.innerHTML = this.#renderMembers();
     } else if (this.#activeTab === 'invitations') {
       content.innerHTML = this.#renderInvitations();
+    } else if (this.#activeTab === 'access') {
+      content.innerHTML = this.#renderAccess();
+    } else if (this.#activeTab === 'webhooks') {
+      content.innerHTML = this.#renderWebhooks();
     } else if (this.#activeTab === 'settings') {
       content.innerHTML = this.#renderSettings();
     }
@@ -245,6 +273,104 @@ export class PenpotTeamManagement extends PenpotElement {
           <button class="penpot-tm__btn penpot-tm__btn-danger" data-delete-invitation="${this.escAttr(inv.id || '')}" style="font-size:10px;padding:2px 6px;">Revoke</button>
         </div>
       </div>`;
+    }
+
+    html += '</div>';
+    return html;
+  }
+
+  #renderAccess() {
+    const member = this.#members.find(m => m.profileId === this.#profileId || m.memberId === this.#profileId);
+    if (!member) {
+      return '<div class="penpot-tm__empty-state">You are not a member of this team.</div>';
+    }
+    const isAdminOrOwner = member.role === 'owner' || member.role === 'admin';
+
+    if (!isAdminOrOwner) {
+      return '<div class="penpot-tm__empty-state">Only team owners and admins can view access requests.</div>';
+    }
+
+    if (this.#accessRequests.length === 0) {
+      return '<div class="penpot-tm__empty-state">No pending access requests.</div>';
+    }
+
+    let html = '<div class="penpot-tm__section">';
+    html += '<div class="penpot-tm__section-title">Pending Access Requests (' + this.#accessRequests.length + ')</div>';
+
+    for (const req of this.#accessRequests) {
+      const name = req.requesterFullname || req.requesterEmail || 'Unknown';
+      const email = req.requesterEmail || '';
+      const created = req.createdAt ? new Date(req.createdAt).toLocaleDateString() : '';
+      const valid = req.validUntil ? new Date(req.validUntil).toLocaleDateString() : '';
+
+      html += `<div class="penpot-tm__member-row" data-access-req-id="${this.escAttr(req.id || '')}">
+        <div class="penpot-tm__member-avatar">${this.escHtml(name.charAt(0).toUpperCase())}</div>
+        <div class="penpot-tm__member-info">
+          <div class="penpot-tm__member-name">${this.escHtml(name)}</div>
+          ${email ? `<div class="penpot-tm__member-email">${this.escHtml(email)}</div>` : ''}
+        </div>
+        <div style="font-size:9px;color:var(--penpot-text-dim,#999);text-align:right;flex-shrink:0;">
+          ${created ? `Sent ${created}` : ''}
+          ${valid ? `<br>Valid until ${valid}` : ''}
+        </div>
+        <div class="penpot-tm__invite-actions">
+          <select class="penpot-tm__select" data-accept-role="${this.escAttr(req.id || '')}" style="font-size:10px;padding:2px 4px;" title="Role to assign">
+            <option value="editor">Editor</option>
+            <option value="admin">Admin</option>
+            <option value="viewer">Viewer</option>
+            <option value="owner">Owner</option>
+          </select>
+          <button class="penpot-tm__btn penpot-tm__btn-primary" data-accept-req="${this.escAttr(req.id || '')}" style="font-size:10px;padding:3px 8px;">Accept</button>
+          <button class="penpot-tm__btn penpot-tm__btn-danger" data-decline-req="${this.escAttr(req.id || '')}" style="font-size:10px;padding:3px 8px;">Decline</button>
+        </div>
+      </div>`;
+    }
+
+    html += '</div>';
+    return html;
+  }
+
+  #renderWebhooks() {
+    const member = this.#members.find(m => m.profileId === this.#profileId || m.memberId === this.#profileId);
+    const isAdminOrOwner = member?.role === 'owner' || member?.role === 'admin';
+
+    let html = '<div class="penpot-tm__section">';
+    html += '<div class="penpot-tm__section-title">Team Webhooks</div>';
+    html += '<p style="font-size:10px;color:var(--penpot-text-dim,#999);margin:0 0 12px;">Receive HTTP notifications when events happen in this team.</p>';
+
+    if (isAdminOrOwner) {
+      html += `<div class="penpot-tm__invite-form" style="margin-bottom:12px;">
+        <input class="penpot-tm__invite-input" id="webhook-uri-input" type="url" placeholder="https://example.com/webhook">
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select class="penpot-tm__select" id="webhook-mtype-input">
+            <option value="application/json">JSON</option>
+            <option value="application/transit+json">Transit+JSON</option>
+          </select>
+          <button class="penpot-tm__btn penpot-tm__btn-primary" id="add-webhook-btn">Add Webhook</button>
+        </div>
+      </div>`;
+    }
+
+    if (this.#webhooks.length === 0) {
+      html += '<div class="penpot-tm__empty-state">No webhooks configured.</div>';
+    } else {
+      html += '<div class="penpot-tm__section">';
+      for (const wh of this.#webhooks) {
+        const status = wh.errorCode ? 'Error' : (wh.isActive ? 'Active' : 'Paused');
+        const statusColor = wh.errorCode ? 'var(--penpot-danger,#f44)' : (wh.isActive ? 'var(--penpot-primary,#31efb8)' : 'var(--penpot-text-dim,#999)');
+        html += `<div class="penpot-tm__member-row" data-webhook-id="${this.escAttr(wh.id || '')}">
+          <div class="penpot-tm__member-info">
+            <div class="penpot-tm__member-name" style="font-size:11px;word-break:break-all;">${this.escHtml(wh.uri)}</div>
+            <div class="penpot-tm__member-email">${this.escHtml(wh.mtype || 'application/json')}</div>
+          </div>
+          <span style="font-size:9px;color:${statusColor};flex-shrink:0;">${status}${wh.errorCount ? ` (${wh.errorCount})` : ''}</span>
+          <div class="penpot-tm__invite-actions">
+            ${isAdminOrOwner ? `<button class="penpot-tm__btn penpot-tm__btn-secondary" data-toggle-webhook="${this.escAttr(wh.id || '')}" style="font-size:10px;padding:2px 6px;">${wh.isActive ? 'Pause' : 'Enable'}</button>` : ''}
+            ${isAdminOrOwner ? `<button class="penpot-tm__btn penpot-tm__btn-danger" data-delete-webhook="${this.escAttr(wh.id || '')}" style="font-size:10px;padding:2px 6px;">Delete</button>` : ''}
+          </div>
+        </div>`;
+      }
+      html += '</div>';
     }
 
     html += '</div>';
@@ -373,6 +499,24 @@ export class PenpotTeamManagement extends PenpotElement {
     if (deleteBtn) {
       deleteBtn.addEventListener('click', () => this.#deleteTeam());
     }
+
+    content.querySelectorAll('[data-accept-req]').forEach(btn => {
+      btn.addEventListener('click', () => this.#resolveAccessRequest(btn.dataset.acceptReq, true));
+    });
+    content.querySelectorAll('[data-decline-req]').forEach(btn => {
+      btn.addEventListener('click', () => this.#resolveAccessRequest(btn.dataset.declineReq, false));
+    });
+
+    const addWebhookBtn = content.querySelector('#add-webhook-btn');
+    if (addWebhookBtn) {
+      addWebhookBtn.addEventListener('click', () => this.#addWebhook(content));
+    }
+    content.querySelectorAll('[data-toggle-webhook]').forEach(btn => {
+      btn.addEventListener('click', () => this.#toggleWebhook(btn.dataset.toggleWebhook));
+    });
+    content.querySelectorAll('[data-delete-webhook]').forEach(btn => {
+      btn.addEventListener('click', () => this.#deleteWebhook(btn.dataset.deleteWebhook));
+    });
 
     document.addEventListener('click', () => this.#closeAllMenus(), { once: false });
   }
@@ -543,6 +687,63 @@ export class PenpotTeamManagement extends PenpotElement {
       this.emit('penpot-team-deleted', { teamId: this.#teamId });
     } catch (err) {
       console.warn('[team-management] deleteTeam error:', err.message);
+    }
+  }
+
+  async #resolveAccessRequest(requestId, accept) {
+    if (!requestId) return;
+    let role = 'editor';
+    if (accept) {
+      const select = this.querySelector(`[data-accept-role="${requestId}"]`);
+      role = select?.value || 'editor';
+    }
+    try {
+      await cmd('resolve-team-access-request', { id: requestId, accept, role });
+      await this.loadAccessRequests();
+      if (accept) await this.loadMembers();
+      this.render();
+    } catch (err) {
+      console.warn('[team-management] resolveAccessRequest error:', err.message);
+    }
+  }
+
+  async #addWebhook(content) {
+    const uriInput = content.querySelector('#webhook-uri-input');
+    const mtypeSelect = content.querySelector('#webhook-mtype-input');
+    const uri = uriInput?.value.trim();
+    if (!uri) return;
+    try {
+      await cmd('create-webhook', { teamId: this.#teamId, uri, mtype: mtypeSelect?.value || 'application/json' });
+      if (uriInput) uriInput.value = '';
+      await this.loadWebhooks();
+      this.render();
+    } catch (err) {
+      console.warn('[team-management] addWebhook error:', err.message);
+    }
+  }
+
+  async #toggleWebhook(webhookId) {
+    if (!webhookId) return;
+    const wh = this.#webhooks.find(w => w.id === webhookId);
+    if (!wh) return;
+    try {
+      await cmd('update-webhook', { id: webhookId, isActive: !wh.isActive });
+      await this.loadWebhooks();
+      this.render();
+    } catch (err) {
+      console.warn('[team-management] toggleWebhook error:', err.message);
+    }
+  }
+
+  async #deleteWebhook(webhookId) {
+    if (!webhookId) return;
+    if (!confirm('Delete this webhook?')) return;
+    try {
+      await cmd('delete-webhook', { id: webhookId });
+      await this.loadWebhooks();
+      this.render();
+    } catch (err) {
+      console.warn('[team-management] deleteWebhook error:', err.message);
     }
   }
 }

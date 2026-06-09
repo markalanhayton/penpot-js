@@ -1,5 +1,7 @@
 # shared
 
+> Last updated: 2026-06-08
+
 Shared ES2022+ JavaScript modules for the Penpot JS port — dual-env (browser + Node.js).
 
 ## Status

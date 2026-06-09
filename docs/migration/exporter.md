@@ -1,5 +1,8 @@
 # Exporter Module (server/exporter)
 
+> Last updated: 2026-06-08
+> 13 source JS files, 22 unit tests (6 suites, 0 fail).
+
 Node.js ESM service that renders Penpot designs to PNG, JPEG, WebP, SVG, and PDF using Playwright.
 
 ## Architecture
@@ -47,6 +50,8 @@ Node.js ESM service that renders Penpot designs to PNG, JPEG, WebP, SVG, and PDF
 ```bash
 node --test test/exporter.test.js
 ```
+
+22 tests, 6 suites, 0 failures.
 
 ## API
 

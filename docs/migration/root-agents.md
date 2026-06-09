@@ -81,10 +81,10 @@ Penpot is an open-source design tool composed of several modules:
 |-----------|----------|---------|:----------------:|
 | `frontend/` | ClojureScript + SCSS | Single-page React app (design editor) — upstream | Yes |
 | `backend/` | Clojure (JVM) | HTTP/RPC server, PostgreSQL, Redis — upstream | Yes |
-| `client/` | JavaScript (ES2022+) + CSS | SPA design editor (Web Components) — JS port | Yes |
+| `client/` | JavaScript (ES2022+) + CSS | SPA design editor (Web Components) — JS port | No |
 | `server/` | JavaScript (Node.js ESM) | HTTP/RPC server, Fastify + SQLite — JS port | Yes |
 | `common/` | Cljc (shared Clojure/ClojureScript) | Data types, geometry, schemas, utilities — upstream | Yes |
-| `shared/` | JavaScript (ES2022+, dual-env) | Data types, geometry, schemas, utilities — JS port | Yes |
+| `shared/` | JavaScript (ES2022+, dual-env) | Data types, geometry, schemas, utilities — JS port | No |
 | `render-wasm/` | Rust -> WebAssembly | High-performance canvas renderer (Skia) | Yes |
 | `exporter/` (upstream only) | ClojureScript (Node.js) | Headless Playwright-based export (SVG/PDF) — upstream | No |
 | `server/exporter/` | JavaScript (Node.js ESM) | Headless Playwright export (PNG/JPEG/WebP/SVG/PDF) — JS port | Yes |

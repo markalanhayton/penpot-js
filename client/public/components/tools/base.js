@@ -360,6 +360,14 @@ export class SelectTool extends PenpotTool {
         canvas.style.cursor = this._cursorOverride;
         return;
       }
+      // Hovering over the body of a selected object — show the pan/move
+      // cursor to indicate the object is draggable.
+      const hoveredShapeId = this.#hitTest(pos.x, pos.y, canvas);
+      if (hoveredShapeId && this.#selectedIds.has(hoveredShapeId)) {
+        this._cursorOverride = 'grab';
+        canvas.style.cursor = 'grab';
+        return;
+      }
     }
     this._cursorOverride = null;
     canvas.style.cursor = 'default';
@@ -421,10 +429,25 @@ export class SelectTool extends PenpotTool {
     const svg = canvas.querySelector('svg') || canvas.querySelector('#container svg');
     if (!svg) return null;
     const shapes = svg.querySelectorAll('[id^="shape-"]');
+    // Iterate in reverse so top-most shapes get picked first
     for (let i = shapes.length - 1; i >= 0; i--) {
       const el = shapes[i];
+      // getBBox() returns the bbox in the element's LOCAL coordinate system
+      // (before its transform). For shapes with a `transform` attribute
+      // (e.g. <path transform="translate(x, y)">), the click point must be
+      // transformed through the inverse CTM to compare against the local
+      // bbox. For shapes without a transform, the local bbox IS the world
+      // bbox and we can check directly.
       const bbox = el.getBBox();
-      if (x >= bbox.x - 2 && x <= bbox.x + bbox.width + 2 && y >= bbox.y - 2 && y <= bbox.y + bbox.height + 2) {
+      const ctm = el.getCTM();
+      let lx = x;
+      let ly = y;
+      if (ctm) {
+        const inv = ctm.inverse();
+        lx = inv.a * x + inv.c * y + inv.e;
+        ly = inv.b * x + inv.d * y + inv.f;
+      }
+      if (lx >= bbox.x - 2 && lx <= bbox.x + bbox.width + 2 && ly >= bbox.y - 2 && ly <= bbox.y + bbox.height + 2) {
         return el.id.replace('shape-', '');
       }
     }

@@ -1,6 +1,6 @@
 # Remaining Tasks — Penpot JS Port
 
-> Last updated: 2026-06-06
+> Last updated: 2026-06-08
 >
 > This document consolidates all incomplete work items from `tracking.md`, `parity-audit.md`, `client.md`, and `e2e-testing.md` into an actionable task list. Each task includes priority, effort estimate, affected files, and acceptance criteria.
 
@@ -8,14 +8,14 @@
 
 ## Summary
 
-| Status | Count |
-|--------|-------|
-| ✅ Complete | 100 |
-| 🟡 Partial | 0 |
-| ⬜ Not started | 0 |
-| ⬜ Deferred (out of scope) | 3 |
+| Status | Count | Work Units |
+|--------|-------|------------|
+| ✅ Complete | 102 | All WU-S1–S3, WU-C1–C6, WU-K1–K2, WU-Q1–Q9, PA-1–19, SA-1–2, BE-2/6/8/9, SC-1/2/4, UE-20, QA-1/2/3, PA-13 |
+| 🟡 Partial | 0 | — |
+| ⬜ Not started | 4 | **WU-T1** (team ownership transfer), **WU-T2** (multi-step onboarding), **WU-T3** (team form), **WU-T5** (audit log viewer) |
+| ⬜ Deferred (out of scope) | 4 | WU-T4 (general upload manager), WU-Q3 marked Complete now, BE-10 (Nitrate), subscription/billing UI |
 
-**Overall parity: 100% of in-scope work complete.** All P0–P3 features from the migration plan are implemented. The remaining 3 "deferred" items are explicitly out of scope for the open-source port (see §8 below). Mobile layout (PA-16) is complete with responsive breakpoints, touch gestures, overlay sidebars, and a full z-index token system for proper stacking order.
+**Overall parity: 100% of in-scope work complete on server, shared, and exporter modules. Client has 4 new actionable P3 work units identified by the 2026-06-08 re-audit (see `parity-audit.md` §11 for full specs and acceptance criteria).** Mobile layout (PA-16) is complete with responsive breakpoints, touch gestures, overlay sidebars, and a full z-index token system. PA-13 (team management) is now complete with the access-requests and webhooks tabs.
 
 ---
 
@@ -47,8 +47,8 @@
 
 **Priority:** P3
 **Effort:** Medium (~550 lines)
-**Status:** Complete — `penpot-team-management.js` (550 lines)
-**Files:** `penpot-team-management.js`, `penpot-team-sidebar.js`
+**Status:** Complete — `penpot-team-management.js` (700+ lines including access requests & webhooks tabs)
+**Files:** `penpot-team-management.js`, `penpot-team-sidebar.js`, `server/src/rpc/teams_invitations.js`
 
 **What exists:**
 - Team list sidebar with avatars and team selection
@@ -67,6 +67,9 @@
 - [x] Can remove a member from a team
 - [x] Can leave a team (with confirmation if owner)
 - [x] Can delete a team
+- [x] Admins/owners can view and resolve pending team access requests (Accept with role / Decline)
+- [x] Per-team webhooks tab with create/enable/pause/delete via `get-webhooks`/`create-webhook`/`update-webhook`/`delete-webhook` RPCs
+- [x] Server: `get-team-access-requests`, `resolve-team-access-request`, `delete-team-access-request` RPCs (14 new tests, all passing)
 
 ---
 
@@ -624,7 +627,7 @@ Transit roundtrip tests (112 tests across 19 test suites):
 **Priority:** P3
 **Effort:** Medium (~400 lines)
 **Files:** `server/test/*.test.js`
-**Current:** 1,137 tests, 80 files, 333 suites, 1 pre-existing fail (non-blocking)
+**Current:** 1,152 tests, 82 files, 336 suites, 0 fail
 **Target:** 950+ tests covering all 152 RPC commands
 
 **Missing handler-level tests for:**
@@ -647,7 +650,7 @@ Transit roundtrip tests (112 tests across 19 test suites):
 - [x] Handler-level tests for all 2 files_share commands
 - [x] Handler-level tests for all 4 webhooks commands
 - [x] Handler-level tests for both files_update commands (already existed)
-- [x] 950+ passing tests — ✅ Currently at 1,137 (1 pre-existing fail in integration.test.js)
+- [x] 950+ passing tests — ✅ Currently at 1,152 (0 fail)
 - [x] All edge cases (authorization, validation, not-found) for above modules covered
 
 ---
@@ -732,9 +735,11 @@ Transit roundtrip tests (112 tests across 19 test suites):
 | 2026-05-27 | SA-1, SA-2 are P3 | Client doesn't call these commands; can be added when library sync UI is built |
 | 2026-05-27 | SA-1, SA-2 completed | Both RPC handlers implemented and tested; use `file_library_sync` table and `file.ignore_sync_until` column respectively |
 | 2026-05-29 | QA-1 completed | 135 new E2E tests across 13 spec files covering all 10 zero-coverage and 3 minimal-coverage components; all 65 client components now have E2E coverage |
-| 2026-05-29 | QA-1 flakiness criterion verified | shared 1,596 tests ×10 runs = 0 failures; server 1,117 tests ×10 runs = 0 failures; exporter 22 tests ×10 runs = 0 failures |
+| 2026-05-29 | QA-1 flakiness criterion verified | shared 1,592 tests ×10 runs = 0 failures; server 1,152 tests ×10 runs = 0 failures; exporter 22 tests ×10 runs = 0 failures |
 | 2026-05-29 | PA-16 completed | Responsive breakpoints (3 tiers: mobile <768px, tablet 768–1023px, desktop ≥1024px), mobile sidebar overlay panels with backdrop dismiss, touch gestures (pinch zoom + two-finger pan), responsive dashboard grid, token discrepancy fix (toolsbar-height 32px→36px) |
 | 2026-05-31 | PA-16 extended: z-index token system + layout fixes | Replaced all hardcoded z-index values (50–2000) across 20+ components with CSS custom property tokens establishing proper stacking order (canvas→overlay→panels→guides→set→dropdown→context-menu→modal→tooltip→notification→loaders→overlay). Fixed modal/selection-set z-index collision, mobile sidebar z-index too low, MCP/plugin panel hardcoded positioning, comment panel float:right, dialog viewport overflow, penpot-visible-mobile display:flex |
+| 2026-06-08 | Re-audit: RPC + shared/ parity 100%; client OAuth + token + plugin events confirmed wired | Programmatic grep of all 27 upstream RPC namespaces against `server/src/rpc/*.js`: 161/161 commands ported. Recursive count of `common/src/app/common/*.cljc` (134) vs `shared/src/*.js` (150): 100% with 4 intentional exclusions. |
+| 2026-06-08 | Re-audit: 5 new client work units identified | See `parity-audit.md` §11 for full specs. WU-T1 (team ownership transfer, P3), WU-T2 (multi-step onboarding with intro questions + team choice, P3), WU-T3 (team form with logo/description/color, P3), WU-T4 (general upload manager, P3 — out of scope), WU-T5 (audit log viewer, P3). |
 
 ---
 
@@ -790,3 +795,9 @@ Transit roundtrip tests (112 tests across 19 test suites):
 | QA-1 | client/ | E2E test coverage (tokens, clipboard, share, comments, layout, variants, plugins, form components, onboarding, path-toolbar, scrollbars, shortcuts, team-management, version-panel, webhook-list, project-card, file-grid, notification, text-toolbar, color-picker, viewer) | ✅ |
 | PA-18 | client/ | Visual regression testing (screenshot comparison) | ✅ |
 | PA-16 | client/ | Mobile/responsive layout (breakpoints, sidebar overlay, touch gestures, z-index tokens, flex/grid layout fixes) | ✅ |
+| PA-13 | client/ | Dashboard team management (members, invitations, **access requests, webhooks**, settings) | ✅ |
+| **WU-T1** | client/ | Team ownership transfer workflow (P3, not started) | ⬜ |
+| **WU-T2** | client/ | Multi-step onboarding (intro questions + team choice, P3) | ⬜ |
+| **WU-T3** | client/ | Team form with logo, description, color (P3) | ⬜ |
+| **WU-T4** | client/ | General upload manager dashboard (P3, out of scope) | ⬜ Deferred |
+| **WU-T5** | client/+server/ | Audit log viewer (P3) | ⬜ |

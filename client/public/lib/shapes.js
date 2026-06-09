@@ -674,8 +674,13 @@ function renderPath(shape) {
     attrs.stroke = '#333';
     attrs['stroke-width'] = 1;
   };
-  const transform = shapeTransform(shape);
-  if (transform) attrs.transform = transform;
+  const parts = [];
+  const tx = Number(shape.x) || 0;
+  const ty = Number(shape.y) || 0;
+  if (tx !== 0 || ty !== 0) parts.push(`translate(${tx} ${ty})`);
+  const t = shapeTransform(shape);
+  if (t) parts.push(t);
+  if (parts.length > 0) attrs.transform = parts.join(' ');
   return el('path', attrs);
 }
 

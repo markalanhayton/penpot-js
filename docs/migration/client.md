@@ -1,6 +1,6 @@
 # Client Migration Plan: ClojureScript → ES JS + Web Components
 
-**Date**: 2026-06-06
+**Date**: 2026-06-08
 **Status**: P0–P2 core complete, P3+ features almost done, ~100% functional parity (see tracking.md §Phase 2b Gap Analysis)
 **Constraint**: No third-party frameworks. No TypeScript. No React. Pure Modern ES JS (ES2022+), HTML5, CSS3, Web Components, Node.js ESM.
 
@@ -18,7 +18,7 @@ The canvas is rendered by WASM/Skia to a single `<canvas>` element. React's virt
 
 | Component | Files | Lines | Status |
 |-----------|-------|-------|--------|
-| `client/public/` | 114 | ~31,400 | Working auth + dashboard + workspace with drawing tools, snap guides, rulers, SVG import, Inspect panel, OT collaboration, flex/grid layout, design tokens, bool ops, responsive layout, CSS z-index token system, mobile sidebar overlays. **All P0–P4 items completed, ~100% functional parity** — see `tracking.md` Phase 2b for details. |
+| `client/public/` | 111 | ~29,500 | Working auth + dashboard + workspace with drawing tools, snap guides, rulers, SVG import, Inspect panel, OT collaboration, flex/grid layout, design tokens, bool ops, responsive layout, CSS z-index token system, mobile sidebar overlays. **All P0–P4 items completed, ~100% functional parity** — see `tracking.md` Phase 2b for details. |
 | `frontend/src/app/main/` (ClojureScript) | 544 | ~129K | Production frontend, fully functional |
 
 ### Target

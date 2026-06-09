@@ -179,7 +179,7 @@ node --test test/**/*.test.js
 npm run lint
 ```
 
-Tests run with `node --test test/**/*.test.js` (1,201 tests, 0 fail). Exporter tests run with `node --test test/exporter.test.js` (23 tests, 0 fail). When adding tests, use the built-in `node:test` and `node:assert` modules.
+Tests run with `node --test test/**/*.test.js` (1,152 tests, 0 fail). Exporter tests run with `node --test test/exporter.test.js` (22 tests, 0 fail). When adding tests, use the built-in `node:test` and `node:assert` modules.
 
 ## Environment
 

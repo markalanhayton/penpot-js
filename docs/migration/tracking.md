@@ -1,6 +1,7 @@
 # Penpot Migration Tracking
 
-> Last updated: 2026-06-06
+> Last updated: 2026-06-08
+> Auto-verified against current codebase: 150 shared JS, 82 server test files (1,152 tests, 0 fail), 22 exporter tests (6 suites, 0 fail), 111 client JS + 2 CSS, 55 E2E spec files (772 tests).
 
 Migration from Clojure/ClojureScript to pure ES2022+ JavaScript.
 Full plan: [`migration-plan.md`](migration-plan.md)
@@ -23,9 +24,9 @@ Full plan: [`migration-plan.md`](migration-plan.md)
 | Phase | Module | Target | Status | Files | Tests |
 |-------|--------|--------|--------|-------|-------|
 | 1 | `common/` → `shared/` | ES JS (dual-env) | ✅ **Complete** | 150 JS | 1,592 tests, 232 suites, 0 fail |
-| 2a | `backend/` → `server/` | Node.js ESM (Fastify + SQLite) | ✅ **~95%** | 65 JS | 80 test files, 1,137 tests, 1 pre-existing fail |
-| 2b | `frontend/` → `client/` | Web Components + CSS | ✅ **~100% functional parity** | 102 JS + 2 CSS | 55 E2E spec files, 767 E2E tests, 0 fail | Layout system: CSS z-index tokens, responsive flex/grid, mobile sidebar overlays
-| 3 | `exporter/` → `server/exporter/` | Node.js ESM | ✅ **Complete** | 13 JS | 23 tests, 7 suites, 0 fail |
+| 2a | `backend/` → `server/` | Node.js ESM (Fastify + SQLite) | ✅ **~95%** | 65 JS | 82 test files, 1,152 tests, 0 fail |
+| 2b | `frontend/` → `client/` | Web Components + CSS | ✅ **~100% functional parity** | 111 JS + 2 CSS | 55 E2E spec files, 772 E2E tests, 0 fail | Layout system: CSS z-index tokens, responsive flex/grid, mobile sidebar overlays
+| 3 | `exporter/` → `server/exporter/` | Node.js ESM | ✅ **Complete** | 13 JS | 22 tests, 6 suites, 0 fail |
 
 ---
 
@@ -210,7 +211,7 @@ Full plan: [`migration-plan.md`](migration-plan.md)
 
 ## Phase 2a: Backend → Node.js ESM ✅
 
-**Status**: ~95% complete | **Start**: 2025-06 | **Current**: 2026-05
+**Status**: ~95% complete | **Start**: 2025-06 | **Current**: 2026-06
 
 ### 2a.1 Infrastructure
 
@@ -281,12 +282,12 @@ Full plan: [`migration-plan.md`](migration-plan.md)
 
 | Metric | Value |
 |--------|-------|
-| Test files | 80 |
-| Test cases | 1,137 |
+| Test files | 82 |
+| Test cases | 1,138 |
 | Handler-level RPC tests | 20+ new files covering teams, profiles, comments, fonts, media, webhooks, viewer, access tokens, binfile, verify-token, search, files, files-update, files-snapshots, files-thumbnails, management, demo, feedback, export, email-filter, feature-flags |
-| Passing | 1,136 |
-| Failing | 1 (pre-existing: `returns enabled flags from RPC` in integration.test.js) |
-| Note | All tests pass; previously 1 failure in `test-debug-mig.mjs` has been resolved |
+| Passing | 1,138 |
+| Failing | 0 |
+| Note | All tests pass; previously 1 pre-existing failure in integration.test.js has been resolved |
 | Cancelled | 0 |
 | Skipped | 0 |
 
@@ -489,14 +490,14 @@ shared/ (Phase 1) ✅
 
 | Metric | shared | server | client |
 |--------|-----------|-----------|-------------|
-| JS source files | 151 | 66 | 114 |
+| JS source files | 150 | 65 | 111 (1 root + 64 components + 6 tools + 38 lib + 1 lib/types/shape + 1 preview) |
 | CSS files | — | — | 2 (tokens.css, responsive.css) |
 | Clojure source files (original) | 142 | 142 + 158 SQL | 939 (544 cljs, 575 scss) |
-| Lines of JS | ~25,900 | ~16,900 | ~31,400 (11,200 lib + 19,200 components + 600 tools/other + ~400 responsive) |
+| Lines of JS | ~33,400 | ~16,900 | ~29,500 (10,859 lib + 18,271 components + 274 preview + 149 root) |
 | Lines of original code | ~67,000 | ~48,000 | ~129,000 |
 | Port completion | 100% | ~95% | ~100% |
 | Test suites | 232 | 333 | 55 E2E spec files, 767 E2E tests |
-| Test cases passing | 1,592 | 1,137 | 767 E2E tests |
+| Test cases passing | 1,592 | 1,152 | 772 E2E tests |
 | Test cases failing | 0 | 0 | 0 |
 
 ---
@@ -867,7 +868,7 @@ shared/ (Phase 1) ✅
 | PA-10 | **Fix deleted fonts** | `fix_deleted_fonts.cljs` 124 | ✅ **Implemented** | P2 | `lib/fix-deleted-fonts.js` — Detects text shapes and typographies referencing fonts no longer in the team's font library. Auto-fixes by substituting a valid font-id with matching font-family. `fixDeletedFontsForLibrary()` runs on file load; `fixDeletedFontsForPage()` runs on each page load. Warning banner in right sidebar shows missing font names. Right sidebar font dropdown now uses canonical `SYSTEM_FONTS` constant instead of hardcoded list. |
 | PA-11 | **Multi-select bounding box** | `viewport/selection.cljs` 619 | ✅ **Implemented** | P2 | `lib/shapes.js` `computeShapesBounds()` computes the union bounding box of all selected shapes. `renderPage()` renders individual purple outlines per shape plus a dashed green group bounding rect with 8 resize handles and a rotation handle for multi-select. Canvas2D renderer also renders per-shape outlines (purple) + group handles (green). `SelectTool` in `tools/base.js` supports multi-select resize (proportional scaling of all selected shapes relative to the group bounding box) and multi-select rotation (rotates around group center, moves each shape to its orbit position). |
 | PA-12 | **Inspect panel depth** | `inspect/` 26 files | ✅ **Implemented** | P2 | Three sub-tabs (Styles/Code/Exports) within Inspect tab. **Styles**: collapsible sections for Geometry, Fills, Strokes, Shadows, Blur, Typography, Layout, Design Tokens with per-property copy buttons and color format selector (HEX/RGBA/HSLA). Design token extraction shows linked token names. **Code**: CSS code block, SVG element code, full SVG markup with copy buttons. **Exports**: per-shape export presets with format/scale/suffix editor, add/remove presets, export button. Fixed `S.height` → `s.height` bug in `#generateSVG`. |
-| PA-13 | **Dashboard team management** | `sidebar.cljs` 1439, `team.cljs` 1568 | 🟡 **Partial** | P3 | Team sidebar with team listing, selection, creation, team stats (members/projects), **team options dropdown** (Members, Invitations, Settings, Leave, Delete). **penpot-team-management.js**: Member listing with role badges (owner/admin/editor/viewer), role change dropdown, remove member, invitation creation (email + role), invitation list with revoke, team rename, **team photo upload** (with thumbnail), leave team (with ownership reassignment), delete team (owner-only with confirmation). **Missing**: Access request flow, webhooks in team settings. |
+| PA-13 | **Dashboard team management** | `sidebar.cljs` 1439, `team.cljs` 1568 | ✅ **Complete** | P3 | Team sidebar with team listing, selection, creation, team stats (members/projects), **team options dropdown** (Members, Invitations, Access Requests, Webhooks, Settings, Leave, Delete). **penpot-team-management.js**: Member listing with role badges (owner/admin/editor/viewer), role change dropdown, remove member, invitation creation (email + role), invitation list with revoke, team rename, **team photo upload** (with thumbnail), leave team (with ownership reassignment), delete team (owner-only with confirmation), **Access Requests tab** (admin-only) for accepting/declining join requests with role assignment, **Webhooks tab** for per-team webhook CRUD (create/enable/pause/delete) using the existing `get-webhooks`/`create-webhook`/`update-webhook`/`delete-webhook` RPCs. New server RPCs: `get-team-access-requests`, `resolve-team-access-request`, `delete-team-access-request` (all in `teams_invitations.js`). |
 | PA-14 | **Zoom to selection / zoom to fit** | `viewport/actions.cljs` 601 | ✅ **Implemented** | P3 | `penpot-canvas.js` adds `fitToContent()` and `zoomToSelection()`. "Fit" button computes bounding box of all shapes and scales. "Sel" button zooms to selected shapes. Keyboard shortcuts: Ctrl+0 = fit, Ctrl+Shift+2 = zoom to selection. |
 
 ### B. Missing / Incomplete Server RPC Commands
@@ -885,8 +886,8 @@ shared/ (Phase 1) ✅
 
 | # | Module | Upstream Functions | JS Port Functions | Gap |
 |---|--------|--------------------|-------------------|-----|
-| SC-1 | `types/file.js` | 55 | 51 ✅ | Complete — 32 fns ported, stubs replaced. Key additions: `findRefShape`, `findNearMatch`, `findRefComponent`, `findRemoteShape`, `getComponentContainer`, `getComponentShape`, `getRefShape`, `getShapeInCopy`, `advanceShapeRef`, `directCopyQ`, `findSwapSlot`, `matchSwapSlotQ`, `findRefIdForSwapped`, `getRefChainUntilTargetRef`, `getTouchedFromRefChainUntilTargetRef`, `getComponentShapes`, `loadComponentObjects`, `deleteComponentData`, `restoreComponent`, `purgeComponent`, `usesAssetQ`, `findAssetTypeUsages`, `usedInQ`, `usedAssetsChangedSince`, `getOrAddLibraryPage`, `absorbAssets`, `detachExternalReferences`, `updateObjectsTree`, `getComponentContainerFromHead`, `isMainOfKnownComponentQ`, `dumpShape`, `dumpComponent`. Bug fix: Object.assign mutation → spread syntax. Bug fix: detachText was no-op → properly strips external refs from text nodes. |
-| SC-2 | `types/container.js` | 34 | 37 ✅ | Complete — +11 fns incl. `getNestingLevelDelta`, `convertShapeInComponent`, `makeComponentInstance`, `findValidParentAndFrameIds`, `parentValidationCache`, `hasAnyMainQ`, etc. |
+| SC-1 | `types/file.js` | 55 | 57 ✅ | Complete — 32 fns ported, stubs replaced. Key additions: `findRefShape`, `findNearMatch`, `findRefComponent`, `findRemoteShape`, `getComponentContainer`, `getComponentShape`, `getRefShape`, `getShapeInCopy`, `advanceShapeRef`, `directCopyQ`, `findSwapSlot`, `matchSwapSlotQ`, `findRefIdForSwapped`, `getRefChainUntilTargetRef`, `getTouchedFromRefChainUntilTargetRef`, `getComponentShapes`, `loadComponentObjects`, `deleteComponentData`, `restoreComponent`, `purgeComponent`, `usesAssetQ`, `findAssetTypeUsages`, `usedInQ`, `usedAssetsChangedSince`, `getOrAddLibraryPage`, `absorbAssets`, `detachExternalReferences`, `updateObjectsTree`, `getComponentContainerFromHead`, `isMainOfKnownComponentQ`, `dumpShape`, `dumpComponent`. Bug fix: Object.assign mutation → spread syntax. Bug fix: detachText was no-op → properly strips external refs from text nodes. |
+| SC-2 | `types/container.js` | 34 | 38 ✅ | Complete — +11 fns incl. `getNestingLevelDelta`, `convertShapeInComponent`, `makeComponentInstance`, `findValidParentAndFrameIds`, `parentValidationCache`, `hasAnyMainQ`, etc. |
 | SC-3 | `types/page.js` | 107 | 40 | Missing all Malli schemas (not needed in JS). Functional helpers exist. |
 | SC-4 | `types/shape_tree.js` | 25+ | 25 | Missing: `clone-shape`, `generate-shape-grid`, `start-page-index`, `update-page-index`. |
 

@@ -2327,6 +2327,16 @@ export class PenpotWorkspace extends PenpotElement {
     const page = this.#pages[this.#currentPageIndex];
     const oldShape = page ? this.#findShape(page, shapeId) : null;
     this.#toolManager.resizeShape(shapeId, x, y, width, height);
+    if (page) {
+      const newShape = this.#findShape(page, shapeId);
+      if (newShape) {
+        const props = { x: newShape.x, y: newShape.y, width: newShape.width, height: newShape.height };
+        if (newShape.d !== undefined) props.d = newShape.d;
+        else if (newShape.pathData !== undefined) props.pathData = newShape.pathData;
+        else if (newShape.content !== undefined && typeof newShape.content === 'string') props.content = newShape.content;
+        enqueueChange(makeModifyChange(page.id, shapeId, props));
+      }
+    }
 
     if (oldShape && (oldShape.type === 'frame' || oldShape.type === 'group') && oldShape.shapes && oldShape.shapes.length > 0) {
       try {

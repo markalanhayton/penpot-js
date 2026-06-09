@@ -34,7 +34,6 @@
     "./types/shape/radius": "./src/types/shape/radius.js",
     "./types/shape/text": "./src/types/shape/text.js",
     "./types/shape/layout": "./src/types/shape/layout.js",
-    "./types/nitrate-permissions": "./src/types/nitrate_permissions.js",
     "./types/team": "./src/types/team.js",
     "./types/profile": "./src/types/profile.js",
     "./types/project": "./src/types/project.js",

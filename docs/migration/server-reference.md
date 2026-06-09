@@ -1,5 +1,7 @@
 # server — Node.js Port Agent Guide
 
+> Last updated: 2026-06-08
+
 Node.js (ESM) port of the Penpot backend, using Fastify + SQLite (better-sqlite3).
 
 ## Architecture
@@ -103,7 +105,7 @@ exporter/                         # Standalone Playwright-based export service
 │   │   └── resources.js       # Temp files, zip archives, upload to server
 │   └── util.js                # Logger, temp files, sanitization, sleep
 └── test/
-    └── exporter.test.js       # 22 unit tests
+    └── exporter.test.js       # 22 unit tests (6 suites)
 ```
 
 ## Key Patterns
@@ -174,7 +176,7 @@ node --test test/**/*.test.js
 npm run lint
 ```
 
-Tests run with `node --test test/**/*.test.js` (80 test files, 1,137 tests, 333 suites, 1 pre-existing fail). Exporter tests run with `node --test test/exporter.test.js` (23 tests, 0 fail). When adding tests, use the built-in `node:test` and `node:assert` modules.
+Tests run with `node --test test/**/*.test.js` (82 test files, 1,152 tests, 336 suites, 0 fail). Exporter tests run with `node --test test/exporter.test.js` (22 tests, 6 suites, 0 fail). When adding tests, use the built-in `node:test` and `node:assert` modules.
 
 ## Environment
 

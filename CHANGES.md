@@ -4,6 +4,9 @@
 
 ### :sparkles: New features & Enhancements
 
+- **Server: Team access request resolution RPCs**: Three new RPCs in `server/src/rpc/teams_invitations.js` complete the team access request flow alongside the existing `create-team-access-request`. `get-team-access-requests` lists pending requests with requester details (admin-only). `resolve-team-access-request` accepts a request (creating a `team_profile_rel` row in a transaction and deleting the request) or declines it (deleting the request). `delete-team-access-request` lets an admin decline a request or lets the original requester withdraw their own. `create-team-access-request` now also rejects calls from existing team members and from nonexistent teams. 14 new tests in `server/test/teams-invitations-rpc.test.js`, all passing.
+- **Client: Team management Access Requests & Webhooks tabs**: `penpot-team-management.js` adds two new tabs to the team management view. The **Access Requests** tab (admin/owner only) lists pending join requests with the requester's name/email and dates, and offers Accept (with role dropdown — editor/admin/viewer/owner) / Decline buttons wired to the new server RPCs. The **Webhooks** tab provides per-team webhook CRUD using the existing `get-webhooks`/`create-webhook`/`update-webhook`/`delete-webhook` RPCs — admins/owners can add a webhook (URL + JSON/Transit mtype), enable/pause, and delete. 5 new E2E tests in `client/e2e/team-management.spec.js` covering the new tabs and their rendering states.
+
 ### :bug: Bugs fixed
 
 ### :wastebasket: Removals

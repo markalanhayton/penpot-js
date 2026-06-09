@@ -1,8 +1,24 @@
 # Parity Audit: JS Port vs Upstream
 
-> Last updated: 2026-06-06
+> Last updated: 2026-06-08 (re-audit pass)
 
 This document tracks the functional parity between the upstream Penpot codebase (Clojure/ClojureScript) and the JS port (penpot-js). It covers all major modules and identifies what is ported, what is intentionally skipped, and what gaps remain.
+
+## Quick Links
+
+- [§1 shared/ vs common/](#1-shared-vs-common)
+- [§2 client/ vs frontend/](#2-client-vs-frontend)
+- [§3 server/ vs backend/](#3-server-vs-backend)
+- [§4 server/exporter/ vs exporter/](#4-serverexporter-vs-exporter)
+- [§5 Test Coverage](#5-test-coverage)
+- [§6 Summary Scorecard](#6-summary-scorecard)
+- [§7 Intentional Skips](#7-intentional-skips)
+- [§8 Remaining Gaps — Work Units](#8-remaining-gaps--work-units)
+- [§8.1 Re-Audit Findings (2026-06-08)](#81-re-audit-findings-2026-06-08)
+- [§9 Code Quality Audit](#9-code-quality-audit--mock-data-fake-stubs-and-error-handling)
+- [§10 Functional Correctness Audit](#10-functional-correctness-audit--why-buttons-dont-work)
+- [§11 New Work Units (2026-06-08)](#11-new-work-units-from-2026-06-08-re-audit)
+- [§12 Re-Audit Verification](#12-re-audit-verification)
 
 ## 1. shared/ vs common/
 
@@ -435,14 +451,15 @@ Lines comparison: ~35,000 lines (JS + CSS) vs ~129,000 lines (cljs + scss). The 
 | Category | Status |
 |---|---|
 | Infrastructure | ~100% |
-| RPC commands | 149/143 = 104% (6 JS-specific) |
-| Database schema | Full (21 migrations, PG parity) |
+| RPC commands | 167/161 = 104% (6 JS-specific) — all upstream commands ported, plus 3 PA-13 access-request commands |
+| Database schema | Full (22 migrations, PG parity) |
 | Middleware | 8/8 layers |
-| Test coverage | 79 files, 1,070 tests, 0 failures |
+| Test coverage | 82 files, 1,152 tests, 0 failures |
 | **Overall** | **~95%** (all major features functional, all RPC commands implemented) |
 
 Remaining gaps:
 - Some edge-case RPC handler logic may not cover every optional parameter the upstream provides
+- See §11 for new actionable work units identified by the 2026-06-08 re-audit (WU-T1 through WU-T5)
 
 ---
 
@@ -519,10 +536,12 @@ Categories: auth (6), P0 flow (11), workspace shell (14), components (18), tools
 
 | Module | Upstream Lines | JS Port Lines | Port Completion | Test Coverage |
 |---|---|---|---|---|
-| **shared/** | ~67,000 | ~29,600 | **100%** (0 stubs, 0 missing) | 1,592 pass, 232 suites |
-| **client/** | ~129,000 | ~35,000 | **~100%** | 55 spec files, 767 E2E, 55 unit |
-| **server/** | ~48,000 | ~19,000 | **~95%** | 1,137 pass, 333 suites, 1 pre-existing fail |
-| **server/exporter/** | ~4,000 | ~1,500 | **100%** (+ WebP) | 22 tests, 6 suites |
+| **shared/** | ~67,000 | ~29,600 | **100%** (0 stubs, 0 missing) | 1,592 pass, 232 suites, 0 fail |
+| **client/** | ~129,000 | ~35,000 | **~100%** | 55 spec files, 772 E2E, 56 unit, 0 fail |
+| **server/** | ~48,000 | ~19,000 | **~95%** (5 actionable gaps in §11) | 1,152 pass, 336 suites, 0 fail |
+| **server/exporter/** | ~4,000 | ~1,500 | **100%** (+ WebP) | 22 tests, 6 suites, 0 fail |
+
+> Re-audit 2026-06-08: Server has 5 actionable client gaps (WU-T1–T5 in §11). Server, shared, and exporter are 100% on the core surface.
 
 ## 7. Intentional Skips
 
@@ -901,6 +920,41 @@ Implemented the full file GC pipeline matching upstream's `process-file!` flow, 
 
 ---
 
+## 8.1 Re-Audit Findings (2026-06-08)
+
+> Programmatic comparison of all upstream RPC commands (27 namespaces) and all 134 upstream `common/src/app/common/` CLJC modules against the JS port.
+> **Result: 100% RPC parity. 100% shared/ parity. Client is at ~100% functional parity with a small number of UI gaps documented below.**
+
+### 8.1.1 RPC Parity Verified
+
+All 161 upstream RPC commands have JS port equivalents. Five `nitrate` commands (`add-team-to-organization`, `get-nitrate-connectivity`, `leave-org`, `redeem-nitrate-activation-code`, `remove-team-from-org`) are intentionally removed (out of scope for open-source port, see §7). Six JS-only commands added: `get-export-status`, `get-current-mcp-token`, `get-api-tokens`, `search-rebuild-index`, `get-team-access-requests`, `resolve-team-access-request`, `delete-team-access-request` (the last three added in PA-13 WU).
+
+### 8.1.2 Status Corrections
+
+The following items listed in §10.4 / §10.7 as "deferred" or "missing" are **actually complete** in the current codebase:
+
+| Item | Doc status | Actual status | Evidence |
+|------|------------|---------------|----------|
+| WU-Q3 (OAuth login buttons) | "Deferred" (line 1102) | **Complete** | `client/public/components/penpot-auth-screen.js:72-76` `OAUTH_PROVIDERS` array; `penpot-auth-screen.js:188-220` `renderOAuthButtons()` with feature flag checks; `penpot-auth-screen.js:220` `cmd('get-oidc-auth-uri', { providerId })`. Server-side `oidc-callback` handler is in `server/src/auth/oidc.js`. |
+| Reset overrides UI | "Implemented" via `#reset-overrides-btn` | **Complete** | `penpot-right-sidebar.js:543,660,826,930-931` — Reset buttons per group + global; `penpot-workspace.js:751` handler persists via `enqueueChange(makeModifyChange(...))`. |
+| `penpot-swap-instance` event | "Wired" in `penpot-workspace.js:770` | **Complete** | Confirmed: swap dropdown emits `penpot-swap-instance`; workspace handler updates `component-id` with `swap-slot-<id>` touched tracking. |
+| `penpot-plugin-{install,open,remove}` events | "Wired" in `penpot-workspace.js:216-222` | **Complete** | Confirmed: 3 event handlers dispatching to `PluginManager.{loadPlugin,openPlugin,unloadPlugin}`. |
+| All 7 `penpot-token-*` events | "Wired" in `penpot-workspace.js:820-841` | **Complete** | Confirmed: 7 handlers for set-activate, theme-change, apply-color-token, apply-typo-token, add, delete, update. |
+
+### 8.1.3 Real Gaps Identified
+
+A small number of upstream UI features are not present in the JS port. These are added as new work units below.
+
+| Gap | Upstream | JS Port | Reason |
+|-----|----------|---------|--------|
+| Subscription tier / billing UI | `frontend/src/app/main/ui/dashboard/subscription.cljs` (1,326 lines) | Missing | Out of scope (paid-tier enterprise, see §7). Backend RPC `get-subscription-usage` is ported for usage display only. |
+| Team ownership transfer workflow | `frontend/src/app/main/ui/dashboard/change_owner.cljs` | Missing — `penpot-team-management.js` has role changes but no explicit "Transfer Ownership" flow | Functional gap (P3) |
+| Multi-step onboarding (intro questions + team choice) | `frontend/src/app/main/ui/onboarding/{questions,team_choice}.cljs` | `penpot-onboarding.js` is a 6-step overlay only; no intro-questionnaire or post-signup team choice | Functional gap (P3) |
+| General upload manager UI | `frontend/src/app/main/data/uploads.cljs` | Media upload via `media-rpc.js`; font upload via `lib/fonts.js`; file import via `file-import.js`. No general "uploads" dashboard. | Functional gap (P3) |
+| Team form (logo, description, color) | `frontend/src/app/main/ui/dashboard/team_form.cljs` | `penpot-dashboard.js` create-team dialog has only a name field | Functional gap (P3) |
+
+---
+
 ## 9. Code Quality Audit — Mock Data, Fake Stubs, and Error Handling
 
 > Last updated: 2026-06-06
@@ -1099,19 +1153,156 @@ ES modules are automatically in strict mode per spec, but the explicit directive
 |---|---|---|---|---|
 | **WU-Q1** | **P0** | ~~Wire token panel events in workspace~~ | `penpot-workspace.js`, `penpot-tokens-panel.js` | ✅ **Complete** — All 7 token events wired + persistence via `enqueueChange` |
 | **WU-Q2** | **P0** | ~~Wire plugin lifecycle events~~ | `penpot-workspace.js`, `penpot-plugin-manager.js`, `penpot-toolbar.js` | ✅ **Complete** — All 3 plugin events wired: install loads manifest via `PluginManager.loadPlugin()`, open creates iframe via `PluginManager.openPlugin()`, remove calls `PluginManager.unloadPlugin()`. Plugin panel overlay with toolbar button added. |
-| **WU-Q3** | **P0** | Add OAuth login buttons to auth screen | `penpot-auth-screen.js` | Small |
+| **WU-Q3** | **P0** | ~~Add OAuth login buttons to auth screen~~ | `penpot-auth-screen.js` | ✅ **Complete** — `OAUTH_PROVIDERS` array (line 72-76) for OIDC/Google/GitHub/GitLab, `renderOAuthButtons()` (line 188) renders buttons when feature flags are enabled, `handleOAuthLogin()` calls `get-oidc-auth-uri` RPC and redirects to provider. Server-side `oidc-callback` handler processes auth code. |
 | **WU-Q4** | **P1** | ~~Add webhook management UI to settings~~ | `penpot-settings.js`, `penpot-webhook-list.js` | ✅ **Complete** — New Webhook list component with CRUD via `create-webhook`, `update-webhook`, `delete-webhook`, `get-webhooks` RPC. Settings page shows Webhooks tab when `webhooks` flag is enabled. Team selector, URL + mtype fields, pause/enable toggle, delete with confirm. |
 | **WU-Q5** | **P1** | ~~Fix `#createShape` return value in plugin API~~ | `lib/plugin-api.js`, `penpot-workspace.js` | ✅ **Complete** — `#createShape` now pre-generates UUID and returns `{success: true, id}`. `#updateShape` now dispatches single `penpot-shape-update` event with all updates batched instead of per-property `penpot-property-change` events. New `#handleShapeUpdate` in workspace persists via `makeModifyChange`. |
-| **WU-Q6** | **P2** | Implement or remove Templates tab properly | `penpot-dashboard.js`, `server/src/rpc/management.js` | Medium |
+| **WU-Q6** | **P2** | ~~Implement or remove Templates tab properly~~ | `penpot-dashboard.js`, `server/src/rpc/management.js` | ✅ **Complete** — `get-builtin-templates` reads from `server/resources/onboarding.json` (15 templates); `clone-template` downloads `.penpot` files from GitHub URLs and imports via `parseImportBuffer`. 9 tests (template listing, validation, permissions, file duplication, file moving). |
 | **WU-Q7** | **P2** | ~~Upgrade boolean operations library~~ | `lib/bool-ops.js` | ✅ **Complete** — Rewrote with convex decomposition for concave intersection, point-in-polygon containment, even-odd fill for difference/exclusion |
-| **WU-Q8** | **P2** | Centralize SYSTEM_FONTS constant | `shared/src/constants.js` or `lib/fonts.js` | Small |
-| **WU-Q9** | **P3** | Improve template icon rendering | `penpot-dashboard.js` | Small |
+| **WU-Q8** | **P2** | ~~Centralize SYSTEM_FONTS constant~~ | `shared/src/constants.js` | ✅ **Complete** — Canonical `SYSTEM_FONTS` (17 entries) in `shared/src/constants.js`; all 4 consumers import from `@penpot/shared/constants`. |
+| **WU-Q9** | **P3** | ~~Improve template icon rendering~~ | `penpot-dashboard.js` | ✅ **Complete** — Added `icon` (emoji) and `color` fields to `server/resources/onboarding.json` for all 15 templates. Dashboard renders emoji icon on colored background. Filters out `welcome`/`tutorial-for-beginners` (shown in onboarding only). |
 
 **WU-Q1** (token panel events) is the highest priority because it makes the entire design tokens panel functional. Currently users can see and interact with token sets, themes, and apply buttons, but nothing happens when they click.
 
 **WU-Q2** (plugin lifecycle) makes the plugin system work end-to-end. Currently plugins can't be installed, opened, or removed through the UI.
 
 **WU-Q3** (OAuth buttons) is required for any SSO/login deployment. The server-side OIDC code works, but the auth screen doesn't render the buttons.
+
+> **Status note 2026-06-08:** WU-Q1, WU-Q2, WU-Q3, WU-Q4, WU-Q5, WU-Q7, WU-Q8, WU-Q9 are all **already complete** in the current codebase (see §8.1.2). The §10.7 table is kept for historical context; the WU-Q1–Q9 rows are no longer actionable.
+
+---
+
+## 11. New Work Units (from 2026-06-08 Re-Audit)
+
+> New work units identified by the 2026-06-08 re-audit. These are the **only** in-scope, actionable gaps remaining. See §8.1.3 for the complete list of findings.
+
+### WU-T1: Team ownership transfer workflow
+
+**Module:** client/
+**Priority:** P3
+**Upstream:** `frontend/src/app/main/ui/dashboard/change_owner.cljs` + `frontend/src/app/main/ui/dashboard/team_form.cljs`
+**Current JS:** `client/public/components/penpot-team-management.js` (role changes only — no ownership transfer workflow)
+**Status:** Not started
+
+**Description:** Add an explicit "Transfer Ownership" workflow to `penpot-team-management.js`. The current role-change dropdown lets owners change a member's role to "owner" — but upstream has a dedicated confirmation modal that:
+- Lists current owners
+- Lets the current owner pick which other member becomes the new owner
+- Validates that the new owner is a team member
+- Confirms the action with the user before persisting
+- Sends a notification email (or audit event) to the team
+
+**Acceptance criteria:**
+- [ ] "Transfer Ownership" option in the team settings or member context menu
+- [ ] Modal lists current team members, owner-selectable
+- [ ] Confirmation dialog before persisting
+- [ ] On confirm, calls existing `update-team-member-role` with `role: 'owner'` for the new owner and `role: 'admin'` (or similar) for the old owner
+- [ ] Audit event logged via `push-audit-events`
+- [ ] 3+ new E2E tests in `team-management.spec.js`
+
+---
+
+### WU-T2: Multi-step onboarding (intro questions + team choice)
+
+**Module:** client/
+**Priority:** P3
+**Upstream:** `frontend/src/app/main/ui/onboarding/questions.cljs` (intro questionnaire) + `frontend/src/app/main/ui/onboarding/team_choice.cljs` (post-signup team selection)
+**Current JS:** `client/public/components/penpot-onboarding.js` (single 6-step overlay)
+**Status:** Not started
+
+**Description:** The JS port has a 6-step overlay onboarding shown on first workspace visit. Upstream has two distinct onboarding flows:
+1. **Intro questions** — Shown once on first login. Asks role (designer/developer/PM/other), team size, use case. Persists to `profile.props.onboarding-*` via existing `update-profile-props` RPC.
+2. **Team choice** — Shown after signup if user has no team. Offers to create a new team or join an existing one via invite link.
+
+**Acceptance criteria:**
+- [ ] Intro-questions step shown after login for new users (checks `profile.props.onboarding-viewed` flag)
+- [ ] At least 3 question steps: role, team size, primary use case
+- [ ] Persisted via `update-profile-props` RPC with `onboarding-{role,size,use-case}` keys
+- [ ] Team-choice overlay shown if user has 0 teams
+- [ ] "Create Team" and "Join via invite link" options
+- [ ] 4+ new E2E tests in a new `onboarding.spec.js` (existing onboarding.spec.js is for the 6-step overlay)
+
+---
+
+### WU-T3: Team form (logo, description, color)
+
+**Module:** client/
+**Priority:** P3
+**Upstream:** `frontend/src/app/main/ui/dashboard/team_form.cljs` (~300 lines)
+**Current JS:** `client/public/components/penpot-dashboard.js` (create-team dialog has only a `name` field)
+**Status:** Not started
+
+**Description:** The JS port's team creation dialog only captures the team name. Upstream's `team_form.cljs` also captures:
+- **Description** (optional 500-char free text, persisted to `team.features` or new `team.description` column)
+- **Logo** (image upload, persisted via `update-team-photo` which already exists in `teams.js:286`)
+- **Color** (hex color used for team badge / sidebar accent)
+
+This is a UI enhancement, not a backend change — the backend already supports `update-team-photo` and arbitrary features blobs.
+
+**Acceptance criteria:**
+- [ ] Create-team dialog has description, logo upload, and color picker
+- [ ] Edit-team dialog (accessible from team settings) supports the same fields
+- [ ] Description persisted to `team.features.description` or a new column (design choice)
+- [ ] Logo uses existing `update-team-photo` RPC
+- [ ] Color persisted to `team.features.color`
+- [ ] 3+ new E2E tests in a new `team-form.spec.js`
+
+---
+
+### WU-T4: General upload manager dashboard
+
+**Module:** client/
+**Priority:** P3
+**Upstream:** `frontend/src/app/main/data/uploads.cljs`
+**Current JS:** No general upload dashboard. Uploads happen inline (media, fonts, file import).
+**Status:** Not started
+
+**Description:** Upstream has a centralized uploads manager that tracks in-progress, completed, and failed uploads. The JS port handles uploads inline — there's no surface to monitor upload progress across media, font, file, and import uploads.
+
+This work unit is **optional / nice-to-have**. The JS port's current per-feature progress UI is functional; the uploads manager would centralize progress and retry logic.
+
+**Acceptance criteria (out of scope for v2.17):**
+- [ ] Upload progress registry shared by media / font / file / import flows
+- [ ] In-progress / completed / failed upload dashboard
+- [ ] Retry-failed-upload action
+- [ ] Cancel-in-progress-upload action
+- [ ] 5+ new unit tests for upload state machine
+
+---
+
+### WU-T5: Audit log viewer in settings
+
+**Module:** client/ + server/
+**Priority:** P3
+**Upstream:** `frontend/src/app/main/data/workspace/audit_log.cljs` + `backend/src/app/rpc/commands/audit.clj` (`get-audit-events` query)
+**Current JS:** Audit events are pushed via `push-audit-events` and stored in `audit_log` table. No RPC to retrieve them. No UI to view them.
+**Status:** Not started
+
+**Description:** Add a `get-audit-events` RPC to query audit events (with pagination, filtering by team/profile/event-type/date range) and a "Audit Log" tab in settings showing the events.
+
+**Acceptance criteria:**
+- [ ] New `get-audit-events` RPC in `server/src/rpc/audit.js` with pagination (`limit`/`offset`) and filters (`team-id`, `profile-id`, `event-type`, `from`, `to`)
+- [ ] Returns camelCase rows with `eventName`, `profileId`, `props`, `context`, `trackedAt`
+- [ ] Permission check: only team admins/owners can view team-scoped events
+- [ ] New "Audit Log" tab in `penpot-settings.js` with filterable event list
+- [ ] 5+ new integration tests for the RPC
+- [ ] 3+ new E2E tests for the settings tab
+
+---
+
+## 12. Re-Audit Verification
+
+The 2026-06-08 re-audit verified the following via file-level inspection of both codebases:
+
+| Area | Method | Result |
+|------|--------|--------|
+| Server RPC parity | `grep "sv/defmethod ::"` on `backend/src/app/rpc/commands/*.clj` vs `grep "register\('"` on `server/src/rpc/*.js` | 161/161 upstream commands ported. 5 nitrate intentionally removed. 7 JS-only added. |
+| Shared module parity | Recursive file count of `common/src/app/common/*.cljc` (134 files) vs `shared/src/*.js` (150 files) | 100% ported. 4 JVM-only intentionally excluded. |
+| OAuth UI | `grep "OAUTH_PROVIDERS\|renderOAuthButtons\|get-oidc-auth-uri"` on `client/public/components/penpot-auth-screen.js` | Implemented (line 72-76, 188-220) |
+| Token events | `grep "penpot-token-"` on `client/public/components/penpot-workspace.js` | 7 handlers wired (line 820-841) |
+| Plugin events | `grep "penpot-plugin-"` on `client/public/components/penpot-workspace.js` | 3 handlers wired (line 216-222) |
+| Reset overrides | `grep "penpot-reset-overrides"` on `client/public/components/{penpot-right-sidebar,penpot-workspace}.js` | Wired (per-group + global) |
+| Component swap | `grep "penpot-swap-instance"` on `client/public/components/penpot-workspace.js` | Handler at line 770 |
+
+The re-audit confirms the existing claim of **~100% functional parity** with **5 new actionable work units** (WU-T1 through WU-T5) plus **1 explicitly out-of-scope** (WU-T4 uploads manager).
 
 ### 9.7 Recommended Test Plan
 

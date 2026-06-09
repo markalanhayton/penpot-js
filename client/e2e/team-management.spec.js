@@ -171,4 +171,69 @@ test.describe('Team Management E2E', () => {
     });
     expect(hasDangerZone).toBe(true);
   });
+
+  test('renders Access Requests and Webhooks tabs', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('penpot-auth-screen');
+    const tabs = await page.evaluate(() => {
+      const tm = document.createElement('penpot-team-management');
+      document.body.appendChild(tm);
+      return Array.from(tm.querySelectorAll('.penpot-tm__tab')).map((t) => t.dataset.tab);
+    });
+    expect(tabs).toContain('access');
+    expect(tabs).toContain('webhooks');
+  });
+
+  test('clicking Access Requests tab activates it', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('penpot-auth-screen');
+    const activeTab = await page.evaluate(() => {
+      const tm = document.createElement('penpot-team-management');
+      document.body.appendChild(tm);
+      tm.querySelector('[data-tab="access"]')?.click();
+      return tm.querySelector('.penpot-tm__tab.penpot-tm__active')?.dataset.tab || '';
+    });
+    expect(activeTab).toBe('access');
+  });
+
+  test('clicking Webhooks tab activates it', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('penpot-auth-screen');
+    const activeTab = await page.evaluate(() => {
+      const tm = document.createElement('penpot-team-management');
+      document.body.appendChild(tm);
+      tm.querySelector('[data-tab="webhooks"]')?.click();
+      return tm.querySelector('.penpot-tm__tab.penpot-tm__active')?.dataset.tab || '';
+    });
+    expect(activeTab).toBe('webhooks');
+  });
+
+  test('Access Requests tab shows empty state for non-admin', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('penpot-auth-screen');
+    const hasEmpty = await page.evaluate(() => {
+      const tm = document.createElement('penpot-team-management');
+      document.body.appendChild(tm);
+      tm.querySelector('[data-tab="access"]')?.click();
+      const content = tm.querySelector('#content');
+      return content?.innerHTML?.includes('No pending access requests')
+        || content?.innerHTML?.includes('Only team owners and admins')
+        || content?.innerHTML?.includes('not a member')
+        || false;
+    });
+    expect(hasEmpty).toBe(true);
+  });
+
+  test('Webhooks tab shows empty state', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('penpot-auth-screen');
+    const hasEmpty = await page.evaluate(() => {
+      const tm = document.createElement('penpot-team-management');
+      document.body.appendChild(tm);
+      tm.querySelector('[data-tab="webhooks"]')?.click();
+      const content = tm.querySelector('#content');
+      return content?.innerHTML?.includes('No webhooks configured') || false;
+    });
+    expect(hasEmpty).toBe(true);
+  });
 });

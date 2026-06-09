@@ -8,6 +8,19 @@ import { enqueueChange, makeCreateChange, makeModifyChange, makeDeleteChange, ma
 import { copyShapesToClipboard, readShapesFromClipboard, readSystemClipboard, deepCloneShape, assignNewIds } from './clipboard.js';
 import { PathEditor } from './path-editor.js';
 import { degrees, radians } from '@penpot/shared/math.js';
+import { transformPathD, getPathDBounds } from './path-d.js';
+
+function getShapePathD(shape) {
+  if (!shape) return null;
+  return shape.d || shape.pathData || shape.content || null;
+}
+
+function setShapePathD(shape, d) {
+  if (!shape) return;
+  if (shape.d !== undefined) shape.d = d;
+  else if (shape.pathData !== undefined) shape.pathData = d;
+  else shape.d = d;
+}
 
 export class ToolManager {
   #tools = new Map();
@@ -347,6 +360,7 @@ export class ToolManager {
     const oldY = shape.y;
     shape.x = oldX + dx;
     shape.y = oldY + dy;
+
     this.#history.push({ type: 'move', shapeId, oldX, oldY, newX: shape.x, newY: shape.y, pageId: page.id });
     this.#workspace.emit('penpot-page-change', { page, pageIndex: this.#currentPageIndex });
   }
@@ -375,6 +389,32 @@ export class ToolManager {
     const shape = this.#findShape(page, shapeId);
     if (!shape) return;
     const oldProps = { x: shape.x, y: shape.y, width: shape.width, height: shape.height };
+    const oldW = oldProps.width || 0;
+    const oldH = oldProps.height || 0;
+    const newW = width || 0;
+    const newH = height || 0;
+
+    const isPathLike = shape.type === 'path' || shape.type === 'curve'
+      || shape.type === 'polyline' || shape.type === 'polygon' || shape.type === 'bool';
+    const d = getShapePathD(shape);
+    if (isPathLike && d && oldW > 0 && oldH > 0 && newW > 0 && newH > 0) {
+      const dBounds = getPathDBounds(d);
+      const scaleX = newW / oldW;
+      const scaleY = newH / oldH;
+      // Normalize: shift d so its top-left sits at the local origin (0, 0),
+      // scale around (0, 0) to fill the new size, then update shape.x/y to
+      // the new world position so renderPath's translate(shape.x, shape.y)
+      // lands the d's top-left at the bbox's top-left.
+      setShapePathD(shape, transformPathD(d, {
+        dx: -dBounds.x,
+        dy: -dBounds.y,
+        scaleX,
+        scaleY,
+        scaleOriginX: 0,
+        scaleOriginY: 0,
+      }));
+    }
+
     shape.x = x;
     shape.y = y;
     shape.width = width;

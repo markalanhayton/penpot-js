@@ -1,6 +1,7 @@
 # E2E Testing Document
 
-> Last updated: 2026-06-06
+> Last updated: 2026-06-08
+> Current counts (auto-verified): 55 client E2E spec files (767 tests), 82 server test files (1,152 tests, 0 fail), 65 shared test files (1,592 tests, 232 suites, 0 fail), 1 exporter test file (22 tests, 6 suites, 0 fail).
 
 Comprehensive guide to end-to-end, integration, and unit testing across all modules of the Penpot JS port.
 
@@ -52,10 +53,10 @@ The Penpot JS port uses a layered testing strategy tailored to each module's run
 
 | Module | Test Type | Runner | Location | Count |
 |--------|-----------|--------|----------|-------|
-| `client/` | E2E | Playwright | `client/e2e/*.spec.js` | 55 spec files, 767 tests |
-| `server/` | Integration + Unit | `node:test` | `server/test/*.test.js` | 80 files, 1,137 tests, 333 suites, 1 pre-existing fail |
-| `shared/` | Unit | `node:test` | `shared/test/*.test.js` | 64 files, 232 suites, 1,592 tests |
-| `server/exporter/` | Unit | `node:test` | `server/exporter/test/*.test.js` | 23 tests |
+| `client/` | E2E | Playwright | `client/e2e/*.spec.js` | 55 spec files, 772 tests |
+| `server/` | Integration + Unit | `node:test` | `server/test/*.test.js` | 82 files, 1,152 tests, 336 suites, 0 fail |
+| `shared/` | Unit | `node:test` | `shared/test/*.test.js` | 65 files, 232 suites, 1,592 tests |
+| `server/exporter/` | Unit | `node:test` | `server/exporter/test/exporter.test.js` | 22 tests, 6 suites, 0 fail |
 | `frontend/` (upstream) | E2E | Playwright | `frontend/playwright/ui/specs/*.spec.js` | 35 spec files |
 
 ---
