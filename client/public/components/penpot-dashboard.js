@@ -6,8 +6,10 @@ import { t } from '../lib/i18n.js';
 import { PenpotElement } from './base.js';
 import { generateAndUploadThumbnail } from '../lib/thumbnail.js';
 import { processFontBlobs, uploadFontVariant, groupFontsByFamily, fetchTeamFonts, deleteFontFamily, deleteFontVariant, variantDisplayName } from '../lib/fonts.js';
+import { getFailedCount, getInFlightCount, subscribeUploads, registerUpload, runUpload } from '../lib/uploads.js';
 import './penpot-context-menu.js';
 import './penpot-share-dialog.js';
+import './penpot-uploads-dashboard.js';
 
 const template = document.createElement('template');
 template.innerHTML = `
@@ -20,7 +22,8 @@ template.innerHTML = `
     .penpot-app__spacer { flex: 1; }
     .penpot-app__user-info { font-size: var(--penpot-font-size-s, 11px); color: var(--penpot-text-dim, #999); margin-right: var(--penpot-spacing-s, 8px); display: flex; align-items: center; gap: var(--penpot-spacing-xs, 4px); }
     .penpot-app__user-avatar { width: 24px; height: 24px; border-radius: var(--penpot-radius-full, 9999px); background: var(--penpot-primary-bg, rgba(49,239,184,0.15)); color: var(--penpot-primary, #31efb8); display: flex; align-items: center; justify-content: center; font-size: var(--penpot-font-size-xs, 10px); font-weight: 600; }
-    .penpot-app__btn { background: none; border: 1px solid var(--penpot-border, #444); border-radius: var(--penpot-radius-s, 4px); color: var(--penpot-text, #e6e6e6); padding: var(--penpot-spacing-xs, 4px) var(--penpot-spacing-s, 8px); cursor: pointer; font-size: var(--penpot-font-size-s, 11px); }
+    .penpot-app__btn { background: none; border: 1px solid var(--penpot-border, #444); border-radius: var(--penpot-radius-s, 4px); color: var(--penpot-text, #e6e6e6); padding: var(--penpot-spacing-xs, 4px) var(--penpot-spacing-s, 8px); cursor: pointer; font-size: var(--penpot-font-size-s, 11px); position: relative; }
+    .penpot-app__nav-badge { display: inline-block; min-width: 14px; height: 14px; padding: 0 4px; margin-left: 4px; background: var(--penpot-danger, #f44); color: #fff; font-size: 9px; font-weight: 600; line-height: 14px; text-align: center; border-radius: 7px; vertical-align: middle; }
     .penpot-app__btn:hover { background: var(--penpot-surface-high, #333); border-color: var(--penpot-border-hover, #666); }
     .penpot-app__danger { color: var(--penpot-danger, #f44); border-color: var(--penpot-danger, #f44); }
     .penpot-app__btn.penpot-app__danger:hover { background: var(--penpot-danger-bg, rgba(244,67,54,0.08)); }
@@ -68,6 +71,7 @@ template.innerHTML = `
         <button class="penpot-app__btn" id="nav-libraries">Libraries</button>
         <button class="penpot-app__btn" id="nav-templates">Templates</button>
         <button class="penpot-app__btn" id="nav-deleted">Deleted</button>
+        <button class="penpot-app__btn" id="nav-uploads">Uploads<span class="penpot-app__nav-badge" id="nav-uploads-badge" style="display:none;"></span></button>
         <span class="penpot-app__spacer"></span>
         <span class="penpot-app__user-info" id="user-info">
           <span class="penpot-app__user-avatar" id="user-avatar"></span>
@@ -113,6 +117,9 @@ export class PenpotDashboard extends PenpotElement {
     this.querySelector('#nav-libraries').addEventListener('click', () => { this.#view = 'libraries'; this.renderCurrentView(); });
     this.querySelector('#nav-templates').addEventListener('click', () => { this.#view = 'templates'; this.renderCurrentView(); });
     this.querySelector('#nav-deleted').addEventListener('click', () => { this.#view = 'deleted'; this.renderCurrentView(); });
+    this.querySelector('#nav-uploads').addEventListener('click', () => { this.#view = 'uploads'; this.renderCurrentView(); });
+
+    document.addEventListener('penpot-uploads-changed', () => this.#updateUploadsBadge());
 
     const sidebar = this.querySelector('#team-sidebar');
     sidebar.addEventListener('penpot-team-selected', (e) => {
@@ -125,6 +132,7 @@ export class PenpotDashboard extends PenpotElement {
     });
 
     this.loadDashboard();
+    this.#updateUploadsBadge();
   }
 
   static get observedAttributes() { return ['view']; }
@@ -187,7 +195,41 @@ export class PenpotDashboard extends PenpotElement {
       case 'libraries': this.renderLibraries(); break;
       case 'templates': this.renderTemplates(); break;
       case 'deleted': this.renderDeleted(); break;
+      case 'uploads': this.renderUploads(); break;
       default: this.renderProjects(); break;
+    }
+  }
+
+  renderUploads() {
+    const content = this.querySelector('#content');
+    const titleEl = this.querySelector('#title');
+    if (!content || !titleEl) return;
+    titleEl.textContent = 'Uploads';
+    content.innerHTML = '';
+    const dash = content.querySelector('penpot-uploads-dashboard');
+    if (!dash) {
+      const el = document.createElement('penpot-uploads-dashboard');
+      content.appendChild(el);
+    }
+  }
+
+  #updateUploadsBadge() {
+    const badge = this.querySelector('#nav-uploads-badge');
+    if (!badge) return;
+    const failed = getFailedCount();
+    const inFlight = getInFlightCount();
+    if (failed > 0) {
+      badge.textContent = String(failed);
+      badge.title = `${failed} failed upload${failed > 1 ? 's' : ''}`;
+      badge.style.display = 'inline-block';
+    } else if (inFlight > 0) {
+      badge.textContent = String(inFlight);
+      badge.title = `${inFlight} upload${inFlight > 1 ? 's' : ''} in progress`;
+      badge.style.display = 'inline-block';
+    } else {
+      badge.textContent = '';
+      badge.title = '';
+      badge.style.display = 'none';
     }
   }
 

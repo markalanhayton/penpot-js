@@ -1,7 +1,7 @@
 # Penpot Migration Tracking
 
-> Last updated: 2026-06-08
-> Auto-verified against current codebase: 150 shared JS, 82 server test files (1,152 tests, 0 fail), 22 exporter tests (6 suites, 0 fail), 111 client JS + 2 CSS, 55 E2E spec files (772 tests).
+> Last updated: 2026-06-10
+> Auto-verified against current codebase: 150 shared JS, 82 server test files (1,165 tests, 0 fail), 22 exporter tests (6 suites, 0 fail), 111 client JS + 2 CSS, 57 E2E spec files (803 tests).
 
 Migration from Clojure/ClojureScript to pure ES2022+ JavaScript.
 Full plan: [`migration-plan.md`](migration-plan.md)

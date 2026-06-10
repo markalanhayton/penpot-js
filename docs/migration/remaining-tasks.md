@@ -1,6 +1,6 @@
 # Remaining Tasks — Penpot JS Port
 
-> Last updated: 2026-06-08
+> Last updated: 2026-06-10
 >
 > This document consolidates all incomplete work items from `tracking.md`, `parity-audit.md`, `client.md`, and `e2e-testing.md` into an actionable task list. Each task includes priority, effort estimate, affected files, and acceptance criteria.
 
@@ -10,9 +10,8 @@
 
 | Status | Count | Work Units |
 |--------|-------|------------|
-| ✅ Complete | 102 | All WU-S1–S3, WU-C1–C6, WU-K1–K2, WU-Q1–Q9, PA-1–19, SA-1–2, BE-2/6/8/9, SC-1/2/4, UE-20, QA-1/2/3, PA-13 |
-| 🟡 Partial | 0 | — |
-| ⬜ Not started | 4 | **WU-T1** (team ownership transfer), **WU-T2** (multi-step onboarding), **WU-T3** (team form), **WU-T5** (audit log viewer) |
+| ✅ Complete | 106 | All WU-S1–S3, WU-C1–C6, WU-K1–K2, WU-Q1–Q9, PA-1–19, SA-1–2, BE-2/6/8/9, SC-1/2/4, UE-20, QA-1/2/3, PA-13, **WU-T5**, **WU-T1**, **WU-T2**, **WU-T3** |
+| ⬜ Not started | 0 | — |
 | ⬜ Deferred (out of scope) | 4 | WU-T4 (general upload manager), WU-Q3 marked Complete now, BE-10 (Nitrate), subscription/billing UI |
 
 **Overall parity: 100% of in-scope work complete on server, shared, and exporter modules. Client has 4 new actionable P3 work units identified by the 2026-06-08 re-audit (see `parity-audit.md` §11 for full specs and acceptance criteria).** Mobile layout (PA-16) is complete with responsive breakpoints, touch gestures, overlay sidebars, and a full z-index token system. PA-13 (team management) is now complete with the access-requests and webhooks tabs.
@@ -796,8 +795,8 @@ Transit roundtrip tests (112 tests across 19 test suites):
 | PA-18 | client/ | Visual regression testing (screenshot comparison) | ✅ |
 | PA-16 | client/ | Mobile/responsive layout (breakpoints, sidebar overlay, touch gestures, z-index tokens, flex/grid layout fixes) | ✅ |
 | PA-13 | client/ | Dashboard team management (members, invitations, **access requests, webhooks**, settings) | ✅ |
-| **WU-T1** | client/ | Team ownership transfer workflow (P3, not started) | ⬜ |
-| **WU-T2** | client/ | Multi-step onboarding (intro questions + team choice, P3) | ⬜ |
-| **WU-T3** | client/ | Team form with logo, description, color (P3) | ⬜ |
-| **WU-T4** | client/ | General upload manager dashboard (P3, out of scope) | ⬜ Deferred |
-| **WU-T5** | client/+server/ | Audit log viewer (P3) | ⬜ |
+| **WU-T1** | client/ | Team ownership transfer workflow (P3) | ✅ |
+| **WU-T2** | client/ | Multi-step onboarding (intro questions + team choice, P3) | ✅ |
+| **WU-T3** | client/ | Team form with logo, description, color (P3) | ✅ |
+| **WU-T4** | client/ | General upload manager dashboard (P3, registry shipped, dashboard UI out of scope for v2.17) | ⬜ Deferred |
+| **WU-T5** | client/+server/ | Audit log viewer (P3) | ✅ |
