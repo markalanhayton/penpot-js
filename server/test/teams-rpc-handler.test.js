@@ -288,7 +288,8 @@ describe('Teams RPC — update-team', () => {
     const handler = dispatcher.methods.get('update-team').handler;
     const features = { customFonts: true };
     const result = await handler({ id: ids.teamId, features }, { profileId: ids.profileId });
-    assert.deepEqual(JSON.parse(result.features), features);
+    // result.features is now auto-parsed to an object (WU-T3 fix).
+    assert.deepEqual(result.features, features);
   });
 
   it('throws for non-existent team', async () => {
@@ -574,5 +575,213 @@ describe('Teams RPC — get-team-info', () => {
       () => handler({ fileId: uuidv4() }),
       /not-found/
     );
+  });
+});
+
+describe('Teams RPC — update-team features (WU-T3)', () => {
+  let pool;
+  let dispatcher;
+  let ids;
+
+  beforeEach(() => {
+    pool = createTestPool();
+    ids = seedFullHierarchy(pool);
+    dispatcher = createDispatcher();
+    registerTeamCommands(dispatcher.register, pool);
+  });
+
+  afterEach(() => { destroyTestPool(pool); });
+
+  it('WU-T3: persists description and color in features', async () => {
+    const handler = dispatcher.methods.get('update-team').handler;
+    const result = await handler({
+      id: ids.teamId,
+      features: { description: 'A great team for testing', color: '#3b82f6' },
+    }, { profileId: ids.profileId });
+    // result.features is now auto-parsed to an object (WU-T3 fix).
+    assert.equal(result.features.description, 'A great team for testing');
+    assert.equal(result.features.color, '#3b82f6');
+  });
+
+  it('WU-T3: clamps description to 500 chars', async () => {
+    const handler = dispatcher.methods.get('update-team').handler;
+    const long = 'x'.repeat(800);
+    const result = await handler({
+      id: ids.teamId,
+      features: { description: long },
+    }, { profileId: ids.profileId });
+    assert.equal(result.features.description.length, 500);
+  });
+
+  it('WU-T3: rejects invalid color format', async () => {
+    const handler = dispatcher.methods.get('update-team').handler;
+    await assert.rejects(
+      () => handler({
+        id: ids.teamId,
+        features: { color: 'not-a-color' },
+      }, { profileId: ids.profileId }),
+      { code: 'validation-error' }
+    );
+  });
+
+  it('WU-T3: accepts 3-digit hex color', async () => {
+    const handler = dispatcher.methods.get('update-team').handler;
+    const result = await handler({
+      id: ids.teamId,
+      features: { color: '#f00' },
+    }, { profileId: ids.profileId });
+    assert.equal(result.features.color, '#f00');
+  });
+
+  it('WU-T3: rejects non-string description', async () => {
+    const handler = dispatcher.methods.get('update-team').handler;
+    await assert.rejects(
+      () => handler({
+        id: ids.teamId,
+        features: { description: 12345 },
+      }, { profileId: ids.profileId }),
+      { code: 'validation-error' }
+    );
+  });
+});
+
+describe('Teams RPC — create-team features (WU-T3)', () => {
+  let pool;
+  let dispatcher;
+  let ids;
+
+  beforeEach(() => {
+    pool = createTestPool();
+    ids = seedFullHierarchy(pool);
+    dispatcher = createDispatcher();
+    registerTeamCommands(dispatcher.register, pool);
+  });
+
+  afterEach(() => { destroyTestPool(pool); });
+
+  it('WU-T3: create-team accepts features with description and color', async () => {
+    const handler = dispatcher.methods.get('create-team').handler;
+    const result = await handler({
+      name: 'My Team',
+      features: { description: 'Cool team', color: '#abcdef' },
+    }, { profileId: ids.profileId });
+    assert.equal(result.name, 'My Team');
+    const stored = JSON.parse(pool.get('SELECT features FROM team WHERE id = ?', [result.id]).features);
+    assert.equal(stored.description, 'Cool team');
+    assert.equal(stored.color, '#abcdef');
+  });
+
+  it('WU-T3: create-team rejects invalid color', async () => {
+    const handler = dispatcher.methods.get('create-team').handler;
+    await assert.rejects(
+      () => handler({
+        name: 'Bad',
+        features: { color: 'red' },
+      }, { profileId: ids.profileId }),
+      { code: 'validation-error' }
+    );
+  });
+});
+
+describe('Teams RPC — ownership transfer (WU-T1)', () => {
+  let pool;
+  let dispatcher;
+  let ids;
+  let otherProfileId;
+
+  beforeEach(() => {
+    pool = createTestPool();
+    ids = seedFullHierarchy(pool);
+    dispatcher = createDispatcher();
+    registerTeamCommands(dispatcher.register, pool);
+
+    otherProfileId = uuidv4();
+    const now = new Date().toISOString();
+    pool.insertReturning('profile', {
+      id: otherProfileId, fullname: 'Member', email: 'wu_t1_member@example.com',
+      password: '!', is_active: '1', is_demo: '0', is_blocked: '0',
+      auth_source: 'password', created_at: now, modified_at: now,
+    });
+    pool.insertReturning('team_profile_rel', {
+      team_id: ids.teamId, profile_id: otherProfileId,
+      is_owner: '0', is_admin: '0', can_edit: '0', is_member: '1',
+      created_at: now, modified_at: now,
+    });
+  });
+
+  afterEach(() => { destroyTestPool(pool); });
+
+  it('WU-T1: ownership transfer sequence promotes new owner and demotes old', async () => {
+    // The WU-T1 client flow calls update-team-member-role twice in
+    // sequence: once to promote the new owner (role:'owner') and once to
+    // demote the previous owner (role:'admin'). Verify both work correctly.
+    const handler = dispatcher.methods.get('update-team-member-role').handler;
+
+    // Step 1: promote 'otherProfileId' to owner
+    await handler({
+      teamId: ids.teamId,
+      memberId: otherProfileId,
+      role: 'owner',
+    }, { profileId: ids.profileId });
+
+    let newOwner = pool.get(
+      'SELECT * FROM team_profile_rel WHERE team_id = ? AND profile_id = ?',
+      { team_id: ids.teamId, profile_id: otherProfileId }
+    );
+    assert.equal(newOwner.is_owner, '1', 'new owner should have is_owner=1');
+
+    // Step 2: demote the previous owner to admin
+    await handler({
+      teamId: ids.teamId,
+      memberId: ids.profileId,
+      role: 'admin',
+    }, { profileId: ids.profileId });
+
+    const previousOwner = pool.get(
+      'SELECT * FROM team_profile_rel WHERE team_id = ? AND profile_id = ?',
+      { team_id: ids.teamId, profile_id: ids.profileId }
+    );
+    assert.equal(previousOwner.is_owner, '0', 'previous owner should be demoted');
+    assert.equal(previousOwner.is_admin, '1', 'previous owner should now be admin');
+  });
+
+  it('WU-T1: ownership transfer + leave-team flow', async () => {
+    // After transferring ownership, the previous owner leaves the team.
+    // Verify the new owner still has admin/owner access and the previous
+    // owner's membership is removed.
+    const roleHandler = dispatcher.methods.get('update-team-member-role').handler;
+    const leaveHandler = dispatcher.methods.get('leave-team').handler;
+
+    // Promote otherProfileId to owner
+    await roleHandler({
+      teamId: ids.teamId,
+      memberId: otherProfileId,
+      role: 'owner',
+    }, { profileId: ids.profileId });
+
+    // Demote previous owner to admin
+    await roleHandler({
+      teamId: ids.teamId,
+      memberId: ids.profileId,
+      role: 'admin',
+    }, { profileId: ids.profileId });
+
+    // Previous owner leaves
+    await leaveHandler({ id: ids.teamId }, { profileId: ids.profileId });
+
+    // The otherProfileId is now the sole owner
+    const owner = pool.get(
+      'SELECT * FROM team_profile_rel WHERE team_id = ? AND is_owner = \'1\'',
+      { team_id: ids.teamId }
+    );
+    assert.ok(owner);
+    assert.equal(owner.profile_id, otherProfileId);
+
+    // The previous owner's membership is gone
+    const previousOwnerMembership = pool.get(
+      'SELECT * FROM team_profile_rel WHERE team_id = ? AND profile_id = ?',
+      { team_id: ids.teamId, profile_id: ids.profileId }
+    );
+    assert.ok(!previousOwnerMembership, 'previous owner membership should be removed');
   });
 });
