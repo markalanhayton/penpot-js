@@ -208,3 +208,176 @@ describe('rpc/audit — get-enabled-flags', () => {
     assert.ok('telemetry' in result);
   });
 });
+
+describe('rpc/audit — get-audit-events', () => {
+  let pool;
+  let ids;
+  let handlers;
+
+  beforeEach(() => {
+    pool = createTestPool();
+    ids = seedFullHierarchy(pool);
+    handlers = captureHandlers(pool);
+  });
+  afterEach(() => { destroyTestPool(pool); });
+
+  async function pushEvents(events) {
+    return handlers['push-audit-events'](
+      { events },
+      { profileId: ids.profileId, requestAt: new Date(), ipAddr: '127.0.0.1' }
+    );
+  }
+
+  if (!eitherEnabled) {
+    it('returns empty result when audit-log flag is disabled', async () => {
+      const result = await handlers['get-audit-events']({}, {});
+      assert.deepEqual(result, { events: [], total: 0 });
+    });
+    return;
+  }
+
+  async function seedSampleEvents() {
+    const now = Date.now();
+    const iso = (offsetMs) => new Date(now + offsetMs).toISOString();
+    await pushEvents([
+      { type: 'action', name: 'create-file', source: 'frontend', trackedAt: iso(-10000) },
+      { type: 'action', name: 'update-shape', source: 'frontend', trackedAt: iso(-8000), props: { shapeType: 'rect' } },
+      { type: 'navigation', name: 'open-workspace', source: 'frontend', trackedAt: iso(-6000) },
+      { type: 'action', name: 'delete-shape', source: 'backend', trackedAt: iso(-4000) },
+    ]);
+  }
+
+  it('returns events and total count for unfiltered query', async () => {
+    await seedSampleEvents();
+    const result = await handlers['get-audit-events']({}, { profileId: ids.profileId });
+    assert.equal(result.total, 4);
+    assert.equal(result.events.length, 4);
+    assert.equal(result.events[0].name, 'delete-shape');
+    assert.equal(result.events[3].name, 'create-file');
+  });
+
+  it('returns camelCased fields with parsed props/context JSON', async () => {
+    await pushEvents([{
+      type: 'action', name: 'update-shape', source: 'frontend',
+      props: { shapeType: 'rect' }, context: { fileId: 'abc123' },
+    }]);
+    const result = await handlers['get-audit-events']({}, { profileId: ids.profileId });
+    const event = result.events[0];
+    assert.ok(event.trackedAt, 'camelCased trackedAt present');
+    assert.ok(event.profileId, 'camelCased profileId present');
+    assert.equal(event.props.shapeType, 'rect');
+    assert.equal(event.context.fileId, 'abc123');
+  });
+
+  it('filters by profileId', async () => {
+    await pushEvents([{ type: 'action', name: 'evt-a' }]);
+    const otherPid = '11111111-1111-1111-1111-111111111111';
+    const now = new Date().toISOString();
+    pool.insertReturning('profile', {
+      id: otherPid, fullname: 'Other', email: 'other@example.com', password: '!',
+      is_active: '1', is_demo: '0', is_blocked: '0', auth_source: 'password',
+      created_at: now, modified_at: now,
+    });
+    await handlers['push-audit-events'](
+      { events: [{ type: 'action', name: 'evt-b' }] },
+      { profileId: otherPid, requestAt: new Date(), ipAddr: null }
+    );
+    const result = await handlers['get-audit-events']({ profileId: ids.profileId }, { profileId: ids.profileId });
+    assert.equal(result.total, 1);
+    assert.equal(result.events[0].name, 'evt-a');
+  });
+
+  it('filters by eventType', async () => {
+    await seedSampleEvents();
+    const result = await handlers['get-audit-events']({ eventType: 'action' }, { profileId: ids.profileId });
+    assert.equal(result.total, 3);
+    assert.ok(result.events.every(e => e.type === 'action'));
+  });
+
+  it('filters by eventName', async () => {
+    await seedSampleEvents();
+    const result = await handlers['get-audit-events']({ eventName: 'create-file' }, { profileId: ids.profileId });
+    assert.equal(result.total, 1);
+    assert.equal(result.events[0].name, 'create-file');
+  });
+
+  it('filters by source', async () => {
+    await seedSampleEvents();
+    const result = await handlers['get-audit-events']({ source: 'backend' }, { profileId: ids.profileId });
+    assert.equal(result.total, 1);
+    assert.equal(result.events[0].name, 'delete-shape');
+  });
+
+  it('filters by from/to date range', async () => {
+    await seedSampleEvents();
+    const now = Date.now();
+    const result = await handlers['get-audit-events']({
+      from: new Date(now - 7000).toISOString(),
+      to: new Date(now - 5000).toISOString(),
+    }, { profileId: ids.profileId });
+    assert.equal(result.total, 1);
+    assert.equal(result.events[0].name, 'open-workspace');
+  });
+
+  it('filters by teamId via team_profile_rel', async () => {
+    await pushEvents([{ type: 'action', name: 'team-evt' }]);
+    const otherTeam = '22222222-2222-2222-2222-222222222222';
+    const otherProfile = '33333333-3333-3333-3333-333333333333';
+    const now = new Date().toISOString();
+    pool.insertReturning('team', {
+      id: otherTeam, name: 'Other Team', is_default: '0', features: '[]',
+      created_at: now, modified_at: now,
+    });
+    pool.insertReturning('profile', {
+      id: otherProfile, fullname: 'Outside', email: 'outside@example.com', password: '!',
+      is_active: '1', is_demo: '0', is_blocked: '0', auth_source: 'password',
+      created_at: now, modified_at: now,
+    });
+    await handlers['push-audit-events'](
+      { events: [{ type: 'action', name: 'other-team-evt' }] },
+      { profileId: otherProfile, requestAt: new Date(), ipAddr: null }
+    );
+    const result = await handlers['get-audit-events']({ teamId: ids.teamId }, { profileId: ids.profileId });
+    assert.equal(result.total, 1);
+    assert.equal(result.events[0].name, 'team-evt');
+  });
+
+  it('respects pagination (limit + offset)', async () => {
+    await seedSampleEvents();
+    const page1 = await handlers['get-audit-events']({ limit: 2, offset: 0 }, { profileId: ids.profileId });
+    assert.equal(page1.total, 4);
+    assert.equal(page1.events.length, 2);
+    assert.equal(page1.events[0].name, 'delete-shape');
+    assert.equal(page1.events[1].name, 'open-workspace');
+
+    const page2 = await handlers['get-audit-events']({ limit: 2, offset: 2 }, { profileId: ids.profileId });
+    assert.equal(page2.events.length, 2);
+    assert.equal(page2.events[0].name, 'update-shape');
+    assert.equal(page2.events[1].name, 'create-file');
+  });
+
+  it('clamps limit to a max of 200', async () => {
+    await seedSampleEvents();
+    const result = await handlers['get-audit-events']({ limit: 99999 }, { profileId: ids.profileId });
+    assert.ok(result.events.length <= 200);
+  });
+
+  it('excludes archived events by default and includes them when includeArchived=true', async () => {
+    await pushEvents([{ type: 'action', name: 'live' }]);
+    await pushEvents([{ type: 'action', name: 'archived' }]);
+    pool.db.prepare('UPDATE audit_log SET archived_at = ? WHERE name = ?').run(new Date().toISOString(), 'archived');
+
+    const def = await handlers['get-audit-events']({}, { profileId: ids.profileId });
+    assert.equal(def.total, 1);
+    assert.equal(def.events[0].name, 'live');
+
+    const all = await handlers['get-audit-events']({ includeArchived: true }, { profileId: ids.profileId });
+    assert.equal(all.total, 2);
+  });
+
+  it('returns empty array when no events match', async () => {
+    const result = await handlers['get-audit-events']({ eventName: 'nonexistent' }, { profileId: ids.profileId });
+    assert.equal(result.total, 0);
+    assert.deepEqual(result.events, []);
+  });
+});

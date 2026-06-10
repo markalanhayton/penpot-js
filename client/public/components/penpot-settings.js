@@ -49,6 +49,27 @@ template.innerHTML = `<style>
     .penpot-settings__notif-desc { font-size: var(--penpot-font-size-s, 11px); color: var(--penpot-text-dim, #999); margin-top: 2px; }
     .penpot-settings__notif-select { background: var(--penpot-input-bg, #333); border: 1px solid var(--penpot-input-border, #555); border-radius: var(--penpot-radius-s, 4px); color: var(--penpot-text, #e6e6e6); padding: 4px 8px; font-size: var(--penpot-font-size-s, 11px); outline: none; }
     .penpot-settings__notif-select:focus { border-color: var(--penpot-primary, #31efb8); }
+    .penpot-settings__audit-filters { display: flex; gap: var(--penpot-spacing-s, 8px); margin-bottom: var(--penpot-spacing-m, 12px); flex-wrap: wrap; align-items: center; }
+    .penpot-settings__audit-filters input { background: var(--penpot-input-bg, #333); border: 1px solid var(--penpot-input-border, #555); border-radius: var(--penpot-radius-s, 4px); color: var(--penpot-text, #e6e6e6); padding: 6px 10px; font-size: var(--penpot-font-size-s, 11px); font-family: inherit; outline: none; }
+    .penpot-settings__audit-filters input:focus { border-color: var(--penpot-primary, #31efb8); }
+    .penpot-settings__audit-filters button { background: var(--penpot-surface-high, #333); border: 1px solid var(--penpot-border, #444); color: var(--penpot-text, #e6e6e6); padding: 6px 12px; border-radius: var(--penpot-radius-s, 4px); cursor: pointer; font-size: var(--penpot-font-size-s, 11px); font-family: inherit; }
+    .penpot-settings__audit-filters button:hover { border-color: var(--penpot-primary, #31efb8); color: var(--penpot-primary, #31efb8); }
+    .penpot-settings__audit-list { background: var(--penpot-bg, #1c1c1c); border: 1px solid var(--penpot-border, #444); border-radius: var(--penpot-radius-s, 4px); max-height: 480px; overflow-y: auto; }
+    .penpot-settings__audit-event { padding: var(--penpot-spacing-s, 8px) var(--penpot-spacing-m, 12px); border-bottom: 1px solid var(--penpot-border, #444); font-size: var(--penpot-font-size-s, 11px); }
+    .penpot-settings__audit-event:last-child { border-bottom: none; }
+    .penpot-settings__audit-event-header { display: flex; align-items: center; gap: var(--penpot-spacing-s, 8px); margin-bottom: 4px; }
+    .penpot-settings__audit-name { font-weight: 600; color: var(--penpot-text, #e6e6e6); font-family: 'SFMono-Regular', Consolas, monospace; }
+    .penpot-settings__audit-type { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 9px; text-transform: uppercase; background: rgba(49,239,184,0.15); color: var(--penpot-primary, #31efb8); }
+    .penpot-settings__audit-type--navigation { background: rgba(150,180,255,0.15); color: #96b4ff; }
+    .penpot-settings__audit-type--interaction { background: rgba(255,200,100,0.15); color: #ffc864; }
+    .penpot-settings__audit-time { color: var(--penpot-text-dim, #999); font-size: var(--penpot-font-size-xs, 10px); }
+    .penpot-settings__audit-source { color: var(--penpot-text-dim, #999); font-size: var(--penpot-font-size-xs, 10px); font-family: 'SFMono-Regular', Consolas, monospace; }
+    .penpot-settings__audit-props { color: var(--penpot-text-dim, #999); font-size: 10px; font-family: 'SFMono-Regular', Consolas, monospace; word-break: break-all; }
+    .penpot-settings__audit-empty { text-align: center; color: var(--penpot-text-dim, #999); padding: 32px; font-size: var(--penpot-font-size-s, 11px); }
+    .penpot-settings__audit-pagination { display: flex; align-items: center; justify-content: space-between; margin-top: var(--penpot-spacing-s, 8px); font-size: var(--penpot-font-size-s, 11px); color: var(--penpot-text-dim, #999); }
+    .penpot-settings__audit-pagination button { background: var(--penpot-surface-high, #333); border: 1px solid var(--penpot-border, #444); color: var(--penpot-text, #e6e6e6); padding: 4px 10px; border-radius: var(--penpot-radius-s, 4px); cursor: pointer; font-family: inherit; font-size: 10px; }
+    .penpot-settings__audit-pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .penpot-settings__audit-pagination button:not(:disabled):hover { border-color: var(--penpot-primary, #31efb8); color: var(--penpot-primary, #31efb8); }
   
   </style>
   <div class="penpot-settings__settings-layout">
@@ -59,8 +80,9 @@ template.innerHTML = `<style>
       <button class="penpot-settings__nav-item" data-section="tokens">Access Tokens</button>
       <button class="penpot-settings__nav-item" data-section="feedback">Feedback</button>
       <button class="penpot-settings__nav-item" data-section="nudge">Nudge</button>
-       <button class="penpot-settings__nav-item" data-section="notifications">Notifications</button>
-       <button class="penpot-settings__nav-item penpot-settings__webhooks-nav" data-section="webhooks" style="display:none;">Webhooks</button>
+      <button class="penpot-settings__nav-item" data-section="notifications">Notifications</button>
+      <button class="penpot-settings__nav-item penpot-settings__webhooks-nav" data-section="webhooks" style="display:none;">Webhooks</button>
+      <button class="penpot-settings__nav-item" data-section="audit">Audit Log</button>
     </nav>
     <div class="penpot-settings__settings-content" id="content"></div>
   </div>`;
@@ -127,6 +149,7 @@ export class PenpotSettings extends PenpotElement {
       case 'nudge': this.#renderNudge(content); break;
       case 'notifications': this.#renderNotifications(content); break;
       case 'webhooks': this.#renderWebhooks(content); break;
+      case 'audit': this.#renderAuditLog(content); break;
     }
   }
 
@@ -550,6 +573,153 @@ export class PenpotSettings extends PenpotElement {
     content.querySelector('#webhook-team')?.addEventListener('change', (e) => {
       const webhookList = content.querySelector('#webhook-list');
       if (webhookList) webhookList.teamId = e.target.value;
+    });
+  }
+
+  /**
+   * Audit Log section: filterable, paginated view of audit events.
+   * State is per-render: filters and pagination are tracked on the
+   * element instance so navigating away and back resets to defaults.
+   */
+  #auditFilters = { name: '', type: '', source: '' };
+  #auditOffset = 0;
+  #auditLimit = 20;
+  #auditTotal = 0;
+  #auditEvents = [];
+
+  async #renderAuditLog(content) {
+    content.innerHTML = `
+      <button class="penpot-settings__back-link">&larr; Back to Dashboard</button>
+      <h2>Audit Log</h2>
+      <p style="font-size:var(--penpot-font-size-s,11px);color:var(--penpot-text-dim,#999);margin-bottom:12px;">
+        Recent activity from your account. Use the filters to narrow the view.
+      </p>
+      <div class="penpot-settings__audit-filters">
+        <input type="text" id="audit-filter-name" placeholder="Event name" value="${this.escHtml(this.#auditFilters.name)}">
+        <input type="text" id="audit-filter-type" placeholder="Type (action, navigation, …)" value="${this.escHtml(this.#auditFilters.type)}">
+        <input type="text" id="audit-filter-source" placeholder="Source (frontend, backend, …)" value="${this.escHtml(this.#auditFilters.source)}">
+        <button id="audit-apply">Apply</button>
+        <button id="audit-clear">Clear</button>
+      </div>
+      <div class="penpot-settings__audit-list" id="audit-list">
+        <div class="penpot-settings__audit-empty">Loading…</div>
+      </div>
+      <div class="penpot-settings__audit-pagination" id="audit-pagination"></div>
+    `;
+
+    content.querySelector('.penpot-settings__back-link').addEventListener('click', () => {
+      this.emit('navigate', { route: 'dashboard' });
+    });
+
+    const applyFilters = async () => {
+      this.#auditFilters.name = content.querySelector('#audit-filter-name').value.trim();
+      this.#auditFilters.type = content.querySelector('#audit-filter-type').value.trim();
+      this.#auditFilters.source = content.querySelector('#audit-filter-source').value.trim();
+      this.#auditOffset = 0;
+      await this.#loadAuditLog(content);
+    };
+
+    content.querySelector('#audit-apply').addEventListener('click', applyFilters);
+    content.querySelector('#audit-filter-name').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') applyFilters();
+    });
+    content.querySelector('#audit-filter-type').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') applyFilters();
+    });
+    content.querySelector('#audit-filter-source').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') applyFilters();
+    });
+
+    content.querySelector('#audit-clear').addEventListener('click', async () => {
+      this.#auditFilters = { name: '', type: '', source: '' };
+      this.#auditOffset = 0;
+      content.querySelector('#audit-filter-name').value = '';
+      content.querySelector('#audit-filter-type').value = '';
+      content.querySelector('#audit-filter-source').value = '';
+      await this.#loadAuditLog(content);
+    });
+
+    await this.#loadAuditLog(content);
+  }
+
+  async #loadAuditLog(content) {
+    const listEl = content.querySelector('#audit-list');
+    if (!listEl) return;
+    listEl.innerHTML = '<div class="penpot-settings__audit-empty">Loading…</div>';
+
+    const params = { limit: this.#auditLimit, offset: this.#auditOffset };
+    if (this.#auditFilters.name) params.eventName = this.#auditFilters.name;
+    if (this.#auditFilters.type) params.eventType = this.#auditFilters.type;
+    if (this.#auditFilters.source) params.source = this.#auditFilters.source;
+
+    try {
+      const result = await cmd('get-audit-events', params);
+      this.#auditEvents = result?.events || [];
+      this.#auditTotal = result?.total || 0;
+      this.#renderAuditList(content);
+      this.#renderAuditPagination(content);
+    } catch (err) {
+      console.warn('[settings] audit log load error:', err.message);
+      listEl.innerHTML = '<div class="penpot-settings__audit-empty">Failed to load audit log: ' + this.escHtml(err.hint || err.message || 'unknown error') + '</div>';
+    }
+  }
+
+  #renderAuditList(content) {
+    const listEl = content.querySelector('#audit-list');
+    if (!listEl) return;
+    if (this.#auditEvents.length === 0) {
+      listEl.innerHTML = '<div class="penpot-settings__audit-empty">No audit events match the current filters.</div>';
+      return;
+    }
+    const rows = this.#auditEvents.map((e) => {
+      const type = this.escHtml(e.type || '');
+      const name = this.escHtml(e.name || '');
+      const time = this.escHtml(e.trackedAt || '');
+      const source = this.escHtml(e.source || '');
+      const props = e.props && typeof e.props === 'object'
+        ? '<div class="penpot-settings__audit-props">' + this.escHtml(JSON.stringify(e.props)) + '</div>'
+        : (e.props ? '<div class="penpot-settings__audit-props">' + this.escHtml(String(e.props)) + '</div>' : '');
+      const profile = e.profileId ? '<span class="penpot-settings__audit-source">· ' + this.escHtml(e.profileId.slice(0, 8)) + '</span>' : '';
+      return `<div class="penpot-settings__audit-event">
+        <div class="penpot-settings__audit-event-header">
+          <span class="penpot-settings__audit-type penpot-settings__audit-type--${type}">${type}</span>
+          <span class="penpot-settings__audit-name">${name}</span>
+          <span class="penpot-settings__audit-time">${time}</span>
+        </div>
+        <div class="penpot-settings__audit-props">
+          <span class="penpot-settings__audit-source">${source}</span>
+          ${profile}
+        </div>
+        ${props}
+      </div>`;
+    }).join('');
+    listEl.innerHTML = rows;
+  }
+
+  #renderAuditPagination(content) {
+    const pagEl = content.querySelector('#audit-pagination');
+    if (!pagEl) return;
+    const totalPages = Math.max(1, Math.ceil(this.#auditTotal / this.#auditLimit));
+    const currentPage = Math.floor(this.#auditOffset / this.#auditLimit) + 1;
+    const showingFrom = this.#auditTotal === 0 ? 0 : this.#auditOffset + 1;
+    const showingTo = Math.min(this.#auditTotal, this.#auditOffset + this.#auditEvents.length);
+    pagEl.innerHTML = `
+      <span>Showing ${showingFrom}–${showingTo} of ${this.#auditTotal}</span>
+      <span>
+        <button id="audit-prev" ${currentPage <= 1 ? 'disabled' : ''}>&larr; Prev</button>
+        <span style="margin:0 8px;">Page ${currentPage} of ${totalPages}</span>
+        <button id="audit-next" ${currentPage >= totalPages ? 'disabled' : ''}>Next &rarr;</button>
+      </span>
+    `;
+    const prev = pagEl.querySelector('#audit-prev');
+    const next = pagEl.querySelector('#audit-next');
+    if (prev) prev.addEventListener('click', async () => {
+      this.#auditOffset = Math.max(0, this.#auditOffset - this.#auditLimit);
+      await this.#loadAuditLog(content);
+    });
+    if (next) next.addEventListener('click', async () => {
+      this.#auditOffset += this.#auditLimit;
+      await this.#loadAuditLog(content);
     });
   }
 

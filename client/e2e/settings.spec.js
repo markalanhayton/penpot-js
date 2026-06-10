@@ -107,4 +107,79 @@ test.describe('Settings Pages', () => {
     await settings.locator('.penpot-settings__back-link').click();
     await expect(page.locator('penpot-dashboard')).toBeVisible({ timeout: 5000 });
   });
+
+  test('audit log tab is visible and renders', async ({ page }) => {
+    await login(page);
+    await navigateToSettings(page, 'profile');
+    const settings = page.locator('penpot-settings');
+    // The audit tab should be in the nav
+    await expect(settings.locator('[data-section="audit"]')).toBeVisible();
+    await settings.locator('[data-section="audit"]').click();
+    // h2 should read "Audit Log"
+    await expect(settings.locator('h2')).toHaveText('Audit Log');
+    // Filter inputs should be present
+    await expect(settings.locator('#audit-filter-name')).toBeVisible();
+    await expect(settings.locator('#audit-filter-type')).toBeVisible();
+    await expect(settings.locator('#audit-filter-source')).toBeVisible();
+    await expect(settings.locator('#audit-apply')).toBeVisible();
+    await expect(settings.locator('#audit-clear')).toBeVisible();
+  });
+
+  test('audit log calls get-audit-events RPC on tab open and on apply', async ({ page }) => {
+    await login(page);
+    await navigateToSettings(page, 'profile');
+    const settings = page.locator('penpot-settings');
+    let calls = 0;
+    // Track the RPC call count by intercepting fetch
+    await page.evaluate(() => {
+      window.__auditCallCount = 0;
+      const origFetch = window.fetch;
+      window.fetch = function(...args) {
+        const url = String(args[0] || '');
+        if (url.includes('get-audit-events')) window.__auditCallCount++;
+        return origFetch.apply(this, args);
+      };
+    });
+    await settings.locator('[data-section="audit"]').click();
+    // Wait for the RPC to complete
+    await page.waitForFunction(() => window.__auditCallCount > 0, { timeout: 5000 });
+    const after1 = await page.evaluate(() => window.__auditCallCount);
+    expect(after1).toBeGreaterThanOrEqual(1);
+
+    // Fill a filter and apply
+    await settings.locator('#audit-filter-name').fill('create-file');
+    await settings.locator('#audit-apply').click();
+    await page.waitForFunction((prev) => window.__auditCallCount > prev, after1, { timeout: 5000 });
+    const after2 = await page.evaluate(() => window.__auditCallCount);
+    expect(after2).toBeGreaterThan(after1);
+  });
+
+  test('audit log renders events returned from server', async ({ page }) => {
+    await login(page);
+    await navigateToSettings(page, 'profile');
+    const settings = page.locator('penpot-settings');
+    await settings.locator('[data-section="audit"]').click();
+    // Wait for the list to either show events or the empty state
+    await page.waitForFunction(() => {
+      const list = document.querySelector('#audit-list');
+      return list && (list.querySelector('.penpot-settings__audit-event') || list.querySelector('.penpot-settings__audit-empty'));
+    }, { timeout: 5000 });
+    const eventCount = await settings.locator('.penpot-settings__audit-event').count();
+    const emptyVisible = await settings.locator('.penpot-settings__audit-empty').isVisible().catch(() => false);
+    expect(eventCount + (emptyVisible ? 1 : 0)).toBeGreaterThan(0);
+  });
+
+  test('audit log pagination shows page info', async ({ page }) => {
+    await login(page);
+    await navigateToSettings(page, 'profile');
+    const settings = page.locator('penpot-settings');
+    await settings.locator('[data-section="audit"]').click();
+    await page.waitForFunction(() => {
+      const pag = document.querySelector('#audit-pagination');
+      return pag && pag.textContent.length > 0;
+    }, { timeout: 5000 });
+    const text = await settings.locator('#audit-pagination').textContent();
+    // Should show "Showing X–Y of Z" or "Page X of Y"
+    expect(text).toMatch(/Showing|Page/);
+  });
 });
