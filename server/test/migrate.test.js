@@ -26,4 +26,17 @@ describe('db/migrate exports', async () => {
       assert.ok(f.sql);
     }
   });
+
+  it('migration 0024 adds revn to file_object_thumbnail and file_tagged_object_thumbnail', async () => {
+    const helpers = await import('./helpers.js');
+    const pool = helpers.createTestPool();
+    try {
+      const objCols = pool.query('PRAGMA table_info(file_object_thumbnail)').map(c => c.name);
+      const tagCols = pool.query('PRAGMA table_info(file_tagged_object_thumbnail)').map(c => c.name);
+      assert.ok(objCols.includes('revn'), 'file_object_thumbnail.revn should exist after migrations');
+      assert.ok(tagCols.includes('revn'), 'file_tagged_object_thumbnail.revn should exist after migrations');
+    } finally {
+      helpers.destroyTestPool(pool);
+    }
+  });
 });
