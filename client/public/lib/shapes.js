@@ -6,7 +6,7 @@
  */
 
 import { isFrame, isGroup, isText, isImage, isRect, isCircle, isPath, isBool, hasChildren, getShapeIcon } from './types.js';
-import { isValid as isUUID } from '@penpot/shared/uuid.js';
+import { isValid as isUUID } from '@penpot/shared/uuid';
 import { makeRect } from '@penpot/shared/geom/rect.js';
 
 const NS = 'http://www.w3.org/2000/svg';

@@ -19,7 +19,7 @@ export function isGetCommand(command) {
 
 const TRANSIT_TAG = '^';
 
-import { isValid as isUUID } from '@penpot/shared/uuid.js';
+import { isValid as isUUID } from '@penpot/shared/uuid';
 
 /**
  * Encode a JavaScript value to Transit+JSON string.

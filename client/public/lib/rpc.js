@@ -18,13 +18,14 @@ export function clearAuthToken() { authToken = null; }
 // --- Error types ---
 
 export class RpcError extends Error {
-  constructor(type, code, hint, status) {
+  constructor(type, code, hint, status = 400, extra = null) {
     super(hint || code);
     this.name = 'RpcError';
     this.type = type;
     this.code = code;
     this.hint = hint;
     this.status = status;
+    this.extra = extra;
   }
 }
 

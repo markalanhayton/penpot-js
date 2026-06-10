@@ -2,9 +2,10 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { transitEncode, transitDecode, isGetCommand, apiUrl } from '../public/lib/transit.js';
+import { RpcError, setAuthToken, getAuthToken, clearAuthToken } from '../public/lib/rpc.js';
 
 describe('Client Transit Codec', () => {
-  const { transitEncode, transitDecode, isGetCommand, apiUrl } = await import('../public/lib/transit.js');
 
   describe('transitEncode', () => {
     it('encodes a plain object with string values', () => {
@@ -80,8 +81,6 @@ describe('Client Transit Codec', () => {
 });
 
 describe('Client RPC Module', () => {
-  const { RpcError, setAuthToken, getAuthToken, clearAuthToken } = await import('../public/lib/rpc.js');
-
   describe('RpcError', () => {
     it('creates error with type, code, and hint', () => {
       const err = new RpcError('validation', 'email-required', 'Email is required');
