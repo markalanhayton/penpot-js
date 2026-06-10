@@ -52,6 +52,10 @@ import './components/penpot-import-dialog.js';
 import './components/penpot-rulers.js';
 import './components/penpot-guide-overlay.js';
 import './components/penpot-mcp-panel.js';
+import './components/penpot-onboarding-questions.js';
+import './components/penpot-onboarding-team-choice.js';
+import './components/penpot-team-form.js';
+import './components/penpot-uploads-dashboard.js';
 import { init, subscribe, current, navigate } from './lib/router.js';
 import { cmd, setAuthToken, clearAuthToken } from './lib/rpc.js';
 import { appStore } from './lib/store.js';
@@ -146,6 +150,7 @@ async function bootstrap() {
       connectWS(`${window.location.origin}/ws/notifications`, token);
       render(current());
       navigate('dashboard');
+      runOnboardingFlow(profile);
       return;
     } catch (err) {
       console.error('[app] Auth profile fetch failed, redirecting to login:', err?.message || err);
@@ -157,6 +162,77 @@ async function bootstrap() {
 
   render(current());
   subscribe(render);
+}
+
+/**
+ * WU-T2: Multi-step onboarding flow.
+ *
+ * Two optional overlays shown after first login:
+ *  1. Intro questions (role / team size / use case) — for users with no
+ *     `onboarding-viewed` flag in profile.props.
+ *  2. Team choice (create / join) — for users with 0 teams.
+ *
+ * Each overlay is dismissable via Skip; localStorage prevents it from
+ * re-appearing in the same browser. RPC results are best-effort.
+ */
+function runOnboardingFlow(profile) {
+  // Parse the props JSON string returned by the server
+  let props = {};
+  if (profile && profile.props) {
+    try { props = typeof profile.props === 'string' ? JSON.parse(profile.props) : (profile.props || {}); }
+    catch { props = {}; }
+  }
+
+  // 1. Intro questions overlay (only for users who haven't completed it)
+  const alreadyViewed = props && props.onboardingViewed;
+  const localDone = localStorage.getItem('penpot-intro-questions-done');
+
+  if (!alreadyViewed && !localDone) {
+    // Defer to next tick so the dashboard has time to mount
+    setTimeout(() => {
+      const el = document.createElement('penpot-onboarding-questions');
+      document.body.appendChild(el);
+      el.addEventListener('intro-questions-complete', () => {
+        // Continue to team choice after a short delay
+        setTimeout(() => maybeShowTeamChoice(), 300);
+      });
+    }, 800);
+  } else {
+    // Already viewed, but still check team choice
+    maybeShowTeamChoice();
+  }
+}
+
+async function maybeShowTeamChoice() {
+  const localDone = localStorage.getItem('penpot-team-choice-done');
+  if (localDone) return;
+
+  try {
+    const teams = await cmd('get-teams', {});
+    if (Array.isArray(teams) && teams.length > 0) {
+      // User has at least one team — no team choice needed
+      return;
+    }
+    // No team — show the overlay
+    setTimeout(() => {
+      const el = document.createElement('penpot-onboarding-team-choice');
+      document.body.appendChild(el);
+      el.addEventListener('team-choice-complete', (e) => {
+        const action = e?.detail?.action;
+        if (action === 'create-team') {
+          // Navigate to dashboard which has the create-team dialog flow
+          if (window.__penpot?.navigate) window.__penpot.navigate('dashboard');
+        }
+        if (action === 'join-invite') {
+          // Store the token for the dashboard to consume
+          sessionStorage.setItem('penpot-pending-invite-token', e.detail.token);
+          if (window.__penpot?.navigate) window.__penpot.navigate('dashboard');
+        }
+      });
+    }, 300);
+  } catch (err) {
+    console.warn('[app] team choice check failed:', err.message);
+  }
 }
 
 bootstrap();

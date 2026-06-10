@@ -326,6 +326,45 @@ describe('Profile RPC — update-profile-props', () => {
       { code: 'object-not-found' }
     );
   });
+
+  it('WU-T2: persists onboarding-role, onboarding-team-size, onboarding-use-case', async () => {
+    const handler = dispatcher.methods.get('update-profile-props').handler;
+    const result = await handler({
+      props: {
+        'onboarding-role': 'designer',
+        'onboarding-team-size': '5-10',
+        'onboarding-use-case': 'web-design',
+      },
+    }, { profileId: ids.profileId });
+    assert.equal(result['onboarding-role'], 'designer');
+    assert.equal(result['onboarding-team-size'], '5-10');
+    assert.equal(result['onboarding-use-case'], 'web-design');
+
+    // Verify persisted
+    const row = pool.get('SELECT props FROM profile WHERE id = ?', [ids.profileId]);
+    const stored = JSON.parse(row.props);
+    assert.equal(stored['onboarding-role'], 'designer');
+    assert.equal(stored['onboarding-team-size'], '5-10');
+    assert.equal(stored['onboarding-use-case'], 'web-design');
+  });
+
+  it('WU-T2: onboarding keys can be set independently', async () => {
+    const handler = dispatcher.methods.get('update-profile-props').handler;
+
+    // Set only role first
+    await handler({ props: { 'onboarding-role': 'developer' } }, { profileId: ids.profileId });
+    let row = pool.get('SELECT props FROM profile WHERE id = ?', [ids.profileId]);
+    let stored = JSON.parse(row.props);
+    assert.equal(stored['onboarding-role'], 'developer');
+    assert.equal(stored['onboarding-team-size'], undefined);
+
+    // Then add team size (should not clobber role)
+    await handler({ props: { 'onboarding-team-size': '1-5' } }, { profileId: ids.profileId });
+    row = pool.get('SELECT props FROM profile WHERE id = ?', [ids.profileId]);
+    stored = JSON.parse(row.props);
+    assert.equal(stored['onboarding-role'], 'developer', 'role preserved');
+    assert.equal(stored['onboarding-team-size'], '1-5');
+  });
 });
 
 describe('Profile RPC — get-subscription-usage', () => {

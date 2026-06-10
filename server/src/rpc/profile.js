@@ -289,8 +289,8 @@ export default function registerProfileCommands(register, pool) {
       try { props = typeof profile.props === 'string' ? JSON.parse(profile.props) : (profile.props || {}); } catch { props = {}; }
 
       const allowedKeys = ['plugins', 'renderer', 'mcp-enabled', 'newsletter-updates', 'newsletter-news',
-        'onboarding-team-id', 'onboarding-viewed', 'v2-info-shown', 'welcome-file-id',
-        'release-notes-viewed', 'notifications', 'workspace-visited'];
+        'onboarding-team-id', 'onboarding-viewed', 'onboarding-role', 'onboarding-team-size', 'onboarding-use-case',
+        'v2-info-shown', 'welcome-file-id', 'release-notes-viewed', 'notifications', 'workspace-visited'];
 
       for (const [key, value] of Object.entries(newProps)) {
         if (allowedKeys.includes(key)) {
