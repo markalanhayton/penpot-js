@@ -13,7 +13,8 @@ template.innerHTML = `<style>
     .penpot-tools__spacer { flex: 1; }
     .penpot-tools__zoom-controls { display: flex; align-items: center; gap: var(--penpot-spacing-xs, 4px); margin-left: auto; }
     .penpot-tools__zoom-controls span { font-size: var(--penpot-font-size-xs, 10px); color: var(--penpot-text-dim, #999); min-width: 40px; text-align: center; }
-    .penpot-tools__zoom-controls button { background: none; border: 1px solid var(--penpot-border, #444); color: var(--penpot-text, #e6e6e6); border-radius: var(--penpot-radius-s, 4px); padding: 0 var(--penpot-spacing-xs, 4px); cursor: pointer; font-size: 12px; height: 20px; }
+    .penpot-tools__zoom-controls button { background: none; border: 1px solid var(--penpot-border, #444); color: var(--penpot-text, #e6e6e6); border-radius: var(--penpot-radius-s, 4px); padding: 0; cursor: pointer; font-size: 12px; height: 20px; min-width: 22px; display: inline-flex; align-items: center; justify-content: center; }
+    .penpot-tools__zoom-controls button penpot-icon { font-size: 10px; }
     .penpot-tools__zoom-controls button:hover { background: var(--penpot-surface-high, #333); }
     .penpot-tools__zoom-fit { font-size: var(--penpot-font-size-xs, 10px); }
   </style>

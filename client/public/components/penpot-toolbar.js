@@ -153,7 +153,13 @@ export class PenpotToolbar extends PenpotElement {
   set fileName(name) {
     this.#fileName = name || 'Untitled';
     const el = this.querySelector('#file-name');
-    if (el && !el.contentEditable || el.contentEditable === 'false') {
+    // Only update the DOM text if the user is not currently editing the
+    // title in place. The rename flow sets contentEditable='true' on the
+    // span, so we must check the exact string value, not its truthiness.
+    // (Previously used `!el.contentEditable`, which evaluated to `false`
+    // for the default `'inherit'` value and skipped every update — that's
+    // why the toolbar always showed the template's "Untitled file".)
+    if (el && el.contentEditable !== 'true') {
       el.textContent = this.#fileName;
     }
   }

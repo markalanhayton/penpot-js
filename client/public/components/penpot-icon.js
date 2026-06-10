@@ -75,7 +75,12 @@ export class PenpotIcon extends PenpotElement {
     const color = this.getAttribute('color');
     const pathData = ICON_PATHS[name] || ICON_PATHS.square;
 
-    this.style.setProperty('--penpot-icon-size', size);
+    // Normalize the size: if it's a bare number (e.g. "14"), append "px" so the
+    // CSS var resolves to a valid length. Otherwise use the value as-is
+    // (it may be "1em", "1rem", "16px", etc.).
+    const sizeValue = /^\d+(\.\d+)?$/.test(size) ? `${size}px` : size;
+
+    this.style.setProperty('--penpot-icon-size', sizeValue);
     if (color) this.style.color = color;
 
     const path = this.querySelector('#path');
