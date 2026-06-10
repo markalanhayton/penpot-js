@@ -178,11 +178,25 @@ export default function registerTeamCommands(register, pool) {
       const id = params.id || uuidv4();
       const now = new Date().toISOString();
 
+      // WU-T3: validate/normalise optional `description` and `color` features
+      const features = (params.features && typeof params.features === 'object') ? { ...params.features } : {};
+      if (features.description != null) {
+        if (typeof features.description !== 'string') {
+          throw new RpcError('validation', 'validation-error', 'Team description must be a string');
+        }
+        features.description = features.description.slice(0, 500);
+      }
+      if (features.color != null) {
+        if (typeof features.color !== 'string' || !/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(features.color)) {
+          throw new RpcError('validation', 'validation-error', 'Team color must be a valid hex color (e.g. #3b82f6)');
+        }
+      }
+
       const result = pool.insertReturning('team', {
         id,
         name: params.name || 'New Team',
         is_default: params.isDefault ? '1' : '0',
-        features: JSON.stringify(params.features || {}),
+        features: JSON.stringify(features),
         created_at: now,
         modified_at: now,
       });
@@ -209,7 +223,13 @@ export default function registerTeamCommands(register, pool) {
         modified_at: now,
       });
 
-      return rowToCamel(result);
+      // Parse the JSON `features` column so the client gets an object
+      // instead of a JSON string.
+      const out = rowToCamel(result);
+      if (typeof out.features === 'string') {
+        try { out.features = JSON.parse(out.features); } catch { /* keep as string */ }
+      }
+      return out;
     }
   });
 
@@ -220,11 +240,34 @@ export default function registerTeamCommands(register, pool) {
       const updates = { modified_at: new Date().toISOString() };
       if (params.name !== undefined) updates.name = params.name;
       if (params.photo !== undefined) updates.photo_id = params.photo;
-      if (params.features !== undefined) updates.features = JSON.stringify(params.features);
+      if (params.features !== undefined) {
+        // WU-T3: validate/normalise the optional `description` and `color`
+        // sub-keys. Description is clamped to 500 chars, color is checked
+        // against a strict 3- or 6-digit hex pattern (#RGB or #RRGGBB).
+        const features = (params.features && typeof params.features === 'object') ? { ...params.features } : {};
+        if (features.description != null) {
+          if (typeof features.description !== 'string') {
+            throw new RpcError('validation', 'validation-error', 'Team description must be a string');
+          }
+          features.description = features.description.slice(0, 500);
+        }
+        if (features.color != null) {
+          if (typeof features.color !== 'string' || !/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(features.color)) {
+            throw new RpcError('validation', 'validation-error', 'Team color must be a valid hex color (e.g. #3b82f6)');
+          }
+        }
+        updates.features = JSON.stringify(features);
+      }
 
       const result = pool.updateReturning('team', updates, { id: params.id });
       if (!result) throw new Error('not-found:Team not found');
-      return rowToCamel(result);
+      // Parse the JSON `features` column so the client gets an object
+      // instead of a JSON string.
+      const out = rowToCamel(result);
+      if (typeof out.features === 'string') {
+        try { out.features = JSON.parse(out.features); } catch { /* keep as string */ }
+      }
+      return out;
     }
   });
 
