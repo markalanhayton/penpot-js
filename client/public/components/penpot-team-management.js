@@ -2,6 +2,7 @@
 import { cmd } from '../lib/rpc.js';
 import { appStore } from '../lib/store.js';
 import { PenpotElement } from './base.js';
+import './penpot-team-form.js';
 
 const html = String.raw;
 
@@ -64,6 +65,12 @@ template.innerHTML = `<style>
     .penpot-tm__danger-zone h4 { color: var(--penpot-danger, #f44); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 8px; }
     .penpot-tm__team-photo-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
     .penpot-tm__team-photo { width: 48px; height: 48px; border-radius: 50%; background: var(--penpot-surface-highest, #3c3c3c); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 600; color: var(--penpot-text-dim, #999); flex-shrink: 0; overflow: hidden; }
+    .penpot-tm__modal-backdrop { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: var(--penpot-z-modal, 600); display: flex; align-items: center; justify-content: center; }
+    .penpot-tm__modal { background: var(--penpot-surface, #2a2a2a); border: 1px solid var(--penpot-border, #444); border-radius: var(--penpot-radius-m, 8px); box-shadow: 0 8px 32px rgba(0,0,0,0.5); padding: 24px; min-width: 360px; max-width: 480px; }
+    .penpot-tm__modal h3 { margin: 0 0 12px; font-size: 14px; font-weight: 600; color: var(--penpot-text, #e6e6e6); }
+    .penpot-tm__modal p { font-size: 11px; color: var(--penpot-text-dim, #999); margin: 0 0 12px; line-height: 1.4; }
+    .penpot-tm__modal-field { margin-bottom: 12px; }
+    .penpot-tm__modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
     .penpot-tm__team-photo img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
     .penpot-tm__team-photo-upload { position: relative; }
     .penpot-tm__team-photo-btn { background: none; border: 1px solid var(--penpot-border, #444); border-radius: var(--penpot-radius-s, 4px); color: var(--penpot-text-dim, #999); font-size: 10px; cursor: pointer; padding: 4px 8px; }
@@ -415,6 +422,26 @@ export class PenpotTeamManagement extends PenpotElement {
     </div>`;
     html += '</div>';
 
+    if (isAdmin) {
+      // WU-T3: rich Edit Team form (description, color, logo)
+      html += '<div class="penpot-tm__section">';
+      html += '<div class="penpot-tm__section-title">Edit Team</div>';
+      html += '<p style="font-size:10px;color:var(--penpot-text-dim,#999);margin:0 0 8px;">Update the team description, color, or logo.</p>';
+      html += '<button class="penpot-tm__btn penpot-tm__btn-secondary" id="edit-team-btn">Open Edit Form</button>';
+      html += '</div>';
+    }
+
+    if (isOwner) {
+      const otherMembers = this.#members.filter(m => m.id !== this.#profileId);
+      if (otherMembers.length > 0) {
+        html += '<div class="penpot-tm__section">';
+        html += '<div class="penpot-tm__section-title">Ownership</div>';
+        html += '<p style="font-size:10px;color:var(--penpot-text-dim,#999);margin:0 0 8px;">Transfer ownership to another team member. You will become an Admin after the transfer.</p>';
+        html += '<button class="penpot-tm__btn penpot-tm__btn-secondary" id="transfer-ownership-btn">Transfer Ownership…</button>';
+        html += '</div>';
+      }
+    }
+
     if (isOwner) {
       html += '<div class="penpot-tm__danger-zone">';
       html += '<h4>Danger Zone</h4>';
@@ -517,6 +544,16 @@ export class PenpotTeamManagement extends PenpotElement {
     content.querySelectorAll('[data-delete-webhook]').forEach(btn => {
       btn.addEventListener('click', () => this.#deleteWebhook(btn.dataset.deleteWebhook));
     });
+
+    const transferBtn = content.querySelector('#transfer-ownership-btn');
+    if (transferBtn) {
+      transferBtn.addEventListener('click', () => this.#showTransferOwnershipDialog());
+    }
+
+    const editTeamBtn = content.querySelector('#edit-team-btn');
+    if (editTeamBtn) {
+      editTeamBtn.addEventListener('click', () => this.#openEditTeamForm());
+    }
 
     document.addEventListener('click', () => this.#closeAllMenus(), { once: false });
   }
@@ -744,6 +781,172 @@ export class PenpotTeamManagement extends PenpotElement {
       this.render();
     } catch (err) {
       console.warn('[team-management] deleteWebhook error:', err.message);
+    }
+  }
+
+  /**
+   * Open a modal dialog that lets the current owner transfer ownership
+   * to another team member. The previous owner is automatically demoted
+   * to admin. The change is confirmed with the user before persisting,
+   * and an audit event is pushed for traceability.
+   */
+  #showTransferOwnershipDialog() {
+    const otherMembers = (this.#members || []).filter(m => m.id !== this.#profileId);
+    if (otherMembers.length === 0) {
+      console.warn('[team-management] cannot transfer ownership: no other members');
+      return;
+    }
+
+    const existing = this.querySelector('#transfer-ownership-modal');
+    if (existing) { existing.remove(); return; }
+
+    const currentMember = this.#members.find(m => m.id === this.#profileId);
+    const currentName = currentMember?.fullname || currentMember?.email || 'You';
+
+    const options = otherMembers.map(m => {
+      const label = m.fullname || m.email || m.id;
+      return `<option value="${this.escAttr(m.id)}">${this.escHtml(label)} (${this.escHtml(m.role || 'editor')})</option>`;
+    }).join('');
+
+    const backdrop = document.createElement('div');
+    backdrop.id = 'transfer-ownership-modal';
+    backdrop.className = 'penpot-tm__modal-backdrop';
+    backdrop.innerHTML = `
+      <div class="penpot-tm__modal" role="dialog" aria-modal="true" aria-labelledby="transfer-title" tabindex="-1">
+        <h3 id="transfer-title">Transfer Ownership</h3>
+        <p>Choose a new owner for this team. <strong>${this.escHtml(currentName)}</strong> will become an Admin after the transfer.</p>
+        <div class="penpot-tm__modal-field">
+          <select class="penpot-tm__select" id="transfer-owner-select" style="width:100%;">
+            ${options}
+          </select>
+        </div>
+        <p style="font-size:10px;color:var(--penpot-text-dim,#999);">This action cannot be undone by the new owner without your cooperation.</p>
+        <div class="penpot-tm__modal-actions">
+          <button class="penpot-tm__btn penpot-tm__btn-secondary" id="transfer-cancel-btn">Cancel</button>
+          <button class="penpot-tm__btn penpot-tm__btn-primary" id="transfer-confirm-btn">Transfer Ownership</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(backdrop);
+
+    const select = backdrop.querySelector('#transfer-owner-select');
+    const cancelBtn = backdrop.querySelector('#transfer-cancel-btn');
+    const confirmBtn = backdrop.querySelector('#transfer-confirm-btn');
+    const close = () => backdrop.remove();
+
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) close();
+    });
+    document.addEventListener('keydown', function escHandler(e) {
+      if (e.key === 'Escape') {
+        document.removeEventListener('keydown', escHandler);
+        close();
+      }
+    });
+
+    cancelBtn.addEventListener('click', close);
+    confirmBtn.addEventListener('click', () => this.#confirmTransferOwnership(select.value, close));
+  }
+
+  /**
+   * Open the rich team form (penpot-team-form) in edit mode, pre-filled
+   * with the current team's data. Reuses the form for both create and
+   * edit, so it's a single, well-tested component.
+   */
+  #openEditTeamForm() {
+    let form = document.body.querySelector('penpot-team-form');
+    if (!form) {
+      form = document.createElement('penpot-team-form');
+      document.body.appendChild(form);
+    }
+    form.mode = 'edit';
+    form.team = {
+      ...this.#team,
+      // Spread the parsed features so the form pre-fills description/color
+      features: (() => {
+        let f = {};
+        if (this.#team?.features) {
+          if (typeof this.#team.features === 'string') {
+            try { f = JSON.parse(this.#team.features); } catch { f = {}; }
+          } else {
+            f = this.#team.features;
+          }
+        }
+        return f;
+      })(),
+    };
+
+    // One-time listener cleanup: remove any previous submit/cancel handlers
+    // before adding new ones.
+    if (this._editFormHandler) {
+      form.removeEventListener('team-form-submit', this._editFormHandler);
+      form.removeEventListener('team-form-cancel', this._editFormCancelHandler);
+    }
+    this._editFormHandler = async () => {
+      await this.loadTeam();
+      this.emit('penpot-team-updated', { teamId: this.#teamId });
+    };
+    this._editFormCancelHandler = () => { /* no-op */ };
+    form.addEventListener('team-form-submit', this._editFormHandler, { once: true });
+    form.addEventListener('team-form-cancel', this._editFormCancelHandler);
+    form.show();
+  }
+
+  async #confirmTransferOwnership(newOwnerId, closeDialog) {
+    if (!newOwnerId) return;
+    if (!confirm('Are you sure you want to transfer ownership? You will be demoted to Admin.')) return;
+
+    const currentMember = this.#members.find(m => m.id === this.#profileId);
+    const newOwner = this.#members.find(m => m.id === newOwnerId);
+    if (!currentMember || !newOwner) {
+      console.warn('[team-management] transferOwnership: missing member data');
+      return;
+    }
+
+    try {
+      await cmd('update-team-member-role', {
+        teamId: this.#teamId,
+        memberId: newOwnerId,
+        role: 'owner',
+      });
+      await cmd('update-team-member-role', {
+        teamId: this.#teamId,
+        memberId: this.#profileId,
+        role: 'admin',
+      });
+
+      // Audit event for traceability
+      try {
+        await cmd('push-audit-events', {
+          events: [{
+            type: 'team',
+            name: 'transfer-ownership',
+            source: 'frontend',
+            props: {
+              teamId: this.#teamId,
+              previousOwnerId: this.#profileId,
+              newOwnerId,
+              previousOwnerEmail: currentMember.email,
+              newOwnerEmail: newOwner.email,
+            },
+          }],
+        });
+      } catch (auditErr) {
+        console.warn('[team-management] audit push error (non-fatal):', auditErr.message);
+      }
+
+      if (typeof closeDialog === 'function') closeDialog();
+      await this.loadMembers();
+      this.render();
+      this.emit('penpot-team-ownership-transferred', {
+        teamId: this.#teamId,
+        newOwnerId,
+        previousOwnerId: this.#profileId,
+      });
+    } catch (err) {
+      console.warn('[team-management] transferOwnership error:', err.message);
+      if (typeof closeDialog === 'function') closeDialog();
     }
   }
 }

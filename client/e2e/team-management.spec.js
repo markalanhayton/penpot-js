@@ -236,4 +236,227 @@ test.describe('Team Management E2E', () => {
     });
     expect(hasEmpty).toBe(true);
   });
+
+  // WU-T1: Team ownership transfer workflow
+
+  test('Transfer Ownership button is rendered in settings when member is owner and has peers', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('penpot-auth-screen');
+    const result = await page.evaluate(() => {
+      const tm = document.createElement('penpot-team-management');
+      // Inject a fake members list where the current user is the owner
+      // and there's one other member.
+      tm.members = [
+        { id: 'me', fullname: 'Me', email: 'me@x.test', role: 'owner' },
+        { id: 'them', fullname: 'Them', email: 'them@x.test', role: 'editor' },
+      ];
+      tm.profileId = 'me';
+      document.body.appendChild(tm);
+      tm.querySelector('[data-tab="settings"]')?.click();
+      const content = tm.querySelector('#content');
+      return {
+        hasButton: !!content?.querySelector('#transfer-ownership-btn'),
+        sectionHasText: content?.textContent?.includes('Transfer Ownership'),
+        // Should NOT show Delete Team danger zone prompt to re-transfer warning twice
+        noDuplicate: (content?.textContent?.match(/Transfer Ownership/g) || []).length >= 1,
+      };
+    });
+    expect(result.hasButton).toBe(true);
+    expect(result.sectionHasText).toBe(true);
+    expect(result.noDuplicate).toBe(true);
+  });
+
+  test('Transfer Ownership button is hidden when member has no peers', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('penpot-auth-screen');
+    const hasButton = await page.evaluate(() => {
+      const tm = document.createElement('penpot-team-management');
+      tm.members = [
+        { id: 'me', fullname: 'Me', email: 'me@x.test', role: 'owner' },
+      ];
+      tm.profileId = 'me';
+      document.body.appendChild(tm);
+      tm.querySelector('[data-tab="settings"]')?.click();
+      const content = tm.querySelector('#content');
+      return !!content?.querySelector('#transfer-ownership-btn');
+    });
+    expect(hasButton).toBe(false);
+  });
+
+  test('Transfer Ownership button is hidden for non-owner members', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('penpot-auth-screen');
+    const hasButton = await page.evaluate(() => {
+      const tm = document.createElement('penpot-team-management');
+      tm.members = [
+        { id: 'me', fullname: 'Me', email: 'me@x.test', role: 'admin' },
+        { id: 'them', fullname: 'Them', email: 'them@x.test', role: 'editor' },
+      ];
+      tm.profileId = 'me';
+      document.body.appendChild(tm);
+      tm.querySelector('[data-tab="settings"]')?.click();
+      const content = tm.querySelector('#content');
+      return !!content?.querySelector('#transfer-ownership-btn');
+    });
+    expect(hasButton).toBe(false);
+  });
+
+  test('clicking Transfer Ownership opens a modal with member dropdown', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('penpot-auth-screen');
+    const result = await page.evaluate(() => {
+      const tm = document.createElement('penpot-team-management');
+      tm.members = [
+        { id: 'me', fullname: 'Me', email: 'me@x.test', role: 'owner' },
+        { id: 'alice', fullname: 'Alice', email: 'a@x.test', role: 'editor' },
+        { id: 'bob', fullname: 'Bob', email: 'b@x.test', role: 'admin' },
+      ];
+      tm.profileId = 'me';
+      document.body.appendChild(tm);
+      tm.querySelector('[data-tab="settings"]')?.click();
+      tm.querySelector('#transfer-ownership-btn')?.click();
+      const modal = document.body.querySelector('#transfer-ownership-modal');
+      const select = modal?.querySelector('#transfer-owner-select');
+      const options = select ? Array.from(select.options).map(o => ({ value: o.value, text: o.textContent })) : [];
+      return {
+        modalExists: !!modal,
+        hasSelect: !!select,
+        optionCount: options.length,
+        // Should NOT include 'me' as a candidate for the new owner
+        excludesMe: !options.find(o => o.value === 'me'),
+        includesBoth: options.find(o => o.value === 'alice') && options.find(o => o.value === 'bob'),
+        hasCancel: !!modal?.querySelector('#transfer-cancel-btn'),
+        hasConfirm: !!modal?.querySelector('#transfer-confirm-btn'),
+        hasTitle: modal?.querySelector('h3')?.textContent?.includes('Transfer Ownership'),
+      };
+    });
+    expect(result.modalExists).toBe(true);
+    expect(result.hasSelect).toBe(true);
+    expect(result.optionCount).toBe(2);
+    expect(result.excludesMe).toBe(true);
+    expect(result.includesBoth).toBe(true);
+    expect(result.hasCancel).toBe(true);
+    expect(result.hasConfirm).toBe(true);
+    expect(result.hasTitle).toBe(true);
+  });
+
+  test('Transfer Ownership modal closes on cancel', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('penpot-auth-screen');
+    const closed = await page.evaluate(() => {
+      const tm = document.createElement('penpot-team-management');
+      tm.members = [
+        { id: 'me', fullname: 'Me', email: 'me@x.test', role: 'owner' },
+        { id: 'alice', fullname: 'Alice', email: 'a@x.test', role: 'editor' },
+      ];
+      tm.profileId = 'me';
+      document.body.appendChild(tm);
+      tm.querySelector('[data-tab="settings"]')?.click();
+      tm.querySelector('#transfer-ownership-btn')?.click();
+      const modal = document.body.querySelector('#transfer-ownership-modal');
+      const cancelBtn = modal?.querySelector('#transfer-cancel-btn');
+      cancelBtn?.click();
+      return document.body.querySelector('#transfer-ownership-modal') === null;
+    });
+    expect(closed).toBe(true);
+  });
+
+  test('Transfer Ownership modal closes on Escape key', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('penpot-auth-screen');
+    const closed = await page.evaluate(() => {
+      const tm = document.createElement('penpot-team-management');
+      tm.members = [
+        { id: 'me', fullname: 'Me', email: 'me@x.test', role: 'owner' },
+        { id: 'alice', fullname: 'Alice', email: 'a@x.test', role: 'editor' },
+      ];
+      tm.profileId = 'me';
+      document.body.appendChild(tm);
+      tm.querySelector('[data-tab="settings"]')?.click();
+      tm.querySelector('#transfer-ownership-btn')?.click();
+      const modal = document.body.querySelector('#transfer-ownership-modal');
+      const event = new KeyboardEvent('keydown', { key: 'Escape' });
+      document.dispatchEvent(event);
+      return document.body.querySelector('#transfer-ownership-modal') === null;
+    });
+    expect(closed).toBe(true);
+  });
+
+  test('Transfer Ownership modal closes on backdrop click', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('penpot-auth-screen');
+    const closed = await page.evaluate(() => {
+      const tm = document.createElement('penpot-team-management');
+      tm.members = [
+        { id: 'me', fullname: 'Me', email: 'me@x.test', role: 'owner' },
+        { id: 'alice', fullname: 'Alice', email: 'a@x.test', role: 'editor' },
+      ];
+      tm.profileId = 'me';
+      document.body.appendChild(tm);
+      tm.querySelector('[data-tab="settings"]')?.click();
+      tm.querySelector('#transfer-ownership-btn')?.click();
+      const modal = document.body.querySelector('#transfer-ownership-modal');
+      // Click on the backdrop itself, not the inner modal
+      modal?.click();
+      return document.body.querySelector('#transfer-ownership-modal') === null;
+    });
+    expect(closed).toBe(true);
+  });
+
+  test('confirming transfer calls update-team-member-role for both members and pushes audit', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForSelector('penpot-auth-screen');
+    // Spy on fetch to count RPC calls
+    const result = await page.evaluate(() => {
+      const tm = document.createElement('penpot-team-management');
+      tm.members = [
+        { id: 'me', fullname: 'Me', email: 'me@x.test', role: 'owner' },
+        { id: 'alice', fullname: 'Alice', email: 'a@x.test', role: 'editor' },
+      ];
+      tm.profileId = 'me';
+      tm.teamId = 'team-1';
+      document.body.appendChild(tm);
+
+      // Stub confirm() so the transfer proceeds without user prompt
+      const origConfirm = window.confirm;
+      window.confirm = () => true;
+
+      // Track cmd calls
+      const calls = [];
+      const origFetch = window.fetch;
+      window.fetch = (url, opts) => {
+        const body = opts?.body ? JSON.parse(opts.body) : null;
+        calls.push({ url: String(url), body });
+        return origFetch(url, opts);
+      };
+
+      return tm.querySelector('[data-tab="settings"]')?.click()
+        && tm.querySelector('#transfer-ownership-btn')?.click()
+        && tm.querySelector('#transfer-ownership-modal')?.querySelector('#transfer-owner-select')
+        && (tm.querySelector('#transfer-owner-select').value = 'alice')
+        && tm.querySelector('#transfer-confirm-btn')?.click()
+        && new Promise((resolve) => {
+          setTimeout(() => {
+            window.confirm = origConfirm;
+            window.fetch = origFetch;
+            resolve({
+              callCount: calls.length,
+              calls,
+            });
+          }, 150);
+        });
+    });
+    expect(result.callCount).toBeGreaterThanOrEqual(3);
+    // Should include update-team-member-role for new owner
+    const newOwnerCall = result.calls.find(c => c.body?.role === 'owner' && c.body?.memberId === 'alice');
+    expect(newOwnerCall).toBeDefined();
+    expect(newOwnerCall.body.teamId).toBe('team-1');
+    // Should include update-team-member-role for previous owner (demote to admin)
+    const demoteCall = result.calls.find(c => c.body?.role === 'admin' && c.body?.memberId === 'me');
+    expect(demoteCall).toBeDefined();
+    // Should include push-audit-events
+    const auditCall = result.calls.find(c => c.url.includes('push-audit-events'));
+    expect(auditCall).toBeDefined();
+    expect(auditCall.body.events[0].name).toBe('transfer-ownership');
+  });
 });
