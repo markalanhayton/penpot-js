@@ -1592,11 +1592,23 @@ export class PenpotWorkspace extends PenpotElement {
     }
   }
 
-  #handleShapeMove({ shapeId, dx, dy }) {
+  #handleShapeMove(detail) {
     if (!this.#toolManager) return;
-    this.#toolManager.moveShape(shapeId, dx, dy);
+    const { shapeId, dx, dy, x, y } = detail;
+    if (!shapeId) return;
     const page = this.#pages[this.#currentPageIndex];
-    if (page) {
+    if (!page) return;
+
+    if (typeof x === 'number' && typeof y === 'number') {
+      // Absolute positioning: set x/y directly.
+      this.#toolManager.moveShapeTo(shapeId, x, y);
+      const shape = this.#findShape(page, shapeId);
+      if (shape) {
+        enqueueChange(makeModifyChange(page.id, shapeId, { x: shape.x, y: shape.y }));
+      }
+    } else {
+      // Delta positioning: add dx/dy to current position.
+      this.#toolManager.moveShape(shapeId, dx, dy);
       const shape = this.#findShape(page, shapeId);
       if (shape) {
         enqueueChange(makeModifyChange(page.id, shapeId, { x: shape.x, y: shape.y }));
@@ -2330,11 +2342,28 @@ export class PenpotWorkspace extends PenpotElement {
     if (page) {
       const newShape = this.#findShape(page, shapeId);
       if (newShape) {
-        const props = { x: newShape.x, y: newShape.y, width: newShape.width, height: newShape.height };
-        if (newShape.d !== undefined) props.d = newShape.d;
-        else if (newShape.pathData !== undefined) props.pathData = newShape.pathData;
-        else if (newShape.content !== undefined && typeof newShape.content === 'string') props.content = newShape.content;
-        enqueueChange(makeModifyChange(page.id, shapeId, props));
+        // Collect every shape that was affected by the resize: the target
+        // plus its descendants (when the target is a container).
+        const affected = [newShape];
+        const collect = (list) => {
+          for (const s of list) {
+            if (s.objects || s.children) {
+              const kids = Array.isArray(s.objects || s.children)
+                ? (s.objects || s.children)
+                : Object.values(s.objects || s.children || {});
+              affected.push(...kids);
+              collect(kids);
+            }
+          }
+        };
+        collect([newShape]);
+        for (const s of affected) {
+          const props = { x: s.x, y: s.y, width: s.width, height: s.height };
+          if (s.d !== undefined) props.d = s.d;
+          else if (s.pathData !== undefined) props.pathData = s.pathData;
+          else if (s.content !== undefined && typeof s.content === 'string') props.content = s.content;
+          enqueueChange(makeModifyChange(page.id, s.id, props));
+        }
       }
     }
 

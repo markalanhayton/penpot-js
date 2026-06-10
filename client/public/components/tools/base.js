@@ -287,6 +287,11 @@ export class SelectTool extends PenpotTool {
         this.#selectedIds.add(shapeId);
       }
       this.#isDragging = true;
+      // Use absolute (not delta) tracking: store the cursor's click
+      // position in canvas coords and the clicked shape's initial
+      // position. On every move we set the shape's new position to
+      // `cursor - clickOffset` (where clickOffset is per-shape) so the
+      // point the user clicked on always stays anchored to the cursor.
       this.#dragStartX = pos.x;
       this.#dragStartY = pos.y;
       this.#storeDragStartPositions(canvas);
@@ -317,14 +322,18 @@ export class SelectTool extends PenpotTool {
     }
 
     if (this.#isDragging && this.#selectedIds.size > 0) {
-      const dx = pos.x - this.#dragStartX;
-      const dy = pos.y - this.#dragStartY;
-      this.#dragStartX = pos.x;
-      this.#dragStartY = pos.y;
+      // Compute the cursor's total displacement from the initial click.
+      const totalDx = pos.x - this.#dragStartX;
+      const totalDy = pos.y - this.#dragStartY;
 
-      let adjustedDx = dx;
-      let adjustedDy = dy;
-      const snapResult = this.#computeSnap(canvas);
+      // Ask the snap engine for adjustments based on the proposed new
+      // position (we'll snap the absolute new position, not the delta,
+      // to keep the click offset intact).
+      const proposedNewX = (this.#dragStartPositions.get([...this.#selectedIds][0])?.x || 0) + totalDx;
+      const proposedNewY = (this.#dragStartPositions.get([...this.#selectedIds][0])?.y || 0) + totalDy;
+      const snapResult = this.#computeSnap(canvas, proposedNewX, proposedNewY);
+      let adjustedDx = totalDx;
+      let adjustedDy = totalDy;
       if (snapResult) {
         adjustedDx += snapResult.adjustments.x;
         adjustedDy += snapResult.adjustments.y;
@@ -335,8 +344,15 @@ export class SelectTool extends PenpotTool {
         this.#snapGuides.clear();
       }
 
+      // Set each selected shape's position absolutely (not incrementally)
+      // to `original + adjustedDelta` so the click offset is preserved
+      // exactly — no cumulative floating-point drift.
       for (const shapeId of this.#selectedIds) {
-        this.workspace.emit('penpot-shape-move', { shapeId, dx: adjustedDx, dy: adjustedDy });
+        const orig = this.#dragStartPositions.get(shapeId);
+        if (!orig) continue;
+        const newX = orig.x + adjustedDx;
+        const newY = orig.y + adjustedDy;
+        this.workspace.emit('penpot-shape-move', { shapeId, x: newX, y: newY });
       }
       return;
     }
@@ -727,19 +743,26 @@ export class SelectTool extends PenpotTool {
     }
   }
 
-  #computeSnap(canvas) {
+  #computeSnap(canvas, proposedX, proposedY) {
     if (this.#selectedIds.size !== 1) return null;
     const shapeId = [...this.#selectedIds][0];
     const shapes = this._getShapes(canvas);
     const shape = shapes.find(s => s.id === shapeId);
     if (!shape) return null;
-    return this.#computeSnapForShape(shape, canvas);
+    return this.#computeSnapForShape(shape, canvas, proposedX, proposedY);
   }
 
-  #computeSnapForShape(shape, canvas) {
+  #computeSnapForShape(shape, canvas, proposedX, proposedY) {
     const shapes = this._getShapes(canvas);
     const canvasEl = canvas.querySelector('#container') || canvas;
     const viewport = canvasEl ? { x: 0, y: 0, width: canvasEl.clientWidth / (canvas.zoom || 1), height: canvasEl.clientHeight / (canvas.zoom || 1) } : null;
+    // When the caller has a proposed (snapped) position in mind, pass it
+    // through. The snap engine uses this to compute guides relative to
+    // where the shape will end up (so the user sees the guides follow the
+    // cursor instead of lagging behind).
+    if (typeof proposedX === 'number' && typeof proposedY === 'number') {
+      return this.#snapGuides.snap({ ...shape, x: proposedX, y: proposedY }, shapes, viewport);
+    }
     return this.#snapGuides.snap(shape, shapes, viewport);
   }
 
