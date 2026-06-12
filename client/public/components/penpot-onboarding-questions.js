@@ -13,8 +13,11 @@ import { cmd } from '../lib/rpc.js';
 const template = document.createElement('template');
 template.innerHTML = `<style>
   penpot-onboarding-questions { display: block; }
-  .intro-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: var(--penpot-z-overlay, 1000); display: flex; align-items: center; justify-content: center; }
-  .intro-modal { background: var(--penpot-surface, #2a2a2a); border: 1px solid var(--penpot-border, #444); border-radius: var(--penpot-radius-m, 8px); padding: var(--penpot-spacing-xl, 24px); max-width: 520px; width: 90%; color: var(--penpot-text, #e6e6e6); }
+  /* Backdrop is pointer-events:none so canvas interactions (click,
+     right-click for the context menu) pass through. The modal still
+     captures pointer events for dismissal. */
+  .intro-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: var(--penpot-z-overlay, 1000); display: flex; align-items: center; justify-content: center; pointer-events: none; }
+  .intro-modal { pointer-events: auto; background: var(--penpot-surface, #2a2a2a); border: 1px solid var(--penpot-border, #444); border-radius: var(--penpot-radius-m, 8px); padding: var(--penpot-spacing-xl, 24px); max-width: 520px; width: 90%; color: var(--penpot-text, #e6e6e6); }
   .intro-modal h2 { margin: 0 0 var(--penpot-spacing-s, 8px); font-size: var(--penpot-font-size-xl, 20px); color: var(--penpot-primary, #31efb8); }
   .intro-modal p.subtitle { font-size: var(--penpot-font-size-s, 11px); color: var(--penpot-text-dim, #999); margin: 0 0 var(--penpot-spacing-l, 16px); }
   .intro-step { margin-bottom: var(--penpot-spacing-l, 16px); }

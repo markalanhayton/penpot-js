@@ -14,8 +14,11 @@ import { PenpotElement } from './base.js';
 const template = document.createElement('template');
 template.innerHTML = `<style>
   penpot-onboarding-team-choice { display: block; }
-  .team-choice-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: var(--penpot-z-overlay, 1000); display: flex; align-items: center; justify-content: center; }
-  .team-choice-modal { background: var(--penpot-surface, #2a2a2a); border: 1px solid var(--penpot-border, #444); border-radius: var(--penpot-radius-m, 8px); padding: var(--penpot-spacing-xl, 24px); max-width: 540px; width: 90%; color: var(--penpot-text, #e6e6e6); }
+  /* Backdrop is pointer-events:none so canvas interactions (click,
+     right-click for the context menu) pass through. The modal still
+     captures pointer events for dismissal. */
+  .team-choice-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: var(--penpot-z-overlay, 1000); display: flex; align-items: center; justify-content: center; pointer-events: none; }
+  .team-choice-modal { pointer-events: auto; background: var(--penpot-surface, #2a2a2a); border: 1px solid var(--penpot-border, #444); border-radius: var(--penpot-radius-m, 8px); padding: var(--penpot-spacing-xl, 24px); max-width: 540px; width: 90%; color: var(--penpot-text, #e6e6e6); }
   .team-choice-modal h2 { margin: 0 0 var(--penpot-spacing-s, 8px); font-size: var(--penpot-font-size-xl, 20px); color: var(--penpot-primary, #31efb8); }
   .team-choice-modal p.subtitle { font-size: var(--penpot-font-size-s, 11px); color: var(--penpot-text-dim, #999); margin: 0 0 var(--penpot-spacing-l, 16px); }
   .team-choice-options { display: grid; grid-template-columns: 1fr 1fr; gap: var(--penpot-spacing-m, 12px); }

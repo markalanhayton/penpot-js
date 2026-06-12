@@ -7,8 +7,11 @@ const STORAGE_KEY = 'penpot-release-notes-viewed';
 const template = document.createElement('template');
 template.innerHTML = `<style>
   penpot-release-notes { display: block; }
-  .rn-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: var(--penpot-z-overlay, 1000); display: flex; align-items: center; justify-content: center; }
-  .rn-modal { background: var(--penpot-surface, #2a2a2a); border: 1px solid var(--penpot-border, #444); border-radius: var(--penpot-radius-l, 12px); max-width: 560px; width: 90%; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; color: var(--penpot-text, #e6e6e6); box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+  /* Backdrop is pointer-events:none so canvas clicks (and right-click for the
+     context menu) pass through. The modal still captures clicks for
+     dismissal via the Skip/Next buttons. The backdrop is purely visual. */
+  .rn-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: var(--penpot-z-overlay, 1000); display: flex; align-items: center; justify-content: center; pointer-events: none; }
+  .rn-modal { pointer-events: auto; background: var(--penpot-surface, #2a2a2a); border: 1px solid var(--penpot-border, #444); border-radius: var(--penpot-radius-l, 12px); max-width: 560px; width: 90%; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; color: var(--penpot-text, #e6e6e6); box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
   .rn-header { padding: var(--penpot-spacing-xl, 24px) var(--penpot-spacing-xl, 24px) var(--penpot-spacing-m, 12px); flex-shrink: 0; }
   .rn-header h2 { margin: 0; font-size: var(--penpot-font-size-xl, 20px); color: var(--penpot-primary, #31efb8); display: flex; align-items: center; gap: var(--penpot-spacing-s, 8px); }
   .rn-version-badge { display: inline-block; font-size: var(--penpot-font-size-xs, 10px); background: var(--penpot-primary, #31efb8); color: #111; padding: 2px 8px; border-radius: var(--penpot-radius-s, 4px); font-weight: 600; vertical-align: middle; }
@@ -93,9 +96,9 @@ export class PenpotReleaseNotes extends PenpotElement {
     });
 
     const overlay = this.querySelector('#overlay');
-    if (overlay) overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) this.close();
-    });
+    // Backdrop click-to-close intentionally disabled: the backdrop is
+    // pointer-events:none so canvas clicks pass through (right-click for
+    // the context menu, etc.). Use the Skip or Next button to dismiss.
   }
 
   #trapFocus(e) {
