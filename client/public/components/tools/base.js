@@ -442,29 +442,42 @@ export class SelectTool extends PenpotTool {
   }
 
   #hitTest(x, y, canvas) {
+    // The visual selection outline is drawn on the shape element at the
+    // shape's logical x/y/width/height (via the data-selected stroke
+    // override in renderPage). For a click to "look like" it hits the
+    // visible bounding box, the hit test must use the same logical
+    // bounds from the shape data, not the SVG geometry's getBBox()
+    // (which differs for paths, text, and shapes whose rendered extent
+    // does not match their declared width/height).
+    const page = this.workspace?.currentPage;
+    if (!page) return null;
+    const objects = page.objects || page.children || {};
+    const shapeList = Array.isArray(objects) ? objects : Object.values(objects);
+    if (shapeList.length === 0) return null;
+
+    // Build an id -> shape lookup so we can resolve the SVG element's
+    // id="shape-{id}" back to its logical bounds.
+    const byId = new Map();
+    for (const s of shapeList) byId.set(s.id, s);
+
     const svg = canvas.querySelector('svg') || canvas.querySelector('#container svg');
     if (!svg) return null;
-    const shapes = svg.querySelectorAll('[id^="shape-"]');
+    const shapeEls = svg.querySelectorAll('[id^="shape-"]');
     // Iterate in reverse so top-most shapes get picked first
-    for (let i = shapes.length - 1; i >= 0; i--) {
-      const el = shapes[i];
-      // getBBox() returns the bbox in the element's LOCAL coordinate system
-      // (before its transform). For shapes with a `transform` attribute
-      // (e.g. <path transform="translate(x, y)">), the click point must be
-      // transformed through the inverse CTM to compare against the local
-      // bbox. For shapes without a transform, the local bbox IS the world
-      // bbox and we can check directly.
-      const bbox = el.getBBox();
-      const ctm = el.getCTM();
-      let lx = x;
-      let ly = y;
-      if (ctm) {
-        const inv = ctm.inverse();
-        lx = inv.a * x + inv.c * y + inv.e;
-        ly = inv.b * x + inv.d * y + inv.f;
-      }
-      if (lx >= bbox.x - 2 && lx <= bbox.x + bbox.width + 2 && ly >= bbox.y - 2 && ly <= bbox.y + bbox.height + 2) {
-        return el.id.replace('shape-', '');
+    for (let i = shapeEls.length - 1; i >= 0; i--) {
+      const el = shapeEls[i];
+      const id = el.id.replace('shape-', '');
+      const shape = byId.get(id);
+      if (!shape) continue;
+      const sx = shape.x || 0;
+      const sy = shape.y || 0;
+      const sw = shape.width || 0;
+      const sh = shape.height || 0;
+      // The selection stroke is drawn at the shape's logical edge; the
+      // user perceives clicks inside that visible box as "on the shape".
+      // 2px tolerance matches the previous behavior.
+      if (x >= sx - 2 && x <= sx + sw + 2 && y >= sy - 2 && y <= sy + sh + 2) {
+        return id;
       }
     }
     return null;
