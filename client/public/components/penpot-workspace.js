@@ -36,7 +36,8 @@ import './penpot-presence-bar.js';
 import './penpot-export-dialog.js';
 import './penpot-share-dialog.js';
 import './penpot-comment-panel.js';
-import './penpot-onboarding.js';
+// NOTE: penpot-onboarding removed — superseded by penpot-onboarding-questions
+// (WU-T2) which is shown via app.js runOnboardingFlow().
 import './penpot-text-toolbar.js';
 import './penpot-import-dialog.js';
 import './penpot-version-panel.js';

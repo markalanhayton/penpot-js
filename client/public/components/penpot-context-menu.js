@@ -6,7 +6,7 @@ let nextId = 0;
 const template = document.createElement('template');
 template.innerHTML = `<style>
 
-    penpot-context-menu { position: fixed; z-index: var(--penpot-z-context-menu, 500); }
+    penpot-context-menu { display: block; position: fixed; z-index: var(--penpot-z-context-menu, 500); }
     .penpot-ctx__context-menu { background: var(--penpot-surface-high, #333); border: 1px solid var(--penpot-border, #444); border-radius: var(--penpot-radius-m, 8px); box-shadow: var(--penpot-shadow-m, 0 4px 12px rgba(0,0,0,0.4)); min-width: 160px; padding: var(--penpot-spacing-xs, 4px) 0; }
     .penpot-ctx__context-item { display: flex; align-items: center; gap: var(--penpot-spacing-s, 8px); padding: var(--penpot-spacing-xs, 4px) var(--penpot-spacing-m, 12px); font-size: var(--penpot-font-size-m, 13px); color: var(--penpot-text, #e6e6e6); cursor: pointer; white-space: nowrap; position: relative; }
     .penpot-ctx__context-item:hover { background: var(--penpot-primary-bg, rgba(49,239,184,0.08)); color: var(--penpot-primary, #31efb8); }
